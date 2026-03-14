@@ -1,0 +1,699 @@
+# tactiq.io free youtube transcript
+# How I Build Apple-Style Websites With Claude Code (NEW Skill)
+# https://www.youtube.com/watch/q0TgUtj6vIs
+
+00:00:00.080 So, you know how on Apple's site we've
+00:00:01.439 got the product, we've got quotes come
+00:00:02.800 in, we've got dynamic elements like
+00:00:04.319 this. We can see sort of like the
+00:00:05.759 deconstruction of the product itself,
+00:00:07.600 and all of these features on the website
+00:00:09.040 give it a super professional and branded
+00:00:10.880 feel. And I'm sure that some of you guys
+00:00:12.240 have realized by now, but this website
+00:00:13.599 is not Apple. This is one that I built
+00:00:15.120 with Cloud Code using this new skill in
+00:00:17.440 like 30 minutes. So, I'm going to show
+00:00:19.199 you guys today the exact process to
+00:00:20.800 build sites just like this that are
+00:00:22.400 super professional, that have these
+00:00:23.760 really nice animations going on, and
+00:00:25.680 they just feel awesome. I'm also going
+00:00:27.920 to be giving you away the skill and
+00:00:29.439 everything that you need to do this for
+00:00:30.720 completely free so that even if you've
+00:00:32.479 never opened up Cloud Code or you know
+00:00:34.320 built a website before you will be able
+00:00:35.920 to do exactly what you're seeing on
+00:00:37.280 screen. So let's not waste any time and
+00:00:38.960 get straight into the video. Okay, so
+00:00:40.480 we're using Cloud Code in Visual Studio
+00:00:42.559 Code. So if you don't have that, just go
+00:00:44.000 to the browser, type in VS Code, and
+00:00:45.760 download this for your operating system.
+00:00:47.200 It's completely free. Once you're in
+00:00:48.640 here, you're going to go over to the
+00:00:49.680 left, which is the extensions button.
+00:00:51.360 You're going to type in cloud code and
+00:00:52.800 install this one. It will then prompt
+00:00:54.399 you to sign in with your Anthropic
+00:00:56.000 subscription. And by the way, you do
+00:00:57.600 have to be on the paid plan. So either
+00:00:59.039 the Pro or the Max in order to use Cloud
+00:01:00.960 Code. Now, once you've got that
+00:01:02.160 installed, you're going to click on this
+00:01:03.280 button up here, which is the Explorer,
+00:01:04.879 and you need to open up a folder. So
+00:01:06.640 just go to your desktop, go to your
+00:01:07.840 documents, open up a brand new folder,
+00:01:09.360 just call it, you know, 3D website
+00:01:10.799 testing, and then open it up right here.
+00:01:12.880 So here you can see this is the project
+00:01:14.240 that I've been working in. I've just
+00:01:15.360 called it animated websites. And what
+00:01:17.040 I'm going to do is give you guys all the
+00:01:18.479 skills in here that you need in order to
+00:01:20.159 just replicate what I'm doing. And I'm
+00:01:22.000 giving you guys all of that for free, of
+00:01:23.360 course. So that once you have that, all
+00:01:25.200 you have to do is give Cloud Code a
+00:01:27.520 video. For example, here we have a video
+00:01:29.360 of a camera. You can see what happens is
+00:01:31.280 it just basically spins around and then
+00:01:32.799 it kind of like goes into X-ray mode and
+00:01:35.040 we can see inside the camera. And now
+00:01:36.640 that Cloud Code has that, you just say,
+00:01:38.079 &quot;Build me a website for this video.&quot; And
+00:01:40.240 what you get is something like this
+00:01:41.680 where we have Vanta one. You can see it
+00:01:43.439 looks like a product landing page. As we
+00:01:45.040 start to scroll down, the camera is
+00:01:46.560 revealed. And as we continue to scroll
+00:01:48.240 more, we get dynamic text that comes
+00:01:50.079 through as well as the actual camera
+00:01:52.399 animation starting. And the crazy part
+00:01:54.320 is I didn't give it any of the copy. I
+00:01:56.079 didn't give it a color scheme. I didn't
+00:01:57.439 give it any information about the
+00:01:59.360 product. Obviously, you could, but what
+00:02:01.280 it will do is it will just basically
+00:02:02.799 create this for you. And then you can go
+00:02:04.399 ahead and make the tweaks that you need.
+00:02:06.000 So, the two skills that you're going to
+00:02:07.119 need to go grab are the front-end design
+00:02:08.959 skill, which is the one that I grabbed
+00:02:10.479 from Anthropic. It was an official
+00:02:11.920 skill, but I changed it a little bit.
+00:02:13.520 So, this is like kind of my version of
+00:02:14.879 the front-end design skill for this
+00:02:16.560 specific use case. And then you're also
+00:02:18.239 going to need to go get the video to
+00:02:19.680 website skill. So, both of these skills
+00:02:21.920 are literally just markdown files.
+00:02:23.440 They're markdown files that I've worked
+00:02:24.720 on that tell Claude Code the best
+00:02:26.400 practices for creating these animated 3D
+00:02:28.879 websites. And you can get these skills
+00:02:30.640 for completely free by going to my free
+00:02:32.239 school community. The link for that is
+00:02:33.440 down in the description. You'll go to
+00:02:34.720 the classroom, you'll go to the skills
+00:02:36.239 section, and you'll be able to find all
+00:02:37.599 of them right in there. And literally
+00:02:39.120 all you'd have to do is take them from
+00:02:40.640 your downloads folder, drag them over
+00:02:42.160 here to the lefth hand side, and then
+00:02:43.599 just basically tell Claude, &quot;Hey, set up
+00:02:45.280 this folder.&quot; So I've got myclaude.
+00:02:47.040 Within that claude, I've got a skills
+00:02:48.720 folder. And then within that skills
+00:02:50.160 folder, here are my two skills I need
+00:02:52.400 you to use. And it should look something
+00:02:54.800 like this on the lefth hand side. Now,
+00:02:56.720 before you get too overwhelmed, if
+00:02:57.920 you've never used Cloud Code before,
+00:02:59.519 it's super simple. Right here, we have
+00:03:01.200 our actual agent that we talk to and
+00:03:02.879 have conversations with. And over here,
+00:03:04.640 we just have folders. So, I just showed
+00:03:06.400 you where the skills live, which is in
+00:03:07.840 acloud folder within a skills folder.
+00:03:10.400 But then the other stuff in here is
+00:03:11.760 super simple. Here are all the video
+00:03:13.440 files that I've used to make the
+00:03:14.640 previous websites. And then for each
+00:03:16.640 website, it created its own folder. So
+00:03:18.400 for the camera website, it has all this
+00:03:20.400 information. For the watch website, it
+00:03:21.920 has all this information. And for the
+00:03:23.280 Yeti website, it has all that
+00:03:24.640 information as well. But anyways, if you
+00:03:26.400 just follow the steps that I take in
+00:03:27.680 this video, it will all make sense and
+00:03:29.440 you will get a nice output. And by the
+00:03:31.280 way, if that's a bit confusing, then
+00:03:32.480 definitely go check out my skills video,
+00:03:34.159 which I will tag right up here. And then
+00:03:35.680 once you understand that, hop right back
+00:03:37.200 over here. All right. So, I'm going to
+00:03:38.400 walk you guys through this process step
+00:03:39.920 by step, so you can see exactly what I
+00:03:41.840 did to create these really cool
+00:03:43.440 animations. And what you need to
+00:03:44.959 understand is that all of these
+00:03:46.319 animations that you're seeing on the
+00:03:48.319 site and all the other ones that I've
+00:03:49.680 shown, they're just videos. And so, all
+00:03:51.519 I did here was had Nano Banana generate
+00:03:53.360 two different images for me and then
+00:03:54.799 turn it into a video. So, for example,
+00:03:56.560 that first one with the Apple Watch is
+00:03:58.000 just the Apple Watch kind of opening up
+00:03:59.760 and then exposing all of its layers. And
+00:04:02.159 then when I wanted it to close back up,
+00:04:03.920 I just prompted it to do the opposite.
+00:04:06.000 And now we have the second one where it
+00:04:07.680 goes from that end frame and then kind
+00:04:09.599 of like folds back in on itself and
+00:04:11.439 reveals the Apple Watch. So, now that
+00:04:13.439 you understand how simple this really
+00:04:14.640 is, let's go over to Nano Banana and
+00:04:17.279 start making some images. Okay, so the
+00:04:18.959 way that I like to use Nano Banana,
+00:04:20.399 whether I'm doing it in a playground
+00:04:21.759 like this or over API, is with key.ai I
+00:04:24.240 because I found that it's really fast
+00:04:25.680 and it's like really cheap. So I went to
+00:04:27.600 Nano Banana 2, the new version of Nano
+00:04:29.919 Banana, and I came in here and did a
+00:04:32.000 16x9 aspect ratio image, and I said, I
+00:04:34.880 need a professional studio grade image
+00:04:36.400 of a blender. It should be against a
+00:04:38.320 plain all black background with no
+00:04:40.080 shadows, no hands, no reflections. And
+00:04:42.800 this is essentially going to be our
+00:04:44.160 start frame when we make that actual
+00:04:45.919 video. So then I saved that output,
+00:04:47.680 dropped it in here as an image input and
+00:04:49.360 I just said the exact same prompt, but
+00:04:51.120 this time it should be filled with fruit
+00:04:52.720 and juice. So now we have our start
+00:04:54.639 frame over here and our end frame and we
+00:04:56.720 just need to animate it so that it
+00:04:58.160 actually looks like fruit and juice is
+00:05:00.400 you know being dropped and poured in. So
+00:05:02.320 then I found the best results using
+00:05:04.000 cling 3.0 which once again you can also
+00:05:06.320 access in this key.ai. So we give it the
+00:05:09.680 start frame, we give it the end frame
+00:05:11.120 and here's what I did for my prompt. I
+00:05:13.360 actually went over to Claude and I gave
+00:05:14.800 it the start and end frame and said,
+00:05:15.919 &quot;Help me make an AI video prompt where I
+00:05:18.639 want the lid to float off. I want fruit
+00:05:20.400 and juice to be dropped in. And then I
+00:05:21.919 want the lid to be put back on. No
+00:05:23.680 shadows, no hands, no reflections.&quot; It
+00:05:26.080 spits out this prompt. I put that into
+00:05:28.160 Cling. And here's the result. I haven't
+00:05:30.000 watched this yet, so hopefully it's
+00:05:31.120 good.
+00:05:35.520 Okay. Interesting. I mean, obviously, we
+00:05:37.759 maybe want to fix that a little bit, but
+00:05:39.360 I'm fine with that for the sake of the
+00:05:40.880 demo. the fruit and juice kind of just
+00:05:42.560 magically appear from nowhere and now
+00:05:44.320 they're in the blender. Okay, so I
+00:05:45.919 downloaded that video. I'm just going to
+00:05:47.280 drag it over here to the lefth hand side
+00:05:48.960 and you can see right now that this
+00:05:50.400 video that Cloud Code is looking at is
+00:05:52.160 the exact one that we just generated
+00:05:53.600 together. So this is what it's going to
+00:05:54.960 use. It's basically going to take that
+00:05:56.720 video, pull out like 120 frames or
+00:05:59.199 however many frames make up that video
+00:06:00.880 and then it's going to have all of those
+00:06:02.240 saved. So just as an example, if I go to
+00:06:04.560 the frames from the watch, you can see
+00:06:06.720 it created over a hundred webp pictures
+00:06:10.240 from that actual video. And it's kind of
+00:06:12.319 like stopotion animation where each one
+00:06:14.080 just changes a little bit and as you go
+00:06:15.919 through the actual video starts to form.
+00:06:18.319 So it basically associates each of these
+00:06:20.160 frames with a scroll position. So as you
+00:06:22.560 scroll down, it kind of like reveals
+00:06:24.400 itself or if you scroll backwards, it
+00:06:26.240 goes the other way. So now I'm going to
+00:06:27.840 make sure that my agent is on plan mode,
+00:06:29.520 which basically means it won't actually
+00:06:30.720 do anything. It'll just read things and
+00:06:32.160 it will help create a plan which is
+00:06:33.919 going to result in much better websites
+00:06:35.520 on the first try. All right, so I
+00:06:37.039 started off by saying I just dropped in
+00:06:38.639 a video called blendercling.mpp4.
+00:06:41.520 Help me create a one-page product
+00:06:43.520 landing page for this product. It should
+00:06:46.080 be modern. It should feel very
+00:06:47.840 professional. It should have smooth
+00:06:49.520 animations and design throughout. All of
+00:06:52.000 the text should be easy to read. And the
+00:06:53.840 background of the website should be
+00:06:56.319 completely black. It should be a dark
+00:06:57.919 mode. and it should blend into the
+00:07:00.319 background of the Blender Cling image so
+00:07:02.880 that it looks like it is one, you know,
+00:07:05.039 fluid web page. So, if you were really
+00:07:07.199 doing this for a product or for a
+00:07:08.639 business, you'd probably want to prompt
+00:07:09.840 it with some more information, but I'm
+00:07:11.280 just going to show you guys for now how
+00:07:12.639 this works. I'm going to shoot that off
+00:07:13.840 in plan mode, and you will see that it
+00:07:15.520 naturally comes back and asks me some
+00:07:17.039 questions. Now, if you're wondering how
+00:07:18.479 I was able to speak right into my cloud
+00:07:20.160 code, then check the description for my
+00:07:21.919 tool. Now, one thing you'll notice once
+00:07:23.440 you read through the way that this works
+00:07:24.720 is that you will have to have ffmpeg
+00:07:27.120 which basically just extracts frames
+00:07:29.199 from videos. It's a free tool and if you
+00:07:31.360 don't have it installed, Claude Code
+00:07:32.720 will help you install it. It'll just do
+00:07:34.000 it for you, so don't worry about that.
+00:07:35.680 But now you can see it's asking us some
+00:07:37.039 questions. So, the first one is, what is
+00:07:38.560 the product name and brand for this
+00:07:39.919 blender? And I'm just going to go ahead
+00:07:41.199 and say create fictional branding just
+00:07:42.960 like it did for the Vanta 1, which was
+00:07:45.280 the camera website. Then it says, what
+00:07:47.440 kind of content sections do you want?
+00:07:48.880 I'm just going to go with the full
+00:07:50.160 premium, which is what we've been doing
+00:07:51.520 for the other example sites. But of
+00:07:53.599 course, this is where you could
+00:07:54.560 customize it a little bit to fit your
+00:07:56.960 needs. And if you've never used Cloud
+00:07:58.639 Code before, what's happening here is
+00:08:00.800 you are basically able to look at
+00:08:02.400 everything that Cloud Code is thinking
+00:08:03.840 and doing. You can see a task, you can
+00:08:05.919 see a glob, you can see what it's
+00:08:07.199 reading, and you'll see later when it
+00:08:08.560 actually starts implementing things,
+00:08:09.919 it'll create itself a task list or a
+00:08:11.599 to-do list, and you can actually watch
+00:08:13.120 it fulfill those to-dos. So, it's really
+00:08:15.199 cool. Okay, so now we at the point where
+00:08:17.039 the plan is done. We've got Obsidian
+00:08:18.800 Vortex premium blender landing page.
+00:08:21.039 We've got the brand identity here. So,
+00:08:22.879 Obsidian, Obsidian Vortex. The tagline
+00:08:25.120 is annihilate everything. The accent
+00:08:27.360 color is blood red. And we've got fonts.
+00:08:29.919 We've got the video details,
+00:08:31.199 implementation steps. So, here is the
+00:08:33.440 ffmpeg thing I was talking about. That
+00:08:35.120 will extract the actual frames. Then it
+00:08:37.760 will build the HTML. Then it will create
+00:08:39.679 all these different sections. It will
+00:08:40.880 build the CSS. It'll build the JS. And
+00:08:43.120 then it will test locally. So, before
+00:08:44.959 this actually goes anywhere on the web,
+00:08:46.480 we will test it right here. And then if
+00:08:47.760 we're good with it, we can push it to
+00:08:49.120 the web. And I'll show you guys that at
+00:08:50.480 the end of the video. So I'm actually
+00:08:51.760 just going to make one more suggestion
+00:08:52.800 and then we'll let it start building. I
+00:08:54.480 want to say this looks pretty much
+00:08:56.240 there. There's one thing that I forgot
+00:08:57.600 to mention, which is that I want the
+00:08:59.440 product video to be kind of right
+00:09:01.519 aligned. So I want it to be on the right
+00:09:03.120 2/3 of the page and all the text can be
+00:09:06.399 left aligned. And this is just to show
+00:09:08.000 you that you do have control over the
+00:09:09.680 way it looks. So I'm going to go ahead
+00:09:10.880 and shoot this off. It's going to come
+00:09:11.920 back with another plan and I'm going to
+00:09:13.680 accept it and then I'll check in with
+00:09:14.959 you guys when we have our first
+00:09:16.560 iteration of this website done. And by
+00:09:18.800 the way, now that I've accepted the
+00:09:20.080 plan, I put it in bypass permissions
+00:09:22.000 mode so that it can just continue to run
+00:09:23.600 without stopping all the time to ask me
+00:09:25.120 questions. Here is the to-do list that I
+00:09:26.880 talked about. It's going to go through
+00:09:28.000 and make sure that all of these are good
+00:09:29.920 to go. All right, so in just a few
+00:09:31.519 minutes that came back and it says, as
+00:09:33.120 you can see, the site is live at
+00:09:34.560 localhost. Open it up in your browser
+00:09:36.320 and check it out. So let me go ahead and
+00:09:38.000 open this up and we will see what we
+00:09:39.440 got. So, you just saw the Obsidian
+00:09:40.800 loading. We've got Obsidian Vortex. It
+00:09:42.640 looks really clean so far. Now, let's
+00:09:44.640 see what happens when I start to scroll
+00:09:45.839 down. So, we see the blender starts to
+00:09:48.399 appear. Nice. And as I continue to
+00:09:50.240 scroll, we have we didn't build another
+00:09:51.760 blender. We engineered a force of nature
+00:09:53.600 that reduces anything to nothing in
+00:09:55.839 absolute silence. As I keep scrolling,
+00:09:57.680 we can see that the fruit is starting to
+00:09:59.040 appear. So, we've got meet the obsidian
+00:10:01.120 vortex machine from aerospace grade
+00:10:03.360 stainless steel blah blah blah. There's
+00:10:04.959 also text in the background as you can
+00:10:06.800 see that says I think it says obliterate
+00:10:09.279 everything. So that's pretty cool. We've
+00:10:11.200 got brushless motor. We've got titanium
+00:10:14.320 blade array. So that actually kind of
+00:10:15.519 pops in a little bit late as you can
+00:10:16.880 see. As I'm scrolling it pops in a bit
+00:10:18.880 late. This one comes through. And then
+00:10:21.040 we've got these stats that come up.
+00:10:23.040 Really nice. And then we have the last
+00:10:24.959 blender you'll ever own. And then I
+00:10:26.560 should have the CTA right here which is
+00:10:28.880 own the force. Pre-order the Obsidian
+00:10:30.720 Vortex. So let's just actually think
+00:10:32.480 about that. I dropped in a prompt that
+00:10:34.720 said, &quot;Here's a video. Create a onepage
+00:10:37.040 landing page.&quot; That was basically it. It
+00:10:39.279 used the skill and it created a plan for
+00:10:41.360 us. And then we actually had a website
+00:10:43.680 where pretty much everything is perfect.
+00:10:45.360 Obviously, there's a few things that we
+00:10:46.640 need to iterate upon, but this is super
+00:10:48.800 super clean and the animation I think
+00:10:50.720 looks really good. But the the biggest
+00:10:52.480 problem that I'm noticing is right here
+00:10:53.920 when we scroll to number two feature, we
+00:10:56.399 really don't get to see it unless we
+00:10:57.920 scroll back down. So, what I'm going to
+00:10:59.440 do now is I'm going to go ahead and
+00:11:00.560 clear this out because we're at 53%
+00:11:02.640 context, so I don't want to mess with
+00:11:04.480 context rot. And I'm going to once again
+00:11:06.079 go back into plan mode. All right. So, I
+00:11:07.760 just tested out the Blender website and
+00:11:10.880 it looks really good. I do have one
+00:11:12.399 piece of feedback though. When we're
+00:11:14.320 scrolling down and we see the features,
+00:11:16.480 feature number two doesn't actually
+00:11:18.240 appear until it's basically off the
+00:11:20.399 screen. So, we need that to actually
+00:11:22.320 come into view a bit earlier. But
+00:11:24.720 besides that, all the other features,
+00:11:26.480 features 1, three, and four are working
+00:11:28.079 well. So, I'll shoot that off. And while
+00:11:29.519 it's coming up with a plan, I just want
+00:11:31.040 to make sure that that was accurate.
+00:11:32.160 Feature three looks good. And we don't
+00:11:33.920 even have feature four. So, hopefully it
+00:11:35.440 can understand, read through the code,
+00:11:37.120 and see what's going on. So, while this
+00:11:38.880 is creating a plan, I thought that I
+00:11:40.079 would real quick explain the difference
+00:11:41.680 between local host and actually having
+00:11:43.920 something on the web. Because if you've
+00:11:45.279 never built a website before in cloud
+00:11:46.720 code, that part might not click yet. So,
+00:11:49.519 what happens is we kind of have two
+00:11:50.720 different environments. We've got our
+00:11:52.079 local computer and then we've got the
+00:11:53.760 actual cloud. So remember when Cloud
+00:11:55.360 Code said, &quot;Hey, cool. Your website's
+00:11:56.800 live. You can go ahead and test it on
+00:11:58.640 localhost port 51006.&quot;
+00:12:01.760 If you right now typed this into your
+00:12:03.440 browser, you'd probably get nothing. But
+00:12:05.200 I can type it in because it lives on my
+00:12:07.519 machine locally because what's going on
+00:12:09.519 is Claude Code is helping us write all
+00:12:12.000 of the actual code because that's really
+00:12:13.519 what a website is. It's a bunch of code.
+00:12:15.440 Whether that's HTML or JS or CSS or
+00:12:18.160 whatever it is, it's code. And so what
+00:12:20.240 we're doing right now is we're using it
+00:12:21.760 to build code and then we're testing it.
+00:12:23.519 And then we're going back and forth on
+00:12:24.800 our computer until we're good. And then
+00:12:26.880 once we actually like the code, we push
+00:12:28.800 it to somewhere on the cloud so that it
+00:12:30.480 can actually be viewed by other people.
+00:12:32.880 So I'll cover this pipeline once we
+00:12:34.639 actually get to that stage in the video.
+00:12:36.000 But I thought that I would address this
+00:12:37.200 kind of like local thing first real
+00:12:39.120 quick. All right. You can see it came
+00:12:40.720 back with a plan to fix the Blender
+00:12:42.160 feature number two late appearance. I'm
+00:12:43.600 just going to go ahead and accept this.
+00:12:44.800 Okay. So it did that really fast. I'm
+00:12:46.160 going to click into this website and
+00:12:47.440 we'll see if that fix has actually been
+00:12:49.600 changed. We've got feature one. We've
+00:12:51.920 got feature two. There we go. And we've
+00:12:54.000 got feature three. And everything else
+00:12:55.360 still looks intact with the site. So all
+00:12:57.760 of the magic that's happening here is
+00:12:59.360 once again within the skill that I
+00:13:01.040 built. So it is the video to website
+00:13:02.959 skill. If I open this up, this is
+00:13:04.560 basically just a markdown file and it
+00:13:06.240 says turn a video into a premium scroll
+00:13:08.240 driven animated website. So this is
+00:13:10.079 where all the secret sauce really lives
+00:13:11.760 on how it actually does this. I know
+00:13:13.680 that this is a pretty beefy skill, but
+00:13:16.240 hey, I mean, it seems to be working
+00:13:18.079 pretty well. And what you can do now is
+00:13:19.760 every time you're using this skill to
+00:13:21.120 build websites, you would just say,
+00:13:22.959 &quot;Awesome. Here's what I told you to fix.
+00:13:24.959 Here's what I like. Here's what I don't
+00:13:26.079 like. Make sure that all of this is
+00:13:27.600 reflected on the skill.md.&quot; So
+00:13:29.760 essentially, every single time that you
+00:13:31.040 build a website with this skill, the
+00:13:32.639 skill gets better and better and better.
+00:13:35.040 Now, we have our code that we like, and
+00:13:37.519 it's time to push it over here. So, what
+00:13:39.360 we need to do is we're going to use a
+00:13:40.639 combination of GitHub and Versel. GitHub
+00:13:43.040 basically just lets us store code. So
+00:13:45.680 basically the same way you would have
+00:13:46.880 maybe like a word file locally on your
+00:13:48.639 computer. If you wanted other people to
+00:13:50.240 be able to use that, you would have to
+00:13:51.279 put that on one drive or you know uh
+00:13:54.320 Google doc so that other people could
+00:13:55.920 look at the different versions and
+00:13:57.199 collaborate on it. And then what happens
+00:13:59.040 is we sync up Verscell to our GitHub so
+00:14:01.519 that we can actually deploy that code
+00:14:03.279 onto a real URL so that it's no longer
+00:14:05.279 just like a local host URL. First thing
+00:14:07.279 you want to do is go over to GitHub and
+00:14:08.880 create an account. It's completely free
+00:14:10.399 and it has been around for tons and tons
+00:14:12.560 of years. It is a industry standard for
+00:14:14.399 code. And then the second thing that
+00:14:15.839 you're going to do is go over to
+00:14:16.959 Verscell and create an account over here
+00:14:18.480 as well. So what's cool is we can
+00:14:20.160 basically have Claude Code do this
+00:14:21.760 entire pipeline for us. It's super super
+00:14:23.519 simple. So if you haven't yet connected
+00:14:25.279 your Claude code to your GitHub, you
+00:14:27.120 would just come in here, maybe clear out
+00:14:28.399 the conversation and say, &quot;Help me
+00:14:30.399 connect to GitHub so that I can push
+00:14:32.480 this code base to my GitHub repository.&quot;
+00:14:35.199 And what it can do is it can help you
+00:14:36.560 basically use the CLI to authenticate.
+00:14:38.800 Meaning it will basically just have a
+00:14:40.320 popup for you and all you have to do is
+00:14:41.600 sign in. It's super simple. So here you
+00:14:43.360 can see it says you're already
+00:14:44.320 authenticated with GitHub as Nate Herki.
+00:14:46.639 Nice. Now the next step is to say
+00:14:49.040 awesome. Now let's go ahead and create a
+00:14:51.600 new GitHub repository for me. You can
+00:14:53.360 just call it blender- website and push
+00:14:55.760 the code base for the Blender website
+00:14:57.680 into that repository. Now because we're
+00:14:59.920 pushing something to GitHub and because
+00:15:01.920 it's going to go on the web, this is
+00:15:03.279 where you'd want to be careful if you
+00:15:04.560 had like API keys or anything sensitive
+00:15:06.560 in there. In this case, we have
+00:15:08.079 literally nothing to worry about, but
+00:15:10.000 that is something just to keep in mind.
+00:15:11.519 All right, nice. So, your Blender
+00:15:13.120 website is now live on GitHub. Here's
+00:15:14.720 everything that it did. And it also says
+00:15:16.320 if you want to connect this to Versel
+00:15:17.600 for auto deploys, you can import the
+00:15:19.199 repo from the Versell dashboard. So,
+00:15:21.600 first let's just check in on this GitHub
+00:15:23.839 repo. We can see that this has been set
+00:15:25.680 up. We have one commit, which is the one
+00:15:27.279 that we just did. And that's important
+00:15:28.959 because every time we make a change, we
+00:15:30.800 can see exactly what happened to the
+00:15:32.160 code here. Now, what you'll notice is
+00:15:33.360 that this is a public repository. You
+00:15:35.199 could go into the settings and you could
+00:15:36.480 make this private and it would still be
+00:15:38.000 able to auto deploy to Verscell, no
+00:15:39.680 problem. And now that we're in Versell,
+00:15:41.440 all I have to do is come here to
+00:15:42.880 projects and click on add new. And then
+00:15:44.959 what you'll notice is right here because
+00:15:46.399 I've signed into Verscell with my
+00:15:47.839 GitHub, it says import GitHub
+00:15:49.519 repository. And all I can do is choose
+00:15:51.279 right here Blender-Seite. Click import.
+00:15:53.680 And this is automatically just going to
+00:15:55.040 build up this site for us. So I'll hit
+00:15:56.880 deploy. And then we'll let this spin up.
+00:15:58.720 And I'll show you guys that this is now
+00:16:00.720 accessible on the web. Awesome. So you
+00:16:03.360 just deployed a new project to Nate Her
+00:16:04.880 projects. Let's go ahead and continue
+00:16:06.160 into the dashboard here. All right. So
+00:16:07.680 something interesting just happened and
+00:16:08.880 I'm glad it did so I can show you guys
+00:16:10.560 how to fix it. So our project is now
+00:16:13.440 here on Verscell and when I click into
+00:16:15.360 the domain everything seems to load up,
+00:16:17.120 right? Right. We've got Obsidian Vortex.
+00:16:18.720 We see the animations come through. But
+00:16:20.320 as I start to scroll, where's our
+00:16:22.480 Blender? We still get the text coming
+00:16:24.399 through. We still get all these
+00:16:25.759 animations that we were looking for, but
+00:16:27.279 our Blender is not there. So what
+00:16:29.040 happened was when it pushed this GitHub
+00:16:30.880 repo, it excluded the frames. So if I
+00:16:33.759 come over to the left hand side and we
+00:16:34.880 go to our Blender project and we open up
+00:16:36.720 the frames, you can see that all of
+00:16:38.240 these were grayed out, which basically
+00:16:39.759 means everything got pushed to GitHub in
+00:16:41.519 this folder except for the frames, which
+00:16:43.759 means when the site tries to render it,
+00:16:45.279 there's no frames to actually render. So
+00:16:46.959 what I did is I said, &quot;Okay, that didn't
+00:16:48.560 work. You need to have the frames in the
+00:16:50.320 codebase so that it can actually use it,
+00:16:51.920 otherwise the animation just
+00:16:52.959 disappears.&quot; So I told it to update
+00:16:54.959 those changes, make another push. It
+00:16:57.040 fixed that and then basically it came
+00:16:58.880 back and said okay I did that now the
+00:17:01.199 frames are in the GitHub repo. If I go
+00:17:03.279 to the GitHub repo you can see that we
+00:17:04.640 now have two commits. If I click into
+00:17:06.319 the commits you can see nice the second
+00:17:08.079 one added animation frames for Verscell
+00:17:10.400 deployment. And then in Verscell if I go
+00:17:12.559 to deployments you can see that we had
+00:17:14.319 two. We had this current one that I
+00:17:15.679 rolled back to so I could show you guys
+00:17:17.280 and then we have this main production
+00:17:18.720 one which I could go to and we could
+00:17:21.119 actually roll up to this one. So I could
+00:17:23.199 click on these three dots and then click
+00:17:24.559 on redeploy. And now that I have
+00:17:26.480 redeployed, if I open up this Blender
+00:17:28.640 website one more time and we come down
+00:17:30.559 and we start to scroll, we can now see
+00:17:32.080 that the frames are being rendered and
+00:17:33.440 we still have all of the animations that
+00:17:35.120 we had built. And now the site is
+00:17:37.360 actually ready to go. And just to prove
+00:17:39.200 to you guys that this really is on the
+00:17:40.400 cloud, you can see on my phone we have
+00:17:42.320 the Blender website with the animations.
+00:17:44.160 Now, obviously, this hasn't been yet
+00:17:45.679 optimized for mobile, which would kind
+00:17:47.280 of be the next step, but you can see the
+00:17:49.039 animations are still here. And if it
+00:17:51.440 hasn't quite stuck yet, here's the
+00:17:53.200 advantage of doing it like this. Now
+00:17:55.440 that we have our site on the web, which
+00:17:57.280 maybe customers would be looking at and
+00:17:58.799 interfacing with, what if we wanted to
+00:18:00.480 change something like the colors or
+00:18:01.840 maybe even change the animation, we
+00:18:03.760 don't want to be changing what's
+00:18:04.880 actually out there in production in real
+00:18:06.559 time. So, we can change the code, we can
+00:18:08.559 test on a local host, and then once
+00:18:10.240 we're finally good with it, we push it
+00:18:11.840 to GitHub and then it automatically
+00:18:13.120 syncs to our real domain. So, that way
+00:18:15.039 we have basically a testing environment,
+00:18:17.120 a staging environment, and then we have
+00:18:18.720 our actual production website. And what
+00:18:20.559 you guys saw is that this literally took
+00:18:22.080 me like 30 minutes. And obviously if I
+00:18:24.160 spend another 30 minutes, the site could
+00:18:25.760 be like five times better. And this is
+00:18:27.280 crazy because there's so many businesses
+00:18:28.640 out there, whether they're local in your
+00:18:30.320 area or you know, you look online that
+00:18:32.559 have horrible websites because they
+00:18:34.320 don't want to prioritize it or they
+00:18:35.440 don't want to pay some web design agency
+00:18:37.440 tens of thousands of dollars for a new
+00:18:39.200 website. That could also take
+00:18:40.640 potentially months. Whereas what you
+00:18:42.320 could do is you could find prospects.
+00:18:43.919 You could find some sort of niche. So
+00:18:45.120 let's say you want to design websites
+00:18:46.480 for blender companies. You could build a
+00:18:48.559 demo site similar to this, right? Like
+00:18:50.240 you could build something like this in
+00:18:51.919 one day if you sat down and you wanted
+00:18:53.600 to make it really really good. And then
+00:18:55.520 you email them the link or you walk in
+00:18:57.200 and you show them and say I can build
+00:18:58.559 this for you with your products with
+00:19:00.400 your copy and I can get that to you in 2
+00:19:02.400 days and I can charge you know $5 to
+00:19:04.559 $10,000 which is a lot cheaper than they
+00:19:06.480 might get with other vendors. And then
+00:19:08.559 of course on top of that you could do
+00:19:10.000 monthly hosting, you could have
+00:19:11.200 maintenance which is recurring revenue.
+00:19:12.960 But it also ensures for them that if
+00:19:14.480 they need any different features, you
+00:19:16.080 can fix that codebase and you can push
+00:19:17.600 that all up there because you understand
+00:19:19.120 how this all works now. So maybe you
+00:19:21.360 don't like the style of how I'm doing
+00:19:22.880 this with the different, you know, text
+00:19:24.400 coming through and maybe like this
+00:19:25.760 animation overlay thing. Then just
+00:19:27.440 update the skill so that your cloud code
+00:19:29.600 doesn't actually do that. And once you
+00:19:31.280 now actually understand how all we're
+00:19:33.200 doing is we're turning videos into a
+00:19:34.799 bunch of frames and then having it
+00:19:36.559 scroll through, you'll be able to do so
+00:19:38.240 much more because it doesn't just have
+00:19:39.520 to be product spinning or you know X-ray
+00:19:41.760 vision. It can be words. It can be like
+00:19:43.919 walking. It can be whatever you want.
+00:19:45.520 You can also you can go to this website
+00:19:47.280 awards with three Ws for some
+00:19:48.640 inspiration on animations. It is super
+00:19:50.720 super cool what people are doing here.
+00:19:52.480 But that is going to do it for today. If
+00:19:53.919 you guys love nerding out about this
+00:19:55.280 kind of stuff, then definitely check out
+00:19:56.640 my plus community. The link for that is
+00:19:58.080 down in the description. We've got a
+00:19:59.360 great community of over 3,000 members
+00:20:00.720 who are building with AI every day,
+00:20:02.080 building businesses with AI. And if you
+00:20:03.760 have similar goals, it's a great spot to
+00:20:05.200 be. But anyways, if you enjoyed the
+00:20:06.720 video or you learned something new,
+00:20:07.919 please give it a like. It definitely
+00:20:08.880 helps me out a ton. And as always, I
+00:20:10.640 appreciate you guys making it to the end
+00:20:11.760 of the video. I'll see you on the next
+00:20:13.120 one. Thanks everyone.

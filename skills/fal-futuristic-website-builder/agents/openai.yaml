@@ -1,0 +1,4 @@
+interface:
+  display_name: "Futuristic Site Builder"
+  short_description: "Fal media to futuristic web builds"
+  default_prompt: "Use $fal-futuristic-website-builder to build a website about a 2025 Corvette Stingray from generated start/end images and a transition video."
