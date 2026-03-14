@@ -11,6 +11,19 @@ const galleryGrid = document.getElementById("gallery-grid");
 let jobPollingTimer = null;
 let galleryPollingTimer = null;
 let activeJobId = null;
+const configuredApiBase = String(window.ULTIMATEWEB_API_BASE || "").trim().replace(/\/+$/, "");
+
+function toApiUrl(path) {
+  if (configuredApiBase) return `${configuredApiBase}${path}`;
+  return path;
+}
+
+function toPublicAssetUrl(path) {
+  if (!path) return path;
+  if (/^https?:\/\//i.test(path)) return path;
+  if (configuredApiBase && path.startsWith("/")) return `${configuredApiBase}${path}`;
+  return path;
+}
 
 function setStatus(message) {
   statusText.textContent = message;
@@ -58,9 +71,12 @@ function renderGallery(items) {
   galleryEmpty.classList.add("hidden");
   galleryGrid.innerHTML = items
     .map((item) => {
-      const thumb = item.thumbnailUrl || "/generated-sites/2025-corvette-stingray/media/start-frame.png";
+      const thumb = toPublicAssetUrl(
+        item.thumbnailUrl || "/generated-sites/2025-corvette-stingray/media/start-frame.png"
+      );
+      const siteUrl = toPublicAssetUrl(item.siteUrl);
       return `
-        <a class="gallery-item" href="${item.siteUrl}" target="_blank" rel="noopener noreferrer">
+        <a class="gallery-item" href="${siteUrl}" target="_blank" rel="noopener noreferrer">
           <img src="${thumb}" alt="${item.title}" loading="lazy" />
           <div class="gallery-meta">
             <p class="gallery-title">${item.title}</p>
@@ -73,7 +89,7 @@ function renderGallery(items) {
 }
 
 async function refreshGallery() {
-  const response = await fetch("/api/gallery");
+  const response = await fetch(toApiUrl("/api/gallery"));
   if (!response.ok) {
     throw new Error("Failed to load gallery");
   }
@@ -82,7 +98,7 @@ async function refreshGallery() {
 }
 
 async function fetchJob(jobId) {
-  const response = await fetch(`/api/jobs/${jobId}`);
+  const response = await fetch(toApiUrl(`/api/jobs/${jobId}`));
   if (!response.ok) {
     const data = await response.json().catch(() => ({ error: "Unknown API error" }));
     throw new Error(data.error || "Failed to fetch job");
@@ -153,7 +169,8 @@ form.addEventListener("submit", async (event) => {
   setStatus("Submitting build request...");
 
   try {
-    const response = await fetch("/api/build", {
+    const apiEndpoint = toApiUrl("/api/build");
+    const response = await fetch(apiEndpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ topic }),
@@ -177,6 +194,11 @@ form.addEventListener("submit", async (event) => {
 
 setBusy(false);
 setStage("Waiting for a new request");
+if (window.location.hostname.endsWith("vercel.app") || window.location.hostname.includes("thejaspertan.com")) {
+  if (!configuredApiBase) {
+    setStatus("Backend not configured. Set ULTIMATEWEB_API_BASE in Vercel env.");
+  }
+}
 refreshGallery().catch(() => {
   // Keep page usable even if gallery fetch fails initially.
 });
