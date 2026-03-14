@@ -1,0 +1,183 @@
+const form = document.getElementById("build-form");
+const topicInput = document.getElementById("topic");
+const submitButton = document.getElementById("submit-btn");
+const statusText = document.getElementById("status-text");
+const stageText = document.getElementById("stage-text");
+const engineCore = document.getElementById("engine-core");
+const logs = document.getElementById("logs");
+const galleryEmpty = document.getElementById("gallery-empty");
+const galleryGrid = document.getElementById("gallery-grid");
+
+let jobPollingTimer = null;
+let galleryPollingTimer = null;
+let activeJobId = null;
+
+function setStatus(message) {
+  statusText.textContent = message;
+}
+
+function setStage(message) {
+  stageText.textContent = message;
+}
+
+function setBusy(isBusy) {
+  document.body.classList.toggle("is-building", isBusy);
+  engineCore.classList.toggle("is-building", isBusy);
+}
+
+function setLogs(lines) {
+  logs.textContent = Array.isArray(lines) && lines.length ? lines.join("\n") : "";
+  logs.scrollTop = logs.scrollHeight;
+}
+
+function formatDate(dateString) {
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return dateString;
+  return date.toLocaleString();
+}
+
+function deriveStage(logLines, status) {
+  const joined = (logLines || []).join("\n");
+  if (status === "completed") return "Build complete";
+  if (status === "failed") return "Build failed";
+  if (joined.includes("Generating start frame")) return "Generating first image with Nano Banana 2";
+  if (joined.includes("Generating end frame")) return "Generating final image with Nano Banana 2 Edit";
+  if (joined.includes("Generating transition video")) return "Rendering transition video with Kling 3.0";
+  if (joined.includes("Extracting frames")) return "Extracting frame sequence";
+  if (joined.includes("Scaffolding website")) return "Assembling website";
+  return "Preparing pipeline";
+}
+
+function renderGallery(items) {
+  if (!Array.isArray(items) || items.length === 0) {
+    galleryGrid.innerHTML = "";
+    galleryEmpty.classList.remove("hidden");
+    return;
+  }
+
+  galleryEmpty.classList.add("hidden");
+  galleryGrid.innerHTML = items
+    .map((item) => {
+      const thumb = item.thumbnailUrl || "/generated-sites/2025-corvette-stingray/media/start-frame.png";
+      return `
+        <a class="gallery-item" href="${item.siteUrl}" target="_blank" rel="noopener noreferrer">
+          <img src="${thumb}" alt="${item.title}" loading="lazy" />
+          <div class="gallery-meta">
+            <p class="gallery-title">${item.title}</p>
+            <p class="gallery-date">${formatDate(item.createdAt)}</p>
+          </div>
+        </a>
+      `;
+    })
+    .join("");
+}
+
+async function refreshGallery() {
+  const response = await fetch("/api/gallery");
+  if (!response.ok) {
+    throw new Error("Failed to load gallery");
+  }
+  const entries = await response.json();
+  renderGallery(entries);
+}
+
+async function fetchJob(jobId) {
+  const response = await fetch(`/api/jobs/${jobId}`);
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({ error: "Unknown API error" }));
+    throw new Error(data.error || "Failed to fetch job");
+  }
+  return response.json();
+}
+
+function stopJobPolling() {
+  if (jobPollingTimer) {
+    clearInterval(jobPollingTimer);
+    jobPollingTimer = null;
+  }
+}
+
+function startGalleryPolling() {
+  if (galleryPollingTimer) return;
+  galleryPollingTimer = setInterval(async () => {
+    try {
+      await refreshGallery();
+    } catch {
+      // Keep silent in background refresh.
+    }
+  }, 8000);
+}
+
+function startJobPolling(jobId) {
+  stopJobPolling();
+  jobPollingTimer = setInterval(async () => {
+    try {
+      const job = await fetchJob(jobId);
+      const status = String(job.status || "").toUpperCase();
+      setStatus(`Job ${job.id.slice(0, 8)} • ${status}`);
+      setStage(deriveStage(job.logs || [], job.status));
+      setLogs(job.logs || []);
+
+      if (job.status === "completed") {
+        stopJobPolling();
+        submitButton.disabled = false;
+        setBusy(false);
+        await refreshGallery();
+      }
+
+      if (job.status === "failed") {
+        stopJobPolling();
+        submitButton.disabled = false;
+        setBusy(false);
+        const reason = job.error ? `Failed: ${job.error}` : "Build failed";
+        setStatus(reason);
+      }
+    } catch (error) {
+      stopJobPolling();
+      submitButton.disabled = false;
+      setBusy(false);
+      setStatus(`Polling stopped: ${error.message}`);
+    }
+  }, 2200);
+}
+
+form.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const topic = topicInput.value.trim();
+  if (!topic) return;
+
+  submitButton.disabled = true;
+  setLogs([]);
+  setBusy(true);
+  setStage("Submitting request");
+  setStatus("Submitting build request...");
+
+  try {
+    const response = await fetch("/api/build", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ topic }),
+    });
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(data.error || "Failed to start build");
+    }
+
+    activeJobId = data.id;
+    setStatus(`Job ${activeJobId.slice(0, 8)} • RUNNING`);
+    setStage("Preparing pipeline");
+    startJobPolling(activeJobId);
+  } catch (error) {
+    submitButton.disabled = false;
+    setBusy(false);
+    setStatus(`Could not start build: ${error.message}`);
+  }
+});
+
+setBusy(false);
+setStage("Waiting for a new request");
+refreshGallery().catch(() => {
+  // Keep page usable even if gallery fetch fails initially.
+});
+startGalleryPolling();

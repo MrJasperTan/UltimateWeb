@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Futuristic Website Builder Portal</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <main class="portal-shell">
+    <section class="hero">
+      <p class="badge">Nano Banana 2 + Kling 3.0</p>
+      <h1>What kind of website are we building today?</h1>
+      <p class="subhead">Type a product concept and launch a full animated website pipeline.</p>
+
+      <form id="build-form" class="build-form">
+        <label for="topic">Website Topic</label>
+        <div class="input-row">
+          <input
+            id="topic"
+            name="topic"
+            type="text"
+            autocomplete="off"
+            placeholder="2025 Corvette Stingray"
+            required
+          />
+          <button id="submit-btn" type="submit">Launch Build</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="status-card">
+      <div class="status-header">
+        <h2>Build Engine</h2>
+        <p id="status-text">Idle</p>
+      </div>
+      <div class="engine-wrap">
+        <div id="engine-core" class="engine-core"></div>
+        <div class="engine-ring ring-a"></div>
+        <div class="engine-ring ring-b"></div>
+        <p id="stage-text" class="stage-text">Waiting for a new request</p>
+      </div>
+      <pre id="logs" class="logs"></pre>
+    </section>
+
+    <section class="gallery-card">
+      <div class="gallery-head">
+        <h2>Generated Websites</h2>
+        <p>Auto-refreshes and keeps all generated entries</p>
+      </div>
+      <div id="gallery-empty" class="empty-state">No generated sites found yet.</div>
+      <div id="gallery-grid" class="gallery-grid"></div>
+    </section>
+  </main>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
