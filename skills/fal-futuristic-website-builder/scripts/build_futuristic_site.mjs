@@ -414,7 +414,7 @@ function detectCategory(topic) {
   if (/(corvette|stingray|car|supercar|vehicle|sedan|truck|automotive|auto|tesla|porsche|ferrari|lamborghini|bmw|mercedes|mustang|camaro|mclaren|bugatti|aston\s*martin)/i.test(topic)) {
     return "car";
   }
-  if (/(city|town|village|country|island|mountain|lake|river|park|monument|landmark|tower|bridge|canyon|beach|resort|temple|palace|cathedral|museum|airport|harbor|port|district|borough|prefecture|province|state of)/i.test(topic)) {
+  if (/(city|town|village|country|island|mountain|lake|river|park|monument|landmark|tower|bridge|canyon|beach|resort|temple|palace|cathedral|museum|airport|harbor|port|district|borough|prefecture|province|state of|tokyo|kyoto|osaka|paris|london|new york|los angeles|dubai|rome|venice|barcelona|amsterdam|berlin|sydney|singapore|hong kong|bangkok|istanbul|cairo|mumbai|delhi|beijing|shanghai|seattle|chicago|miami|las vegas|san francisco|hawaii|bali|maldives|santorini|machu picchu|grand canyon|niagara|yellowstone|yosemite|everest|kilimanjaro|alps|sahara|amazon|patagonia|japan|france|italy|spain|germany|australia|brazil|mexico|india|china|egypt|greece|thailand|vietnam|morocco|peru|argentina|colombia|portugal|turkey|iceland|norway|switzerland|austria|croatia|czech|ireland|scotland|england|canada|alaska|africa|europe|asia|antarctica)/i.test(topic)) {
     return "place";
   }
   // Common person indicators — names with titles, or well-known figure patterns
