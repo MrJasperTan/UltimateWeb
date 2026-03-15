@@ -432,10 +432,97 @@ function detectCategory(topic) {
 }
 
 
+function generateDramaticCopy(category, topic, brand, research) {
+  const bestSnippet = pickBestSnippet(research, 220);
+  const introSubtext = bestSnippet || `Experience ${topic} like never before — a journey through precision, beauty, and uncompromising craft.`;
+
+  if (category === "car") {
+    return {
+      tagline: "ANNIHILATE THE ROAD",
+      introStatement: "We didn\u2019t design another car. We sculpted velocity into metal.",
+      introSubtext,
+      closingStatement: "The last machine you\u2019ll ever need.",
+    };
+  }
+  if (category === "person") {
+    return {
+      tagline: "REDEFINE POSSIBLE",
+      introStatement: "Some people don\u2019t follow the path. They become it.",
+      introSubtext,
+      closingStatement: "The standard was set. Then surpassed.",
+    };
+  }
+  if (category === "place") {
+    return {
+      tagline: "DISCOVER THE UNKNOWN",
+      introStatement: "Some places don\u2019t appear on maps. They appear in memories.",
+      introSubtext,
+      closingStatement: "Every journey ends here. Every story begins.",
+    };
+  }
+  // generic
+  return {
+    tagline: "ENGINEERED BEYOND",
+    introStatement: `We didn\u2019t build another product. We engineered a force of nature.`,
+    introSubtext,
+    closingStatement: "The future arrived. It just needed a name.",
+  };
+}
+
+function buildFeaturesFromResearch(category, topic, research) {
+  const animations = ["slide-left", "clip-reveal", "slide-right", "stagger-up"];
+  const alignments = ["left", "right", "left", "right"];
+  const snippets = (research && research.snippets) || [];
+
+  function snip(i) {
+    return (snippets[i] && snippets[i].length > 30) ? snippets[i] : null;
+  }
+
+  let templates;
+
+  if (category === "car") {
+    templates = [
+      { label: "001 / Engine", heading: "Powertrain Supremacy", body: snip(0) || "Raw displacement meets digital precision \u2014 a powertrain tuned for instant throttle response across the entire rev range." },
+      { label: "002 / Chassis", heading: "Suspension Architecture", body: snip(1) || "Adaptive damping, optimised geometry, and structural rigidity engineered for corner confidence and straight-line composure." },
+      { label: "003 / Interior", heading: "Technology Cockpit", body: snip(2) || "Driver-focused layout with haptic controls, head-up projection, and materials that reward every touch." },
+      { label: "004 / Aero", heading: "Design Language", body: snip(3) || "Every surface manages airflow \u2014 sculpted for downforce, cooled for endurance, and shaped for unmistakable presence." },
+    ];
+  } else if (category === "person") {
+    templates = [
+      { label: "001 / Origins", heading: "Where It All Began", body: snip(0) || `The formative years that forged ${topic} \u2014 raw talent colliding with relentless ambition.` },
+      { label: "002 / Peak", heading: "Peak Achievement", body: snip(1) || `The moments that redefined what was possible \u2014 records shattered, boundaries dissolved.` },
+      { label: "003 / Impact", heading: "Cultural Resonance", body: snip(2) || `Beyond the accolades \u2014 how ${topic} shifted the conversation and inspired a generation.` },
+      { label: "004 / Philosophy", heading: "The Approach", body: snip(3) || `A singular philosophy: outwork everyone, question everything, and never accept the ceiling as permanent.` },
+    ];
+  } else if (category === "place") {
+    templates = [
+      { label: "001 / Landscape", heading: "Geography & Terrain", body: snip(0) || `The topography of ${topic} \u2014 dramatic horizons, shifting light, and terrain that humbles the traveller.` },
+      { label: "002 / Culture", heading: "History & Heritage", body: snip(1) || `Centuries of tradition compressed into living streets, rituals, and the quiet pride of a place that remembers.` },
+      { label: "003 / Cuisine", heading: "Flavour & Lifestyle", body: snip(2) || `Taste the locale \u2014 ingredients sourced from the land, techniques passed through generations, experiences shared around every table.` },
+      { label: "004 / Architecture", heading: "Landmarks & Design", body: snip(3) || `Structures that define the skyline \u2014 from ancient stonework to contemporary glass, each building tells a story.` },
+    ];
+  } else {
+    templates = [
+      { label: "001 / Core", heading: "Core Technology", body: snip(0) || "A foundational system engineered for reliability, speed, and effortless scalability from day one." },
+      { label: "002 / Design", heading: "Design Language", body: snip(1) || "Every surface, every pixel, every interaction has been considered \u2014 nothing arbitrary, nothing wasted." },
+      { label: "003 / UX", heading: "User Experience", body: snip(2) || "Intuitive at first touch, powerful at depth \u2014 an interface that disappears so the work can take centre stage." },
+      { label: "004 / Performance", heading: "Performance Class", body: snip(3) || "Benchmarked against the best, tuned beyond the rest \u2014 performance that compounds over time." },
+    ];
+  }
+
+  return templates.map((t, i) => ({
+    ...t,
+    animation: animations[i],
+    alignment: alignments[i],
+  }));
+}
+
 function buildContentProfile(topic, brand, research) {
   const category = detectCategory(topic);
   const researchStats = extractResearchStats(research, category);
   const bestSnippet = pickBestSnippet(research, 180);
+  const dramatic = generateDramaticCopy(category, topic, brand, research);
+  const features = buildFeaturesFromResearch(category, topic, research);
 
   if (category === "car") {
     const hp = researchStats?.hp || "495";
@@ -446,73 +533,72 @@ function buildContentProfile(topic, brand, research) {
     return {
       heroKicker: "AERODYNAMIC FUTURE PERFORMANCE",
       heroSub,
-      sectionOneLabel: "001 / Chassis",
-      sectionOneHeading: "Carbon-Tuned Geometry",
-      sectionOneBody: "Low center of gravity, structural stiffness, and aero-balanced surfaces keep handling sharp at every speed band.",
-      sectionTwoLabel: "002 / Powertrain",
-      sectionTwoHeading: "Precision V8 Delivery",
-      sectionTwoBody: "Power is mapped for immediate response while maintaining control through corner exit, launch, and sustained acceleration.",
+      tagline: dramatic.tagline,
+      introStatement: dramatic.introStatement,
+      introSubtext: dramatic.introSubtext,
+      features,
       stats: [
         { value: String(hp), decimals: "0", suffix: "hp", label: "Peak output" },
         { value: String(accel), decimals: "1", suffix: "s", label: "0-60 launch" },
         { value: String(topSpeed), decimals: "0", suffix: "mph", label: "Top speed class" },
       ],
-      ctaLabel: "003 / Configuration",
+      closingStatement: dramatic.closingStatement,
+      ctaLabel: "005 / Configuration",
       ctaHeading: `Configure ${brand}`,
       ctaBody: `Choose performance package, wheel architecture, aero setup, and signature finish for your ${topic}.`,
       ctaButton: "Open Configurator",
+      headerCta: "Configure",
     };
   }
 
   if (category === "person") {
     const awards = researchStats?.awards || "12";
-    const occupation = researchStats?.occupation || "Visionary";
     const heroSub = bestSnippet
-      || `${topic} — a cinematic portrait from origin to icon, tracing the arc of an extraordinary career.`;
+      || `${topic} \u2014 a cinematic portrait from origin to icon, tracing the arc of an extraordinary career.`;
     return {
       heroKicker: "THE DEFINITIVE PORTRAIT",
       heroSub,
-      sectionOneLabel: "001 / Origins",
-      sectionOneHeading: "Where It All Began",
-      sectionOneBody: `The early years that shaped ${topic} — raw talent meeting relentless dedication, forging a path no one else could follow.`,
-      sectionTwoLabel: "002 / Legacy",
-      sectionTwoHeading: "Defining Moments",
-      sectionTwoBody: `The breakthroughs, the records, the cultural impact — ${topic} redefined what was possible and set a new standard.`,
+      tagline: dramatic.tagline,
+      introStatement: dramatic.introStatement,
+      introSubtext: dramatic.introSubtext,
+      features,
       stats: [
         { value: String(awards), decimals: "0", suffix: "+", label: "Major achievements" },
         { value: "1", decimals: "0", suffix: "of 1", label: "Singular talent" },
-        { value: "∞", decimals: "0", suffix: "", label: "Lasting influence" },
+        { value: "\u221E", decimals: "0", suffix: "", label: "Lasting influence" },
       ],
-      ctaLabel: "003 / Explore",
+      closingStatement: dramatic.closingStatement,
+      ctaLabel: "005 / Explore",
       ctaHeading: `Discover ${brand}`,
       ctaBody: `Dive deeper into the career, philosophy, and impact of ${topic}.`,
       ctaButton: "Full Story",
+      headerCta: "Discover",
     };
   }
 
   if (category === "place") {
-    const population = researchStats?.population || "—";
-    const founded = researchStats?.founded || "—";
+    const population = researchStats?.population || "\u2014";
+    const founded = researchStats?.founded || "\u2014";
     const heroSub = bestSnippet
-      || `${topic} — an immersive journey through atmosphere, architecture, and the spirit of a place unlike any other.`;
+      || `${topic} \u2014 an immersive journey through atmosphere, architecture, and the spirit of a place unlike any other.`;
     return {
       heroKicker: "DESTINATION UNVEILED",
       heroSub,
-      sectionOneLabel: "001 / Arrival",
-      sectionOneHeading: "First Impressions",
-      sectionOneBody: `The moment you enter ${topic}, the light shifts, the air changes, and you understand why this place has captivated travelers for generations.`,
-      sectionTwoLabel: "002 / Experience",
-      sectionTwoHeading: "The Heart of It",
-      sectionTwoBody: `Beyond the surface — the culture, the rhythm, the hidden details that make ${topic} unforgettable to those who truly explore it.`,
+      tagline: dramatic.tagline,
+      introStatement: dramatic.introStatement,
+      introSubtext: dramatic.introSubtext,
+      features,
       stats: [
         { value: String(population).replace(/,/g, ""), decimals: "0", suffix: "", label: "Population" },
         { value: String(founded), decimals: "0", suffix: "", label: "Established" },
         { value: "1", decimals: "0", suffix: "dest", label: "Must-visit" },
       ],
-      ctaLabel: "003 / Journey",
+      closingStatement: dramatic.closingStatement,
+      ctaLabel: "005 / Journey",
       ctaHeading: `Explore ${brand}`,
-      ctaBody: `Plan your journey to ${topic} — the routes, the seasons, the experiences that define this destination.`,
+      ctaBody: `Plan your journey to ${topic} \u2014 the routes, the seasons, the experiences that define this destination.`,
       ctaButton: "Start Planning",
+      headerCta: "Explore",
     };
   }
 
@@ -522,21 +608,21 @@ function buildContentProfile(topic, brand, research) {
   return {
     heroKicker: "FUTURE FORGED PRODUCT SYSTEM",
     heroSub,
-    sectionOneLabel: "001 / Form",
-    sectionOneHeading: "Engineered Exterior Language",
-    sectionOneBody: "Surface geometry, material choices, and contour flow are tuned for visual impact and functional performance.",
-    sectionTwoLabel: "002 / Experience",
-    sectionTwoHeading: "High-Response Interaction",
-    sectionTwoBody: "Every touchpoint is designed for clarity, speed, and confident operation in demanding real-world use.",
+    tagline: dramatic.tagline,
+    introStatement: dramatic.introStatement,
+    introSubtext: dramatic.introSubtext,
+    features,
     stats: [
       { value: "24", decimals: "0", suffix: "mo", label: "Product roadmap" },
       { value: "98.6", decimals: "1", suffix: "%", label: "Satisfaction target" },
       { value: "6", decimals: "0", suffix: "x", label: "Iteration velocity" },
     ],
-    ctaLabel: "003 / Launch",
+    closingStatement: dramatic.closingStatement,
+    ctaLabel: "005 / Launch",
     ctaHeading: `Build With ${brand}`,
     ctaBody: `Define final configuration, deployment strategy, and rollout milestones for your ${topic} experience.`,
     ctaButton: "Start Project",
+    headerCta: "Learn More",
   };
 }
 
@@ -545,6 +631,25 @@ function writeScaffoldFiles({ siteDir, topic, brand, frameCount, frameExtension,
   const headline = escapeHtml(topic.toUpperCase());
   const safeTopic = escapeHtml(topic);
   const safeBrand = escapeHtml(brand);
+  const taglineRepeated = escapeHtml(profile.tagline) + " \u00B7 " + escapeHtml(profile.tagline) + " \u00B7 " + escapeHtml(profile.tagline);
+
+  // Build feature sections HTML
+  const featureEnters = [18, 28, 38, 48];
+  const featureLeaves = [28, 38, 48, 58];
+  let featureSectionsHtml = "";
+  for (let i = 0; i < 4; i++) {
+    const f = profile.features[i];
+    const alignClass = "align-" + f.alignment;
+    featureSectionsHtml += `
+    <section class="scroll-section ${alignClass}" data-enter="${featureEnters[i]}" data-leave="${featureLeaves[i]}" data-animation="${f.animation}">
+      <div class="section-inner">
+        <p class="section-label">${escapeHtml(f.label)}</p>
+        <h2 class="section-heading">${escapeHtml(f.heading)}</h2>
+        <p class="section-body">${escapeHtml(f.body)}</p>
+      </div>
+    </section>
+`;
+  }
 
   const html = `<!doctype html>
 <html lang="en">
@@ -563,7 +668,7 @@ function writeScaffoldFiles({ siteDir, topic, brand, frameCount, frameExtension,
 
   <header class="site-header">
     <span class="brand">${safeBrand}</span>
-    <a href="#cta">Configure</a>
+    <a href="#cta">${escapeHtml(profile.headerCta)}</a>
   </header>
 
   <section class="hero-standalone">
@@ -576,27 +681,18 @@ function writeScaffoldFiles({ siteDir, topic, brand, frameCount, frameExtension,
   <div id="dark-overlay"></div>
 
   <div class="marquee-wrap" data-scroll-speed="-30">
-    <p class="marquee-text">${headline} ${headline}</p>
+    <p class="marquee-text">${taglineRepeated}</p>
   </div>
 
   <main id="scroll-container">
-    <section class="scroll-section align-left" data-enter="20" data-leave="34" data-animation="slide-left">
+    <section class="scroll-section section-dramatic-intro align-center" data-enter="8" data-leave="18" data-animation="fade-up">
       <div class="section-inner">
-        <p class="section-label">${escapeHtml(profile.sectionOneLabel)}</p>
-        <h2 class="section-heading">${escapeHtml(profile.sectionOneHeading)}</h2>
-        <p class="section-body">${escapeHtml(profile.sectionOneBody)}</p>
+        <h2 class="section-heading">${escapeHtml(profile.introStatement)}</h2>
+        <p class="section-body">${escapeHtml(profile.introSubtext)}</p>
       </div>
     </section>
-
-    <section class="scroll-section align-right" data-enter="34" data-leave="50" data-animation="clip-reveal">
-      <div class="section-inner">
-        <p class="section-label">${escapeHtml(profile.sectionTwoLabel)}</p>
-        <h2 class="section-heading">${escapeHtml(profile.sectionTwoHeading)}</h2>
-        <p class="section-body">${escapeHtml(profile.sectionTwoBody)}</p>
-      </div>
-    </section>
-
-    <section class="scroll-section section-stats" data-enter="50" data-leave="68" data-animation="stagger-up">
+${featureSectionsHtml}
+    <section class="scroll-section section-stats" data-enter="58" data-leave="70" data-animation="stagger-up">
       <div class="stats-grid">
         <div class="stat">
           <span class="stat-number" data-value="${escapeHtml(profile.stats[0].value)}" data-decimals="${escapeHtml(profile.stats[0].decimals)}">0</span>
@@ -616,7 +712,13 @@ function writeScaffoldFiles({ siteDir, topic, brand, frameCount, frameExtension,
       </div>
     </section>
 
-    <section id="cta" class="scroll-section align-left" data-enter="68" data-leave="100" data-animation="fade-up" data-persist="true">
+    <section class="scroll-section section-closing align-center" data-enter="70" data-leave="80" data-animation="fade-up">
+      <div class="section-inner">
+        <h2 class="section-heading">${escapeHtml(profile.closingStatement)}</h2>
+      </div>
+    </section>
+
+    <section id="cta" class="scroll-section align-left" data-enter="80" data-leave="100" data-animation="fade-up" data-persist="true">
       <div class="section-inner">
         <p class="section-label">${escapeHtml(profile.ctaLabel)}</p>
         <h2 class="section-heading">${escapeHtml(profile.ctaHeading)}</h2>
@@ -783,7 +885,7 @@ h1 {
 
 #scroll-container {
   position: relative;
-  height: 920vh;
+  height: 1400vh;
   z-index: 20;
 }
 
@@ -797,11 +899,29 @@ h1 {
 
 .align-left { padding-left: 5vw; padding-right: 55vw; }
 .align-right { padding-left: 55vw; padding-right: 5vw; }
+.align-center { padding: 0 10vw; text-align: center; }
 
 .section-inner {
   max-width: 40vw;
   display: grid;
   gap: 1rem;
+}
+
+.section-dramatic-intro .section-inner,
+.section-closing .section-inner {
+  max-width: 70ch;
+  margin-inline: auto;
+  text-align: center;
+}
+
+.section-dramatic-intro .section-heading {
+  font-size: clamp(2.5rem, 7vw, 5.5rem);
+  line-height: 1.05;
+}
+
+.section-closing .section-heading {
+  font-size: clamp(2rem, 5vw, 4rem);
+  line-height: 1.1;
 }
 
 .section-label {
@@ -869,9 +989,10 @@ h1 {
 }
 
 @media (max-width: 900px) {
-  #scroll-container { height: 600vh; }
+  #scroll-container { height: 1000vh; }
   .align-left,
-  .align-right {
+  .align-right,
+  .align-center {
     padding-left: 7vw;
     padding-right: 7vw;
     text-align: center;
@@ -1094,8 +1215,8 @@ function setupMarquee() {
 }
 
 function setupDarkOverlay() {
-  const enter = 0.5;
-  const leave = 0.68;
+  const enter = 0.58;
+  const leave = 0.70;
   const fadeRange = 0.05;
   ScrollTrigger.create({
     trigger: scrollContainer,
