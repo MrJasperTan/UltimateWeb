@@ -59,6 +59,8 @@ Optional:
   --end-model        Override end image model
   --video-model      Override video model
   --duration         Video duration seconds (default: 5)
+  --searxng-url      SearXNG instance URL for topic research (default: http://192.168.0.166:8888)
+  --no-research       Skip topic research step
   --help             Show this help
 `);
 }
@@ -287,13 +289,163 @@ function escapeHtml(value) {
     .replace(/'/g, "&#39;");
 }
 
-function buildContentProfile(topic, brand) {
-  const isCar = /(corvette|stingray|car|supercar|vehicle|sedan|truck|automotive|auto)/i.test(topic);
+const DEFAULT_SEARXNG_URL = "http://192.168.0.166:8888";
 
-  if (isCar) {
+async function researchTopic(topic, searxngUrl) {
+  const queries = [
+    `${topic} specifications features`,
+    `${topic} review details`,
+    `${topic} facts stats`,
+  ];
+
+  const allResults = [];
+
+  for (const query of queries) {
+    try {
+      const url = `${searxngUrl}/search?q=${encodeURIComponent(query)}&format=json&engines=google,duckduckgo,brave,startpage,wikipedia`;
+      const response = await fetch(url, { signal: AbortSignal.timeout(8000) });
+      if (!response.ok) continue;
+      const data = await response.json();
+      if (data.results && data.results.length > 0) {
+        allResults.push(...data.results.slice(0, 5));
+      }
+      if (data.infoboxes && data.infoboxes.length > 0) {
+        for (const box of data.infoboxes) {
+          allResults.push({
+            title: box.infobox || "",
+            content: box.content || "",
+            infobox_attributes: box.attributes || [],
+          });
+        }
+      }
+    } catch {
+      // Search unavailable, continue silently
+    }
+  }
+
+  if (allResults.length === 0) {
+    console.log("Research: no search results available, using template content.");
+    return null;
+  }
+
+  console.log(`Research: gathered ${allResults.length} results across ${queries.length} queries.`);
+
+  const research = {
+    snippets: [],
+    attributes: {},
+    descriptions: [],
+  };
+
+  for (const result of allResults) {
+    if (result.content && typeof result.content === "string" && result.content.length > 20) {
+      research.snippets.push(result.content.slice(0, 500));
+    }
+    if (result.infobox_attributes && Array.isArray(result.infobox_attributes)) {
+      for (const attr of result.infobox_attributes) {
+        if (attr.label && attr.value) {
+          research.attributes[attr.label] = String(attr.value).slice(0, 200);
+        }
+      }
+    }
+  }
+
+  // Deduplicate snippets
+  research.snippets = [...new Set(research.snippets)].slice(0, 10);
+
+  return research;
+}
+
+function extractResearchStats(research, category) {
+  if (!research) return null;
+
+  const attrs = research.attributes || {};
+  const snippetText = (research.snippets || []).join(" ");
+
+  if (category === "car") {
+    const hp = extractNumber(snippetText, /(\d{2,4})\s*(?:hp|horsepower|bhp)/i) || attrs["Power"] || attrs["Horsepower"];
+    const accel = extractNumber(snippetText, /(\d+\.?\d*)\s*(?:s|sec|seconds?).*?0.?(?:to|-).?60/i)
+      || extractNumber(snippetText, /0.?(?:to|-).?60.*?(\d+\.?\d*)\s*(?:s|sec)/i)
+      || attrs["0-60 mph"] || attrs["Acceleration"];
+    const topSpeed = extractNumber(snippetText, /top\s*speed.*?(\d{2,3})\s*(?:mph|km)/i)
+      || extractNumber(snippetText, /(\d{2,3})\s*(?:mph|km\/h).*?top\s*speed/i)
+      || attrs["Top speed"] || attrs["Top Speed"];
+    if (hp || accel || topSpeed) {
+      return { hp, accel, topSpeed };
+    }
+  }
+
+  if (category === "person") {
+    const born = attrs["Born"] || attrs["Date of birth"] || attrs["Birthday"];
+    const nationality = attrs["Nationality"] || attrs["Country"];
+    const occupation = attrs["Occupation"] || attrs["Known for"] || attrs["Profession"];
+    const awards = extractNumber(snippetText, /(\d+)\s*(?:awards?|titles?|championships?|medals?|grammy|oscar)/i);
+    if (born || nationality || occupation || awards) {
+      return { born, nationality, occupation, awards };
+    }
+  }
+
+  if (category === "place") {
+    const population = attrs["Population"] || extractNumber(snippetText, /population.*?(\d[\d,]+)/i);
+    const elevation = attrs["Elevation"] || attrs["Altitude"];
+    const founded = attrs["Founded"] || attrs["Established"];
+    const area = attrs["Area"] || attrs["Size"];
+    if (population || elevation || founded || area) {
+      return { population, elevation, founded, area };
+    }
+  }
+
+  return null;
+}
+
+function extractNumber(text, regex) {
+  const match = text.match(regex);
+  return match ? match[1].replace(/,/g, "") : null;
+}
+
+function pickBestSnippet(research, maxLen) {
+  if (!research || !research.snippets || research.snippets.length === 0) return null;
+  // Return the longest snippet up to maxLen as it likely has the most info
+  const sorted = [...research.snippets].sort((a, b) => b.length - a.length);
+  const best = sorted[0];
+  return best.length > maxLen ? best.slice(0, maxLen) + "..." : best;
+}
+
+function detectCategory(topic) {
+  if (/(corvette|stingray|car|supercar|vehicle|sedan|truck|automotive|auto|tesla|porsche|ferrari|lamborghini|bmw|mercedes|mustang|camaro|mclaren|bugatti|aston\s*martin)/i.test(topic)) {
+    return "car";
+  }
+  if (/(city|town|village|country|island|mountain|lake|river|park|monument|landmark|tower|bridge|canyon|beach|resort|temple|palace|cathedral|museum|airport|harbor|port|district|borough|prefecture|province|state of)/i.test(topic)) {
+    return "place";
+  }
+  // Common person indicators — names with titles, or well-known figure patterns
+  if (/(dr\.?|mr\.?|mrs\.?|ms\.?|president|ceo|chef|coach|captain|king|queen|prince|princess|saint|st\.)/i.test(topic)) {
+    return "person";
+  }
+  // If it looks like a proper name (2-4 capitalized words, no product-like terms)
+  const words = topic.trim().split(/\s+/);
+  const allCapitalized = words.length >= 2 && words.length <= 4 && words.every(w => /^[A-Z]/.test(w));
+  const noProductWords = !/\d{4}|edition|pro|max|ultra|plus|series|model|version|gen\b/i.test(topic);
+  if (allCapitalized && noProductWords) {
+    return "person";
+  }
+  return "generic";
+}
+
+
+function buildContentProfile(topic, brand, research) {
+  const category = detectCategory(topic);
+  const researchStats = extractResearchStats(research, category);
+  const bestSnippet = pickBestSnippet(research, 180);
+
+  if (category === "car") {
+    const hp = researchStats?.hp || "495";
+    const accel = researchStats?.accel || "2.9";
+    const topSpeed = researchStats?.topSpeed || "194";
+    const heroSub = bestSnippet
+      || `From reveal frame to full road form, ${topic} fuses track-ready engineering with street precision.`;
     return {
       heroKicker: "AERODYNAMIC FUTURE PERFORMANCE",
-      heroSub: `From reveal frame to full road form, ${topic} fuses track-ready engineering with street precision.`,
+      heroSub,
       sectionOneLabel: "001 / Chassis",
       sectionOneHeading: "Carbon-Tuned Geometry",
       sectionOneBody: "Low center of gravity, structural stiffness, and aero-balanced surfaces keep handling sharp at every speed band.",
@@ -301,9 +453,9 @@ function buildContentProfile(topic, brand) {
       sectionTwoHeading: "Precision V8 Delivery",
       sectionTwoBody: "Power is mapped for immediate response while maintaining control through corner exit, launch, and sustained acceleration.",
       stats: [
-        { value: "495", decimals: "0", suffix: "hp", label: "Peak output" },
-        { value: "2.9", decimals: "1", suffix: "s", label: "0-60 launch" },
-        { value: "194", decimals: "0", suffix: "mph", label: "Top speed class" },
+        { value: String(hp), decimals: "0", suffix: "hp", label: "Peak output" },
+        { value: String(accel), decimals: "1", suffix: "s", label: "0-60 launch" },
+        { value: String(topSpeed), decimals: "0", suffix: "mph", label: "Top speed class" },
       ],
       ctaLabel: "003 / Configuration",
       ctaHeading: `Configure ${brand}`,
@@ -312,9 +464,64 @@ function buildContentProfile(topic, brand) {
     };
   }
 
+  if (category === "person") {
+    const awards = researchStats?.awards || "12";
+    const occupation = researchStats?.occupation || "Visionary";
+    const heroSub = bestSnippet
+      || `${topic} — a cinematic portrait from origin to icon, tracing the arc of an extraordinary career.`;
+    return {
+      heroKicker: "THE DEFINITIVE PORTRAIT",
+      heroSub,
+      sectionOneLabel: "001 / Origins",
+      sectionOneHeading: "Where It All Began",
+      sectionOneBody: `The early years that shaped ${topic} — raw talent meeting relentless dedication, forging a path no one else could follow.`,
+      sectionTwoLabel: "002 / Legacy",
+      sectionTwoHeading: "Defining Moments",
+      sectionTwoBody: `The breakthroughs, the records, the cultural impact — ${topic} redefined what was possible and set a new standard.`,
+      stats: [
+        { value: String(awards), decimals: "0", suffix: "+", label: "Major achievements" },
+        { value: "1", decimals: "0", suffix: "of 1", label: "Singular talent" },
+        { value: "∞", decimals: "0", suffix: "", label: "Lasting influence" },
+      ],
+      ctaLabel: "003 / Explore",
+      ctaHeading: `Discover ${brand}`,
+      ctaBody: `Dive deeper into the career, philosophy, and impact of ${topic}.`,
+      ctaButton: "Full Story",
+    };
+  }
+
+  if (category === "place") {
+    const population = researchStats?.population || "—";
+    const founded = researchStats?.founded || "—";
+    const heroSub = bestSnippet
+      || `${topic} — an immersive journey through atmosphere, architecture, and the spirit of a place unlike any other.`;
+    return {
+      heroKicker: "DESTINATION UNVEILED",
+      heroSub,
+      sectionOneLabel: "001 / Arrival",
+      sectionOneHeading: "First Impressions",
+      sectionOneBody: `The moment you enter ${topic}, the light shifts, the air changes, and you understand why this place has captivated travelers for generations.`,
+      sectionTwoLabel: "002 / Experience",
+      sectionTwoHeading: "The Heart of It",
+      sectionTwoBody: `Beyond the surface — the culture, the rhythm, the hidden details that make ${topic} unforgettable to those who truly explore it.`,
+      stats: [
+        { value: String(population).replace(/,/g, ""), decimals: "0", suffix: "", label: "Population" },
+        { value: String(founded), decimals: "0", suffix: "", label: "Established" },
+        { value: "1", decimals: "0", suffix: "dest", label: "Must-visit" },
+      ],
+      ctaLabel: "003 / Journey",
+      ctaHeading: `Explore ${brand}`,
+      ctaBody: `Plan your journey to ${topic} — the routes, the seasons, the experiences that define this destination.`,
+      ctaButton: "Start Planning",
+    };
+  }
+
+  // Generic / product fallback
+  const heroSub = bestSnippet
+    || `${topic} is presented as a cinematic product journey, from first silhouette to fully activated form.`;
   return {
     heroKicker: "FUTURE FORGED PRODUCT SYSTEM",
-    heroSub: `${topic} is presented as a cinematic product journey, from first silhouette to fully activated form.`,
+    heroSub,
     sectionOneLabel: "001 / Form",
     sectionOneHeading: "Engineered Exterior Language",
     sectionOneBody: "Surface geometry, material choices, and contour flow are tuned for visual impact and functional performance.",
@@ -333,8 +540,8 @@ function buildContentProfile(topic, brand) {
   };
 }
 
-function writeScaffoldFiles({ siteDir, topic, brand, frameCount, frameExtension }) {
-  const profile = buildContentProfile(topic, brand);
+function writeScaffoldFiles({ siteDir, topic, brand, frameCount, frameExtension, research }) {
+  const profile = buildContentProfile(topic, brand, research);
   const headline = escapeHtml(topic.toUpperCase());
   const safeTopic = escapeHtml(topic);
   const safeBrand = escapeHtml(brand);
@@ -968,6 +1175,43 @@ function runFrameExtraction(videoPath, framesDir) {
 }
 
 function createPrompts(topic) {
+  const category = detectCategory(topic);
+
+  if (category === "person") {
+    const startPrompt =
+      `Cinematic portrait of ${topic}, dramatic studio lighting, dark moody background, ` +
+      `editorial photography style, sharp focus on face and expression, no text, no logos, ultra detailed`;
+
+    const endPrompt =
+      `Same ${topic} subject. Show a dynamic action or iconic pose that captures their essence, ` +
+      `dramatic lighting with motion blur accents, dark atmospheric background, ` +
+      `no text, no logos, editorial photography, ultra detailed.`;
+
+    const motionPrompt =
+      `Cinematic portrait animation. Start from first frame. Smooth transition to the dynamic action pose. ` +
+      `Elegant camera movement, dramatic lighting shifts, no sudden warping, no text, dark atmospheric background.`;
+
+    return { startPrompt, endPrompt, motionPrompt };
+  }
+
+  if (category === "place") {
+    const startPrompt =
+      `Cinematic wide establishing shot of ${topic}, golden hour lighting, dramatic atmosphere, ` +
+      `architectural detail, landscape photography, no people, no text, no logos, ultra detailed 8k`;
+
+    const endPrompt =
+      `Same ${topic} location, different dramatic perspective. Aerial or intimate detail view revealing ` +
+      `hidden character of the place, atmospheric lighting, moody sky, ` +
+      `no people, no text, no logos, landscape photography, ultra detailed.`;
+
+    const motionPrompt =
+      `Cinematic location reveal. Start from first frame. Smooth drone-like camera movement exploring the space. ` +
+      `Atmospheric particles, shifting light, no sudden warping, no text, no people, cinematic landscape.`;
+
+    return { startPrompt, endPrompt, motionPrompt };
+  }
+
+  // Car / product / generic
   const startPrompt =
     `Professional studio hero shot of ${topic}, centered, cinematic lighting, ` +
     `matte black seamless background, no logos, no text, no humans, no reflections, ultra detailed product photography`;
@@ -1151,6 +1395,19 @@ async function main() {
   console.log("Extracting frames...");
   const extraction = runFrameExtraction(videoPath, framesDir);
 
+  const searxngUrl = String(options["searxng-url"] || DEFAULT_SEARXNG_URL);
+  const skipResearch = options["no-research"] === true;
+  let research = null;
+
+  if (!skipResearch) {
+    console.log("Researching topic...");
+    try {
+      research = await researchTopic(topic, searxngUrl);
+    } catch (researchError) {
+      console.warn(`Research step failed: ${researchError.message}. Continuing with template content.`);
+    }
+  }
+
   console.log("Scaffolding website...");
   writeScaffoldFiles({
     siteDir,
@@ -1158,6 +1415,7 @@ async function main() {
     brand,
     frameCount: extraction.frameCount,
     frameExtension: extraction.frameExtension,
+    research,
   });
 
   metadata.startImageUrl = startImageUrl;
@@ -1168,6 +1426,8 @@ async function main() {
   metadata.frameExtraction = extraction.settings;
   metadata.frameCount = extraction.frameCount;
   metadata.frameExtension = extraction.frameExtension;
+  metadata.category = detectCategory(topic);
+  if (research) metadata.research = { snippetCount: research.snippets.length, attributeCount: Object.keys(research.attributes).length };
   writeFileSync(join(siteDir, "pipeline-metadata.json"), JSON.stringify(metadata, null, 2));
 
   console.log("");

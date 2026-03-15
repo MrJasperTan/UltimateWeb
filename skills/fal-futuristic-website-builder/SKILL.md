@@ -1,37 +1,55 @@
 ---
 name: fal-futuristic-website-builder
-description: End-to-end futuristic product website automation using fal.ai media generation plus scroll-driven frontend scaffolding. Use when the user asks for a site like "build a website about a 2025 Corvette Stingray" and wants the full pipeline handled automatically: first image, last image, start-end video, extracted frames, and assembled one-page website.
+description: End-to-end futuristic website automation using fal.ai media generation, topic research, and scroll-driven frontend scaffolding. Handles products, people, and places. Use when the user asks for a site like "build a website about a 2025 Corvette Stingray" or "build a website about Michael Jordan" or "build a website about Tokyo" and wants the full pipeline handled automatically: research, first image, last image, start-end video, extracted frames, and assembled one-page website with real content.
 ---
 
 # Fal Futuristic Website Builder
 
-Build an animated one-page product website from a single topic with minimal back-and-forth.
+Build an animated one-page website from a single topic with minimal back-and-forth. Works for products, people, and places.
 
-Follow the transcript-inspired workflow:
+Follow the workflow:
 1. Plan first.
-2. Generate start and end frames.
-3. Generate transition video from those frames.
-4. Convert video to frame sequence.
-5. Assemble and iterate the scroll website.
+2. Research the topic (auto-detect category: car, person, place, or generic product).
+3. Generate start and end frames (prompts adapted to category).
+4. Generate transition video from those frames.
+5. Convert video to frame sequence.
+6. Assemble the scroll website with real researched content.
+
+## Topic Categories
+
+The pipeline auto-detects what kind of topic you're building for:
+
+- **Car / Vehicle** — performance stats, powertrain specs, configuration CTA
+- **Person / Public Figure** — biographical arc (origins → legacy), career achievements, editorial portrait imagery
+- **Place / Destination** — arrival-to-exploration narrative, geography/culture stats, atmospheric landscape imagery
+- **Generic Product** — product form, experience, launch timeline
+
+Each category gets tailored image prompts, content sections, and stat blocks.
 
 ## Quick Start
 
-For a request like "Build a website about a 2025 Corvette Stingray", run:
-
 ```bash
+# Product
 node skills/fal-futuristic-website-builder/scripts/build_futuristic_site.mjs \
-  --topic "2025 Corvette Stingray" \
-  --out-dir generated-sites
+  --topic "2025 Corvette Stingray" --out-dir generated-sites
+
+# Person
+node skills/fal-futuristic-website-builder/scripts/build_futuristic_site.mjs \
+  --topic "Michael Jordan" --out-dir generated-sites
+
+# Place
+node skills/fal-futuristic-website-builder/scripts/build_futuristic_site.mjs \
+  --topic "Tokyo Japan" --out-dir generated-sites
 ```
 
 Then preview:
 
 ```bash
-cd generated-sites/2025-corvette-stingray
+cd generated-sites/<slug>
 python3 -m http.server 8000
 ```
 
-To run the interactive builder portal (topic input -> generation job -> clickable thumbnail):
+To run the interactive builder portal:
 
 ```bash
 node builder-portal/server.mjs
@@ -39,16 +57,33 @@ node builder-portal/server.mjs
 
 Open `http://localhost:8787`.
 
+## Research Step
+
+Before scaffolding the website, the pipeline queries SearXNG to gather real data about the topic:
+
+- Product specs, features, and descriptions
+- Biographical details for people (born, nationality, achievements)
+- Geographic/cultural facts for places (population, founded, area)
+- Real snippets used as hero descriptions instead of generic copy
+
+Research is automatic and gracefully degrades — if SearXNG is unreachable, the pipeline falls back to template content.
+
+### Research Options
+
+- `--searxng-url URL` — Override the SearXNG endpoint (default: `http://192.168.0.166:8888`)
+- `--no-research` — Skip the research step entirely, use template content
+
 ## Inputs
 
 - Required:
-  - Product topic via `--topic`
+  - Topic via `--topic`
   - `FAL_KEY` provided either in `.env` at project root or as environment variable
 - Optional:
   - `--brand "Brand Name"`
   - `--video-path /path/to/existing.mp4` to skip fal media generation
   - `--start-prompt`, `--end-prompt`, `--motion-prompt`
   - `--start-model`, `--end-model`, `--video-model`
+  - `--searxng-url`, `--no-research`
 
 ## Outputs
 
@@ -60,33 +95,37 @@ The script creates:
 - `index.html`
 - `css/style.css`
 - `js/app.js`
-- `pipeline-metadata.json`
-
-The portal creates the same site output under `generated-sites/<slug>/` and exposes:
-- `/generated-sites/<slug>/index.html` (final site)
-- `/generated-sites/<slug>/media/start-frame.png` (thumbnail shown in portal)
+- `pipeline-metadata.json` (includes category, research summary)
 
 ## Workflow
 
 1. Convert vague requests into direct execution.
 Ask at most one clarifying question only if blocked. Otherwise, assume premium defaults and proceed.
 
-2. Generate media with fal.ai.
-Run `scripts/build_futuristic_site.mjs` with the topic. The script uses Nano Banana 2 for first/last images and Kling 3.0 image-to-video for start-end motion by default.
+2. Research the topic.
+Query SearXNG for real product/person/place data. Extract specs, facts, and descriptions to populate the site with authentic content.
 
-3. Build the website from extracted frames.
-The script runs ffmpeg extraction and scaffolds a premium scroll page with canvas frame rendering and GSAP section choreography.
+3. Generate media with fal.ai.
+Run `scripts/build_futuristic_site.mjs` with the topic. Image prompts are adapted to the detected category (portrait for people, landscape for places, product shot for cars/products).
 
-4. Review locally, then iterate.
+4. Build the website from extracted frames.
+The script runs ffmpeg extraction and scaffolds a premium scroll page with canvas frame rendering, GSAP section choreography, and real researched content.
+
+5. Review locally, then iterate.
 If the user gives feedback ("feature two appears too late"), update prompts or section ranges and rerun.
 
-5. Keep the improvement loop.
+6. Keep the improvement loop.
 After each iteration, preserve what worked in prompts and structure for the next generation request.
+
+## Design Reference
+
+See `skills/frontend-design/SKILL.md` for design direction guidance per category (typography, color, motion, spatial composition). Every generated site should look purpose-built for its topic.
 
 ## Guardrails
 
 - Never hardcode API keys in files. Use `FAL_KEY`.
 - Treat fal generation as paid API usage; do not loop indefinitely on failures.
+- Research gracefully degrades — never fail a build because search is unavailable.
 - Prefer local validation before deployment.
 - Ensure `frames/` is committed/deployed, otherwise canvas animation breaks in production.
 
@@ -94,20 +133,4 @@ After each iteration, preserve what worked in prompts and structure for the next
 
 - Model and endpoint notes: `references/fal-models.md`
 - Source-video inspiration summary: `references/video-inspiration.md`
-
-## Example Invocation
-
-```bash
-node skills/fal-futuristic-website-builder/scripts/build_futuristic_site.mjs \
-  --topic "2025 Corvette Stingray" \
-  --brand "Corvette Labs" \
-  --out-dir generated-sites
-```
-
-If the user already has a transition video:
-```bash
-node skills/fal-futuristic-website-builder/scripts/build_futuristic_site.mjs \
-  --topic "2025 Corvette Stingray" \
-  --video-path /absolute/path/corvette-transition.mp4 \
-  --out-dir generated-sites
-```
+- Frontend design principles: `../frontend-design/SKILL.md`

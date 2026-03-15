@@ -1,0 +1,32 @@
+{
+  "topic": "2026 Lamborghini Aventador Reborn",
+  "brand": "2026 Lamborghini",
+  "models": {
+    "startModel": "fal-ai/nano-banana-2",
+    "endModel": "fal-ai/nano-banana-2/edit",
+    "videoModel": "fal-ai/kling-video/v3/pro/image-to-video"
+  },
+  "videoDurationSeconds": "5",
+  "prompts": {
+    "startPrompt": "Professional studio hero shot of 2026 Lamborghini Aventador Reborn, centered, cinematic lighting, matte black seamless background, no logos, no text, no humans, no reflections, ultra detailed product photography",
+    "endPrompt": "Same 2026 Lamborghini Aventador Reborn subject and camera angle. Show a futuristic deconstruction state with key components separated and suspended in a controlled exploded-view composition. Keep matte black seamless background, no logos, no text, no humans, no reflections, studio lighting, ultra detailed.",
+    "motionPrompt": "Cinematic product animation. Start from first frame. Move smoothly toward the final exploded-view composition. Controlled mechanical motion, no sudden warping, no camera shake, no text, no humans, black seamless background."
+  },
+  "generatedAt": "2026-03-15T00:00:40.804Z",
+  "startImageUrl": "https://v3b.fal.media/files/b/0a923244/ZgfxgVZYpcQdVJ-Kofdmc_gUH66TXT.png",
+  "endImageUrl": "https://v3b.fal.media/files/b/0a923248/FomqshNg8O_MfC59xUbwD_V2Edc4Yo.png",
+  "videoUrl": "https://v3b.fal.media/files/b/0a92325e/uU--zgyes8V0c9uuuvdYk_output.mp4",
+  "localVideo": "/home/thejaspertan/agents/Ultimateweb/generated-sites/2026-lamborghini-aventador-reborn-mmqznty5/media/transition.mp4",
+  "videoMeta": {
+    "width": 1924,
+    "height": 1076,
+    "duration": 5.041667,
+    "fps": 24
+  },
+  "frameExtraction": {
+    "fps": 20,
+    "width": 1920
+  },
+  "frameCount": 101,
+  "frameExtension": "png"
+}
