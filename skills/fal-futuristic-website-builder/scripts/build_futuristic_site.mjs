@@ -13,6 +13,7 @@ const DEFAULT_VIDEO_MODEL = "fal-ai/kling-video/v3/pro/image-to-video";
 const FAL_BASE_URL = "https://queue.fal.run";
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = resolve(SCRIPT_DIR, "../../..");
+const PAGE_MODES = new Set(["conversion", "editorial", "hybrid"]);
 
 function loadEnvFromDotenv(dotenvPath) {
   if (!existsSync(dotenvPath)) return;
@@ -59,6 +60,7 @@ Optional:
   --end-model        Override end image model
   --video-model      Override video model
   --duration         Video duration seconds (default: 5)
+  --page-mode        Site mode: conversion, editorial, or hybrid (default: conversion)
   --searxng-url      SearXNG instance URL for topic research (default: http://192.168.0.166:8888)
   --no-research       Skip topic research step
   --help             Show this help
@@ -82,6 +84,14 @@ function parseArgs(argv) {
     i += 1;
   }
   return options;
+}
+
+function normalizePageMode(rawMode) {
+  const mode = String(rawMode || "conversion").trim().toLowerCase();
+  if (!PAGE_MODES.has(mode)) {
+    throw new Error(`Invalid --page-mode "${rawMode}". Expected one of: conversion, editorial, hybrid.`);
+  }
+  return mode;
 }
 
 function slugify(input) {
@@ -299,6 +309,7 @@ async function researchTopic(topic, searxngUrl) {
   ];
 
   const allResults = [];
+  const sources = [];
 
   for (const query of queries) {
     try {
@@ -307,7 +318,16 @@ async function researchTopic(topic, searxngUrl) {
       if (!response.ok) continue;
       const data = await response.json();
       if (data.results && data.results.length > 0) {
-        allResults.push(...data.results.slice(0, 5));
+        const results = data.results.slice(0, 5);
+        allResults.push(...results);
+        for (const result of results) {
+          if (!result.url) continue;
+          sources.push({
+            url: result.url,
+            title: result.title || query,
+            source: result.engine || result.engines?.[0] || "search",
+          });
+        }
       }
       if (data.infoboxes && data.infoboxes.length > 0) {
         for (const box of data.infoboxes) {
@@ -333,7 +353,7 @@ async function researchTopic(topic, searxngUrl) {
   const research = {
     snippets: [],
     attributes: {},
-    descriptions: [],
+    sources: [],
   };
 
   for (const result of allResults) {
@@ -351,8 +371,218 @@ async function researchTopic(topic, searxngUrl) {
 
   // Deduplicate snippets
   research.snippets = [...new Set(research.snippets)].slice(0, 10);
+  research.sources = dedupeSources(sources, 8);
+  research.category = detectCategory(topic);
+  research.summary = buildResearchSummary(topic, research.snippets);
+  research.facts = buildResearchFacts(research.category, research.attributes, research.snippets);
+  research.proofPoints = buildProofPoints(research.category, topic, research.facts, research.snippets);
+  research.faqCandidates = buildFaqCandidates(research.category, topic, research.facts);
+  research.researchedFields = research.facts.map((fact) => fact.label);
+  research.inferredFallbackUsed = research.sources.length === 0 || research.facts.length < 2;
+  research.confidence =
+    research.sources.length >= 4 && research.facts.length >= 4
+      ? "high"
+      : research.sources.length >= 2 || research.facts.length >= 2
+        ? "medium"
+        : "low";
+  research.coverage = {
+    snippetCount: research.snippets.length,
+    attributeCount: Object.keys(research.attributes).length,
+    sourceCount: research.sources.length,
+    factCount: research.facts.length,
+  };
 
   return research;
+}
+
+function normalizeWhitespace(value) {
+  return String(value || "").replace(/\s+/g, " ").trim();
+}
+
+function clipText(value, maxLen) {
+  const clean = normalizeWhitespace(value);
+  if (clean.length <= maxLen) return clean;
+  return clean.slice(0, maxLen - 3).trimEnd() + "...";
+}
+
+function titleizeFactLabel(value) {
+  return normalizeWhitespace(value)
+    .replace(/[_-]+/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function dedupeSources(items, limit = 8) {
+  const seen = new Set();
+  const out = [];
+  for (const item of items) {
+    const url = normalizeWhitespace(item.url);
+    if (!url || seen.has(url)) continue;
+    seen.add(url);
+    out.push({
+      url,
+      title: clipText(item.title || url, 160),
+      source: clipText(item.source || "search", 80),
+    });
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
+function buildResearchSummary(topic, snippets) {
+  const best = pickBestSnippet({ snippets }, 240);
+  if (best) return best;
+  return `${topic} is presented through a research-informed narrative with premium positioning and category-specific proof points.`;
+}
+
+function makeFact(label, value, type = "attribute") {
+  const cleanValue = clipText(value, 180);
+  if (!cleanValue) return null;
+  return {
+    label: titleizeFactLabel(label),
+    value: cleanValue,
+    type,
+  };
+}
+
+function buildResearchFacts(category, attributes, snippets) {
+  const facts = [];
+  const pushFact = (label, value, type) => {
+    const fact = makeFact(label, value, type);
+    if (!fact) return;
+    if (facts.some((entry) => entry.label === fact.label && entry.value === fact.value)) return;
+    facts.push(fact);
+  };
+
+  for (const [label, value] of Object.entries(attributes || {})) {
+    pushFact(label, value, "attribute");
+  }
+
+  const combined = normalizeWhitespace((snippets || []).join(" "));
+  if (category === "car") {
+    pushFact("Horsepower", extractNumber(combined, /(\d{2,4})\s*(?:hp|horsepower|bhp)/i), "metric");
+    pushFact(
+      "0-60 mph",
+      extractNumber(combined, /(\d+\.?\d*)\s*(?:s|sec|seconds?).*?0.?(?:to|-).?60/i)
+        || extractNumber(combined, /0.?(?:to|-).?60.*?(\d+\.?\d*)\s*(?:s|sec)/i),
+      "metric"
+    );
+    pushFact(
+      "Top speed",
+      extractNumber(combined, /top\s*speed.*?(\d{2,3})\s*(?:mph|km)/i)
+        || extractNumber(combined, /(\d{2,3})\s*(?:mph|km\/h).*?top\s*speed/i),
+      "metric"
+    );
+  }
+
+  if (category === "person") {
+    pushFact("Born", attributes["Born"] || attributes["Date of birth"] || attributes["Birthday"], "bio");
+    pushFact("Nationality", attributes["Nationality"] || attributes["Country"], "bio");
+    pushFact("Occupation", attributes["Occupation"] || attributes["Known for"] || attributes["Profession"], "bio");
+  }
+
+  if (category === "place") {
+    pushFact("Population", attributes["Population"] || extractNumber(combined, /population.*?(\d[\d,]+)/i), "metric");
+    pushFact("Founded", attributes["Founded"] || attributes["Established"], "history");
+    pushFact("Area", attributes["Area"] || attributes["Size"], "metric");
+    pushFact("Elevation", attributes["Elevation"] || attributes["Altitude"], "metric");
+  }
+
+  return facts.slice(0, 8);
+}
+
+function buildProofPoints(category, topic, facts, snippets) {
+  const proofPoints = [];
+  for (const fact of facts.slice(0, 4)) {
+    proofPoints.push(`${fact.label}: ${fact.value}`);
+  }
+  for (const snippet of snippets || []) {
+    const line = clipText(snippet, 140);
+    if (!line || proofPoints.includes(line)) continue;
+    proofPoints.push(line);
+    if (proofPoints.length >= 4) break;
+  }
+
+  if (proofPoints.length > 0) return proofPoints.slice(0, 4);
+
+  if (category === "car") {
+    return [
+      `${topic} is framed around measurable performance, premium design, and purchase intent.`,
+      "The landing page should move from impact to proof to a clear configuration CTA.",
+    ];
+  }
+  if (category === "person") {
+    return [
+      `${topic} is defined through milestones, identity, and lasting cultural impact.`,
+      "The page should feel editorial first, but still guide visitors into deeper exploration.",
+    ];
+  }
+  if (category === "place") {
+    return [
+      `${topic} is defined through atmosphere, geography, and signature experiences.`,
+      "The page should translate inspiration into planning intent with practical highlights.",
+    ];
+  }
+  return [
+    `${topic} is positioned as a premium modern offer with clear differentiation.`,
+    "The page should convert attention into action using proof, clarity, and visual conviction.",
+  ];
+}
+
+function buildFaqCandidates(category, topic, facts) {
+  const faqs = facts.slice(0, 3).map((fact) => ({
+    question: `What should visitors know about ${topic} ${fact.label.toLowerCase()}?`,
+    answer: `${topic} ${fact.label.toLowerCase()} is surfaced through ${fact.value}, turning raw information into a usable decision signal.`,
+  }));
+
+  if (faqs.length < 3) {
+    if (category === "car") {
+      faqs.push(
+        {
+          question: `Why choose ${topic}?`,
+          answer: `${topic} is positioned as a balance of emotional design, measurable performance, and premium ownership appeal.`,
+        },
+        {
+          question: "What should the page emphasize first?",
+          answer: "Lead with verified specs, then translate them into a visceral ownership story and a clear configurator CTA.",
+        }
+      );
+    } else if (category === "person") {
+      faqs.push(
+        {
+          question: `What makes ${topic} distinct?`,
+          answer: `${topic} should be defined by measurable achievements, narrative arc, and cultural resonance rather than generic praise.`,
+        },
+        {
+          question: "How should a visitor move through the page?",
+          answer: "Start with identity, move into milestone proof, and end with a clear invitation to explore the full story.",
+        }
+      );
+    } else if (category === "place") {
+      faqs.push(
+        {
+          question: `Why visit ${topic}?`,
+          answer: `${topic} should combine atmosphere, practical facts, and signature experiences in one coherent journey.`,
+        },
+        {
+          question: "What should the page convert toward?",
+          answer: "Convert inspiration into planning intent with concrete highlights, travel signals, and a destination-oriented CTA.",
+        }
+      );
+    } else {
+      faqs.push(
+        {
+          question: `What differentiates ${topic}?`,
+          answer: `${topic} should pair a strong visual point of view with real proof points so the page feels persuasive instead of generic.`,
+        },
+        {
+          question: "How should this landing page convert?",
+          answer: "Structure the page so visitors quickly understand the offer, trust it, and move naturally into the primary call to action.",
+        }
+      );
+    }
+  }
+
+  return faqs.slice(0, 3);
 }
 
 function extractResearchStats(research, category) {
@@ -517,139 +747,395 @@ function buildFeaturesFromResearch(category, topic, research) {
   }));
 }
 
-function buildContentProfile(topic, brand, research) {
-  const category = detectCategory(topic);
-  const researchStats = extractResearchStats(research, category);
-  const bestSnippet = pickBestSnippet(research, 180);
-  const dramatic = generateDramaticCopy(category, topic, brand, research);
-  const features = buildFeaturesFromResearch(category, topic, research);
+function buildTheme(category) {
+  const themes = {
+    car: {
+      bg: "#070709",
+      bgElevated: "#101218",
+      text: "#f6efe8",
+      muted: "#b6a99e",
+      accent: "#ff5b36",
+      accentSoft: "#ffd0bf",
+      accentAlt: "#6ce6ff",
+      heroGlow: "rgba(255, 91, 54, 0.30)",
+      heroGlowAlt: "rgba(108, 230, 255, 0.18)",
+      displayFont: "\"Oswald\", \"Arial Narrow\", sans-serif",
+      bodyFont: "\"Manrope\", \"Segoe UI\", sans-serif",
+    },
+    person: {
+      bg: "#0a090f",
+      bgElevated: "#15121d",
+      text: "#f7f1ea",
+      muted: "#baaabf",
+      accent: "#f4b14d",
+      accentSoft: "#f6e0b7",
+      accentAlt: "#f66ba2",
+      heroGlow: "rgba(246, 107, 162, 0.22)",
+      heroGlowAlt: "rgba(244, 177, 77, 0.20)",
+      displayFont: "\"DM Serif Display\", Georgia, serif",
+      bodyFont: "\"Manrope\", \"Segoe UI\", sans-serif",
+    },
+    place: {
+      bg: "#071114",
+      bgElevated: "#0e1e24",
+      text: "#eef7f4",
+      muted: "#a4c1bf",
+      accent: "#2fe0b5",
+      accentSoft: "#c4fff1",
+      accentAlt: "#5ec8ff",
+      heroGlow: "rgba(47, 224, 181, 0.24)",
+      heroGlowAlt: "rgba(94, 200, 255, 0.18)",
+      displayFont: "\"Syne\", \"Arial Narrow\", sans-serif",
+      bodyFont: "\"Manrope\", \"Segoe UI\", sans-serif",
+    },
+    generic: {
+      bg: "#08090c",
+      bgElevated: "#11151c",
+      text: "#f2f7ff",
+      muted: "#a8b7ca",
+      accent: "#49c0ff",
+      accentSoft: "#c9edff",
+      accentAlt: "#ff8a3d",
+      heroGlow: "rgba(73, 192, 255, 0.26)",
+      heroGlowAlt: "rgba(255, 138, 61, 0.18)",
+      displayFont: "\"Chakra Petch\", \"Arial Narrow\", sans-serif",
+      bodyFont: "\"Manrope\", \"Segoe UI\", sans-serif",
+    },
+  };
 
-  if (category === "car") {
-    const hp = researchStats?.hp || "495";
-    const accel = researchStats?.accel || "2.9";
-    const topSpeed = researchStats?.topSpeed || "194";
-    const heroSub = bestSnippet
-      || `From reveal frame to full road form, ${topic} fuses track-ready engineering with street precision.`;
+  return themes[category] || themes.generic;
+}
+
+function formatStatValue(rawValue, fallbackValue, fallbackSuffix = "") {
+  const clean = String(rawValue ?? "").replace(/,/g, "").trim();
+  const matched = clean.match(/-?\d+(?:\.\d+)?/);
+  if (!matched) {
     return {
-      heroKicker: "AERODYNAMIC FUTURE PERFORMANCE",
-      heroSub,
-      tagline: dramatic.tagline,
-      introStatement: dramatic.introStatement,
-      introSubtext: dramatic.introSubtext,
-      features,
-      stats: [
-        { value: String(hp), decimals: "0", suffix: "hp", label: "Peak output" },
-        { value: String(accel), decimals: "1", suffix: "s", label: "0-60 launch" },
-        { value: String(topSpeed), decimals: "0", suffix: "mph", label: "Top speed class" },
-      ],
-      closingStatement: dramatic.closingStatement,
-      ctaLabel: "005 / Configuration",
-      ctaHeading: `Configure ${brand}`,
-      ctaBody: `Choose performance package, wheel architecture, aero setup, and signature finish for your ${topic}.`,
-      ctaButton: "Open Configurator",
+      value: String(fallbackValue),
+      decimals: String(String(fallbackValue).includes(".") ? 1 : 0),
+      suffix: fallbackSuffix,
+    };
+  }
+
+  const numeric = matched[0];
+  let suffix = clean.replace(matched[0], "").trim();
+  if (!suffix && fallbackSuffix) suffix = fallbackSuffix;
+  return {
+    value: numeric,
+    decimals: String(numeric.includes(".") ? 1 : 0),
+    suffix,
+  };
+}
+
+function buildStatEntries(category, researchStats) {
+  if (category === "car") {
+    return [
+      { ...formatStatValue(researchStats?.hp, 495, "hp"), label: "Peak output" },
+      { ...formatStatValue(researchStats?.accel, 2.9, "s"), label: "0-60 launch" },
+      { ...formatStatValue(researchStats?.topSpeed, 194, "mph"), label: "Top speed class" },
+    ];
+  }
+
+  if (category === "person") {
+    return [
+      { ...formatStatValue(researchStats?.awards, 12, "+"), label: "Major achievements" },
+      { ...formatStatValue("1", 1, "era"), label: "Defining run" },
+      { ...formatStatValue("24", 24, "moments"), label: "Signature story beats" },
+    ];
+  }
+
+  if (category === "place") {
+    return [
+      { ...formatStatValue(researchStats?.population, 1.2, "M"), label: "Population scale" },
+      { ...formatStatValue(researchStats?.founded, 1868), label: "Established" },
+      { ...formatStatValue("3", 3, "must-sees"), label: "Core highlights" },
+    ];
+  }
+
+  return [
+    { ...formatStatValue("24", 24, "mo"), label: "Roadmap horizon" },
+    { ...formatStatValue("98.6", 98.6, "%"), label: "Confidence target" },
+    { ...formatStatValue("6", 6, "signals"), label: "Proof layers" },
+  ];
+}
+
+function buildCtaProfile(category, topic, brand, pageMode) {
+  if (category === "car") {
+    return {
+      label: pageMode === "editorial" ? "008 / Next Frame" : "008 / Configuration",
+      heading: `Configure ${brand}`,
+      body: `Choose performance package, aero setup, wheel architecture, and signature finish for your ${topic}.`,
+      button: pageMode === "editorial" ? "See Full Build" : "Open Configurator",
       headerCta: "Configure",
     };
   }
 
   if (category === "person") {
-    const awards = researchStats?.awards || "12";
-    const heroSub = bestSnippet
-      || `${topic} \u2014 a cinematic portrait from origin to icon, tracing the arc of an extraordinary career.`;
     return {
-      heroKicker: "THE DEFINITIVE PORTRAIT",
-      heroSub,
-      tagline: dramatic.tagline,
-      introStatement: dramatic.introStatement,
-      introSubtext: dramatic.introSubtext,
-      features,
-      stats: [
-        { value: String(awards), decimals: "0", suffix: "+", label: "Major achievements" },
-        { value: "1", decimals: "0", suffix: "of 1", label: "Singular talent" },
-        { value: "\u221E", decimals: "0", suffix: "", label: "Lasting influence" },
-      ],
-      closingStatement: dramatic.closingStatement,
-      ctaLabel: "005 / Explore",
-      ctaHeading: `Discover ${brand}`,
-      ctaBody: `Dive deeper into the career, philosophy, and impact of ${topic}.`,
-      ctaButton: "Full Story",
+      label: "008 / Explore",
+      heading: `Discover ${brand}`,
+      body: `Move from headline milestones into the deeper story, philosophy, and defining moments behind ${topic}.`,
+      button: "Explore Story",
       headerCta: "Discover",
     };
   }
 
   if (category === "place") {
-    const population = researchStats?.population || "\u2014";
-    const founded = researchStats?.founded || "\u2014";
-    const heroSub = bestSnippet
-      || `${topic} \u2014 an immersive journey through atmosphere, architecture, and the spirit of a place unlike any other.`;
     return {
-      heroKicker: "DESTINATION UNVEILED",
-      heroSub,
-      tagline: dramatic.tagline,
-      introStatement: dramatic.introStatement,
-      introSubtext: dramatic.introSubtext,
-      features,
-      stats: [
-        { value: String(population).replace(/,/g, ""), decimals: "0", suffix: "", label: "Population" },
-        { value: String(founded), decimals: "0", suffix: "", label: "Established" },
-        { value: "1", decimals: "0", suffix: "dest", label: "Must-visit" },
-      ],
-      closingStatement: dramatic.closingStatement,
-      ctaLabel: "005 / Journey",
-      ctaHeading: `Explore ${brand}`,
-      ctaBody: `Plan your journey to ${topic} \u2014 the routes, the seasons, the experiences that define this destination.`,
-      ctaButton: "Start Planning",
+      label: "008 / Journey",
+      heading: `Plan ${brand}`,
+      body: `Translate the atmosphere of ${topic} into a real itinerary with timing, highlights, and signature experiences.`,
+      button: "Start Planning",
       headerCta: "Explore",
     };
   }
 
-  // Generic / product fallback
-  const heroSub = bestSnippet
-    || `${topic} is presented as a cinematic product journey, from first silhouette to fully activated form.`;
   return {
-    heroKicker: "FUTURE FORGED PRODUCT SYSTEM",
-    heroSub,
-    tagline: dramatic.tagline,
-    introStatement: dramatic.introStatement,
-    introSubtext: dramatic.introSubtext,
-    features,
-    stats: [
-      { value: "24", decimals: "0", suffix: "mo", label: "Product roadmap" },
-      { value: "98.6", decimals: "1", suffix: "%", label: "Satisfaction target" },
-      { value: "6", decimals: "0", suffix: "x", label: "Iteration velocity" },
-    ],
-    closingStatement: dramatic.closingStatement,
-    ctaLabel: "005 / Launch",
-    ctaHeading: `Build With ${brand}`,
-    ctaBody: `Define final configuration, deployment strategy, and rollout milestones for your ${topic} experience.`,
-    ctaButton: "Start Project",
+    label: "008 / Launch",
+    heading: `Build With ${brand}`,
+    body: `Turn interest into action with a sharper rollout path, clearer differentiation, and a premium first impression for ${topic}.`,
+    button: "Start Project",
     headerCta: "Learn More",
   };
 }
 
-function writeScaffoldFiles({ siteDir, topic, brand, frameCount, frameExtension, research }) {
-  const profile = buildContentProfile(topic, brand, research);
+function buildCopySection(label, heading, body, alignment, animation) {
+  return { kind: "copy", label, heading, body, alignment, animation };
+}
+
+function buildCardSection(label, heading, cards, alignment, animation) {
+  return { kind: "cards", label, heading, cards: cards.slice(0, 4), alignment, animation };
+}
+
+function buildFaqSection(faqItems, alignment = "left", animation = "fade-up") {
+  const items = faqItems && faqItems.length
+    ? faqItems
+    : [
+        {
+          question: "How should this page guide the visitor?",
+          answer: "Move from impact to proof to action with a clear, premium sense of momentum.",
+        },
+        {
+          question: "What makes the experience feel credible?",
+          answer: "Real data should anchor hero and proof sections whenever available, with informed fallback copy used sparingly elsewhere.",
+        },
+        {
+          question: "What should happen at the end of the page?",
+          answer: "The final section should convert attention into the clearest next step for the topic.",
+        },
+      ];
+  return {
+    kind: "faq",
+    label: "007 / Questions",
+    heading: "What Visitors Need To Know",
+    items: items.slice(0, 3),
+    alignment,
+    animation,
+  };
+}
+
+function buildSections(category, topic, research, pageMode, dramatic, features, stats) {
+  const proofCards = (research?.proofPoints || []).map((item, index) => ({
+    title: index === 0 ? "Verified signal" : `Proof point ${String(index + 1).padStart(2, "0")}`,
+    body: item,
+  }));
+  const factCards = (research?.facts || []).slice(0, 4).map((fact) => ({
+    title: fact.label,
+    body: fact.value,
+  }));
+  const statsCards = stats.map((stat) => ({
+    title: stat.label,
+    body: `${stat.value}${stat.suffix ? ` ${stat.suffix}` : ""}`,
+  }));
+
+  if (pageMode === "editorial") {
+    return [
+      buildCopySection("001 / Opening Frame", dramatic.introStatement, dramatic.introSubtext, "center", "fade-up"),
+      buildCopySection("002 / Presence", features[0].heading, features[0].body, "left", "slide-left"),
+      buildCopySection("003 / Narrative", features[1].heading, features[1].body, "right", "clip-reveal"),
+      buildCardSection("004 / Proof", "Research Signals", proofCards.length ? proofCards : statsCards, "left", "stagger-up"),
+      { kind: "stats", label: "005 / Metrics", heading: "Numbers That Hold Weight", stats, alignment: "center", animation: "stagger-up" },
+      buildCardSection("006 / Archive", "Signature Facts", factCards.length ? factCards : statsCards, "right", "slide-right"),
+      buildCopySection("007 / Legacy", dramatic.closingStatement, `The page resolves by framing ${topic} as something remembered, not merely viewed.`, "center", "fade-up"),
+    ];
+  }
+
+  if (pageMode === "hybrid") {
+    return [
+      buildCopySection("001 / Positioning", dramatic.introStatement, dramatic.introSubtext, "center", "fade-up"),
+      buildCopySection("002 / Distinction", features[0].heading, features[0].body, "left", "slide-left"),
+      buildCopySection("003 / Experience", features[1].heading, features[1].body, "right", "slide-right"),
+      { kind: "stats", label: "004 / Metrics", heading: "Real Signals", stats, alignment: "center", animation: "stagger-up" },
+      buildCardSection("005 / Proof", "Why It Converts", proofCards.length ? proofCards : (factCards.length ? factCards : statsCards), "left", "clip-reveal"),
+      buildCardSection("006 / Details", "Research Highlights", factCards.length ? factCards : statsCards, "right", "stagger-up"),
+      buildFaqSection(research?.faqCandidates || [], "left", "fade-up"),
+    ];
+  }
+
+  return [
+    buildCopySection("001 / Hook", dramatic.introStatement, dramatic.introSubtext, "center", "fade-up"),
+    buildCopySection("002 / Value", features[0].heading, features[0].body, "left", "slide-left"),
+    buildCopySection("003 / Differentiation", features[1].heading, features[1].body, "right", "slide-right"),
+    { kind: "stats", label: "004 / Proof", heading: "Measured Confidence", stats, alignment: "center", animation: "stagger-up" },
+    buildCardSection("005 / Trust", "Research-Backed Highlights", proofCards.length ? proofCards : (factCards.length ? factCards : statsCards), "left", "clip-reveal"),
+    buildCardSection("006 / Decision", "What Makes It Distinct", factCards.length ? factCards : statsCards, "right", "stagger-up"),
+    buildFaqSection(research?.faqCandidates || [], "left", "fade-up"),
+  ];
+}
+
+function buildContentProfile(topic, brand, research, pageMode) {
+  const category = detectCategory(topic);
+  const researchStats = extractResearchStats(research, category);
+  const bestSnippet = pickBestSnippet(research, 180);
+  const dramatic = generateDramaticCopy(category, topic, brand, research);
+  const features = buildFeaturesFromResearch(category, topic, research);
+  const theme = buildTheme(category);
+  const stats = buildStatEntries(category, researchStats);
+  const cta = buildCtaProfile(category, topic, brand, pageMode);
+  const heroSub =
+    bestSnippet
+    || research?.summary
+    || `${topic} is presented as a cinematic, research-informed experience designed to convert attention into action.`;
+
+  let heroKicker = "RESEARCH-LED DIGITAL LAUNCH";
+  if (category === "car") heroKicker = pageMode === "editorial" ? "PERFORMANCE MONOGRAPH" : "AERODYNAMIC FUTURE PERFORMANCE";
+  if (category === "person") heroKicker = pageMode === "conversion" ? "IDENTITY. PROOF. IMPACT." : "THE DEFINITIVE PORTRAIT";
+  if (category === "place") heroKicker = pageMode === "conversion" ? "DESTINATION WITH INTENT" : "DESTINATION UNVEILED";
+
+  return {
+    category,
+    pageMode,
+    theme,
+    heroKicker,
+    heroSub,
+    tagline: dramatic.tagline,
+    introStatement: dramatic.introStatement,
+    introSubtext: dramatic.introSubtext,
+    closingStatement: dramatic.closingStatement,
+    stats,
+    sections: buildSections(category, topic, research, pageMode, dramatic, features, stats),
+    cta,
+    trustLine:
+      research && research.sources?.length
+        ? `${research.sources.length} live sources informed the hero, proof, and spec sections.`
+        : "Built with best-effort category research and premium design defaults.",
+  };
+}
+
+function buildSectionTiming(count) {
+  const start = 10;
+  const end = 100;
+  const span = (end - start) / count;
+  return Array.from({ length: count }, (_, index) => ({
+    enter: Number((start + index * span).toFixed(2)),
+    leave: Number((start + (index + 1) * span).toFixed(2)),
+  }));
+}
+
+function renderCardMarkup(cards) {
+  return cards
+    .map(
+      (card) => `
+          <article class="stat info-card">
+            <span class="stat-label">${escapeHtml(card.title)}</span>
+            <p class="card-body">${escapeHtml(card.body)}</p>
+          </article>`
+    )
+    .join("");
+}
+
+function renderSectionMarkup(section, timing, index, totalSections) {
+  const alignClass = `align-${section.alignment || "left"}`;
+  const commonAttrs = `class="scroll-section section-${escapeHtml(section.kind)} ${alignClass}" data-enter="${timing.enter}" data-leave="${timing.leave}" data-animation="${escapeHtml(section.animation || "fade-up")}"`;
+
+  if (section.kind === "stats") {
+    return `
+    <section ${commonAttrs}>
+      <div class="section-inner section-inner-wide">
+        <p class="section-label">${escapeHtml(section.label)}</p>
+        <h2 class="section-heading">${escapeHtml(section.heading)}</h2>
+        <div class="stats-grid">
+${section.stats
+  .map(
+    (stat) => `          <div class="stat">
+            <span class="stat-number" data-value="${escapeHtml(stat.value)}" data-decimals="${escapeHtml(stat.decimals)}">0</span>
+            <span class="stat-suffix">${escapeHtml(stat.suffix)}</span>
+            <span class="stat-label">${escapeHtml(stat.label)}</span>
+          </div>`
+  )
+  .join("\n")}
+        </div>
+      </div>
+    </section>`;
+  }
+
+  if (section.kind === "cards") {
+    return `
+    <section ${commonAttrs}>
+      <div class="section-inner section-inner-wide">
+        <p class="section-label">${escapeHtml(section.label)}</p>
+        <h2 class="section-heading">${escapeHtml(section.heading)}</h2>
+        <div class="stats-grid cards-grid">
+${renderCardMarkup(section.cards)}
+        </div>
+      </div>
+    </section>`;
+  }
+
+  if (section.kind === "faq") {
+    return `
+    <section ${commonAttrs}>
+      <div class="section-inner section-inner-wide">
+        <p class="section-label">${escapeHtml(section.label)}</p>
+        <h2 class="section-heading">${escapeHtml(section.heading)}</h2>
+        <div class="stats-grid cards-grid faq-grid">
+${renderCardMarkup(
+  section.items.map((item) => ({
+    title: item.question,
+    body: item.answer,
+  }))
+)}
+        </div>
+      </div>
+    </section>`;
+  }
+
+  const extra = index === totalSections - 1 ? ` id="cta" data-persist="true"` : "";
+  const button = section.kind === "cta" ? `<a class="cta-button" href="#">${escapeHtml(section.button)}</a>` : "";
+  return `
+    <section ${commonAttrs}${extra}>
+      <div class="section-inner">
+        <p class="section-label">${escapeHtml(section.label)}</p>
+        <h2 class="section-heading">${escapeHtml(section.heading)}</h2>
+        <p class="section-body">${escapeHtml(section.body)}</p>
+        ${button}
+      </div>
+    </section>`;
+}
+
+function writeScaffoldFiles({ siteDir, topic, brand, pageMode, frameCount, frameExtension, research }) {
+  const profile = buildContentProfile(topic, brand, research, pageMode);
   const headline = escapeHtml(topic.toUpperCase());
   const safeTopic = escapeHtml(topic);
   const safeBrand = escapeHtml(brand);
   const taglineRepeated = escapeHtml(profile.tagline) + " \u00B7 " + escapeHtml(profile.tagline) + " \u00B7 " + escapeHtml(profile.tagline);
-
-  // Build feature sections HTML
-  const featureEnters = [18, 28, 38, 48];
-  const featureLeaves = [28, 38, 48, 58];
-  let featureSectionsHtml = "";
-  for (let i = 0; i < 4; i++) {
-    const f = profile.features[i];
-    const alignClass = "align-" + f.alignment;
-    featureSectionsHtml += `
-    <section class="scroll-section ${alignClass}" data-enter="${featureEnters[i]}" data-leave="${featureLeaves[i]}" data-animation="${f.animation}">
-      <div class="section-inner">
-        <p class="section-label">${escapeHtml(f.label)}</p>
-        <h2 class="section-heading">${escapeHtml(f.heading)}</h2>
-        <p class="section-body">${escapeHtml(f.body)}</p>
-      </div>
-    </section>
-`;
-  }
+  const renderedSections = [
+    ...profile.sections,
+    {
+      kind: "cta",
+      label: profile.cta.label,
+      heading: profile.cta.heading,
+      body: profile.cta.body,
+      alignment: "left",
+      animation: "fade-up",
+      button: profile.cta.button,
+    },
+  ];
+  const timings = buildSectionTiming(renderedSections.length);
+  const sectionsHtml = renderedSections
+    .map((section, index) => renderSectionMarkup(section, timings[index], index, renderedSections.length))
+    .join("\n");
+  const scrollHeight = Math.max(1300, 240 + renderedSections.length * 165);
 
   const html = `<!doctype html>
 <html lang="en">
@@ -657,6 +1143,9 @@ function writeScaffoldFiles({ siteDir, topic, brand, frameCount, frameExtension,
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>${safeTopic} | ${safeBrand}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=DM+Serif+Display:ital@0;1&family=Manrope:wght@400;500;700;800&family=Oswald:wght@500;700&family=Syne:wght@500;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
@@ -668,13 +1157,14 @@ function writeScaffoldFiles({ siteDir, topic, brand, frameCount, frameExtension,
 
   <header class="site-header">
     <span class="brand">${safeBrand}</span>
-    <a href="#cta">${escapeHtml(profile.headerCta)}</a>
+    <a href="#cta">${escapeHtml(profile.cta.headerCta)}</a>
   </header>
 
   <section class="hero-standalone">
     <p class="hero-kicker">${escapeHtml(profile.heroKicker)}</p>
     <h1>${headline}</h1>
     <p class="hero-sub">${escapeHtml(profile.heroSub)}</p>
+    <p class="hero-trust">${escapeHtml(profile.trustLine)}</p>
   </section>
 
   <div class="canvas-wrap"><canvas id="canvas"></canvas></div>
@@ -684,48 +1174,8 @@ function writeScaffoldFiles({ siteDir, topic, brand, frameCount, frameExtension,
     <p class="marquee-text">${taglineRepeated}</p>
   </div>
 
-  <main id="scroll-container">
-    <section class="scroll-section section-dramatic-intro align-center" data-enter="8" data-leave="18" data-animation="fade-up">
-      <div class="section-inner">
-        <h2 class="section-heading">${escapeHtml(profile.introStatement)}</h2>
-        <p class="section-body">${escapeHtml(profile.introSubtext)}</p>
-      </div>
-    </section>
-${featureSectionsHtml}
-    <section class="scroll-section section-stats" data-enter="58" data-leave="70" data-animation="stagger-up">
-      <div class="stats-grid">
-        <div class="stat">
-          <span class="stat-number" data-value="${escapeHtml(profile.stats[0].value)}" data-decimals="${escapeHtml(profile.stats[0].decimals)}">0</span>
-          <span class="stat-suffix">${escapeHtml(profile.stats[0].suffix)}</span>
-          <span class="stat-label">${escapeHtml(profile.stats[0].label)}</span>
-        </div>
-        <div class="stat">
-          <span class="stat-number" data-value="${escapeHtml(profile.stats[1].value)}" data-decimals="${escapeHtml(profile.stats[1].decimals)}">0</span>
-          <span class="stat-suffix">${escapeHtml(profile.stats[1].suffix)}</span>
-          <span class="stat-label">${escapeHtml(profile.stats[1].label)}</span>
-        </div>
-        <div class="stat">
-          <span class="stat-number" data-value="${escapeHtml(profile.stats[2].value)}" data-decimals="${escapeHtml(profile.stats[2].decimals)}">0</span>
-          <span class="stat-suffix">${escapeHtml(profile.stats[2].suffix)}</span>
-          <span class="stat-label">${escapeHtml(profile.stats[2].label)}</span>
-        </div>
-      </div>
-    </section>
-
-    <section class="scroll-section section-closing align-center" data-enter="70" data-leave="80" data-animation="fade-up">
-      <div class="section-inner">
-        <h2 class="section-heading">${escapeHtml(profile.closingStatement)}</h2>
-      </div>
-    </section>
-
-    <section id="cta" class="scroll-section align-left" data-enter="80" data-leave="100" data-animation="fade-up" data-persist="true">
-      <div class="section-inner">
-        <p class="section-label">${escapeHtml(profile.ctaLabel)}</p>
-        <h2 class="section-heading">${escapeHtml(profile.ctaHeading)}</h2>
-        <p class="section-body">${escapeHtml(profile.ctaBody)}</p>
-        <a class="cta-button" href="#">${escapeHtml(profile.ctaButton)}</a>
-      </div>
-    </section>
+  <main id="scroll-container" style="--scroll-length:${scrollHeight}vh;">
+${sectionsHtml}
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/lenis@1/dist/lenis.min.js"></script>
@@ -737,13 +1187,17 @@ ${featureSectionsHtml}
 `;
 
   const css = `:root {
-  --bg: #070707;
-  --bg-elevated: #101010;
-  --text: #f3f3ee;
-  --muted: #a3a39d;
-  --accent: #e24a2b;
-  --font-display: "Bebas Neue", "Arial Narrow", sans-serif;
-  --font-body: "IBM Plex Sans", "Segoe UI", sans-serif;
+  --bg: ${profile.theme.bg};
+  --bg-elevated: ${profile.theme.bgElevated};
+  --text: ${profile.theme.text};
+  --muted: ${profile.theme.muted};
+  --accent: ${profile.theme.accent};
+  --accent-soft: ${profile.theme.accentSoft};
+  --accent-alt: ${profile.theme.accentAlt};
+  --hero-glow: ${profile.theme.heroGlow};
+  --hero-glow-alt: ${profile.theme.heroGlowAlt};
+  --font-display: ${profile.theme.displayFont};
+  --font-body: ${profile.theme.bodyFont};
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -817,7 +1271,11 @@ body { font-family: var(--font-body); overflow-x: hidden; }
   gap: 1.2rem;
   position: relative;
   z-index: 15;
-  background: radial-gradient(circle at 20% 20%, #2c0e0b 0%, #070707 55%);
+  background:
+    radial-gradient(circle at 18% 22%, var(--hero-glow) 0%, transparent 34%),
+    radial-gradient(circle at 82% 16%, var(--hero-glow-alt) 0%, transparent 30%),
+    linear-gradient(160deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 34%),
+    linear-gradient(135deg, var(--bg) 0%, #030405 100%);
 }
 
 .hero-kicker {
@@ -837,6 +1295,14 @@ h1 {
   max-width: 54ch;
   color: #d2d2cc;
   font-size: clamp(1rem, 2vw, 1.3rem);
+}
+
+.hero-trust {
+  max-width: 52ch;
+  color: var(--accent-soft);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.74rem;
 }
 
 .canvas-wrap,
@@ -885,7 +1351,7 @@ h1 {
 
 #scroll-container {
   position: relative;
-  height: 1400vh;
+  height: var(--scroll-length, 1400vh);
   z-index: 20;
 }
 
@@ -905,6 +1371,10 @@ h1 {
   max-width: 40vw;
   display: grid;
   gap: 1rem;
+}
+
+.section-inner-wide {
+  max-width: min(88vw, 1120px);
 }
 
 .section-dramatic-intro .section-inner,
@@ -942,10 +1412,6 @@ h1 {
   color: #d2d2cc;
 }
 
-.section-stats {
-  padding: 0 7vw;
-}
-
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -955,6 +1421,13 @@ h1 {
 .stat {
   display: grid;
   gap: 0.5rem;
+  padding: 1.1rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1.1rem;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02)),
+    rgba(7, 10, 14, 0.54);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.22);
 }
 
 .stat-number {
@@ -976,6 +1449,21 @@ h1 {
   color: var(--muted);
 }
 
+.cards-grid {
+  align-items: stretch;
+}
+
+.info-card {
+  align-content: start;
+}
+
+.card-body {
+  margin: 0;
+  color: #e4e7eb;
+  font-size: clamp(0.96rem, 1.4vw, 1.15rem);
+  line-height: 1.55;
+}
+
 .cta-button {
   margin-top: 0.4rem;
   justify-self: start;
@@ -986,10 +1474,10 @@ h1 {
   text-transform: uppercase;
   color: #fff;
   background: linear-gradient(135deg, #7a2413, #d9431e);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.24);
 }
 
 @media (max-width: 900px) {
-  #scroll-container { height: 1000vh; }
   .align-left,
   .align-right,
   .align-center {
@@ -1269,6 +1757,12 @@ setupHeroTransition();
   writeFileSync(join(siteDir, "index.html"), html);
   writeFileSync(join(siteDir, "css/style.css"), css);
   writeFileSync(join(siteDir, "js/app.js"), js);
+  return {
+    category: profile.category,
+    pageMode: profile.pageMode,
+    sectionKinds: renderedSections.map((section) => section.kind),
+    trustLine: profile.trustLine,
+  };
 }
 
 function runFrameExtraction(videoPath, framesDir) {
@@ -1379,6 +1873,7 @@ async function main() {
   mkdirSync(jsDir, { recursive: true });
 
   const brand = String(options.brand || topic.split(" ").slice(0, 2).join(" ")).trim();
+  const pageMode = normalizePageMode(options["page-mode"]);
   const defaults = createPrompts(topic);
   const startPrompt = String(options["start-prompt"] || defaults.startPrompt);
   const endPrompt = String(options["end-prompt"] || defaults.endPrompt);
@@ -1393,6 +1888,7 @@ async function main() {
   const metadata = {
     topic,
     brand,
+    pageMode,
     models: { startModel, endModel, videoModel },
     videoDurationSeconds: normalizedDuration,
     prompts: { startPrompt, endPrompt, motionPrompt },
@@ -1530,10 +2026,11 @@ async function main() {
   }
 
   console.log("Scaffolding website...");
-  writeScaffoldFiles({
+  const scaffold = writeScaffoldFiles({
     siteDir,
     topic,
     brand,
+    pageMode,
     frameCount: extraction.frameCount,
     frameExtension: extraction.frameExtension,
     research,
@@ -1547,8 +2044,21 @@ async function main() {
   metadata.frameExtraction = extraction.settings;
   metadata.frameCount = extraction.frameCount;
   metadata.frameExtension = extraction.frameExtension;
-  metadata.category = detectCategory(topic);
-  if (research) metadata.research = { snippetCount: research.snippets.length, attributeCount: Object.keys(research.attributes).length };
+  metadata.category = scaffold.category;
+  metadata.sectionKinds = scaffold.sectionKinds;
+  metadata.trustLine = scaffold.trustLine;
+  metadata.research = research || {
+    category: scaffold.category,
+    summary: null,
+    facts: [],
+    proofPoints: [],
+    faqCandidates: [],
+    sources: [],
+    coverage: { snippetCount: 0, attributeCount: 0, sourceCount: 0, factCount: 0 },
+    confidence: "low",
+    inferredFallbackUsed: true,
+    researchedFields: [],
+  };
   writeFileSync(join(siteDir, "pipeline-metadata.json"), JSON.stringify(metadata, null, 2));
 
   console.log("");

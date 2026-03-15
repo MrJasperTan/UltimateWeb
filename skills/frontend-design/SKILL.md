@@ -59,6 +59,13 @@ Design reference for creating unforgettable, production-grade frontend interface
 
 ## Implementation Rules
 
+### Site Modes Must Be Intentional
+- Support three explicit generation modes: `conversion`, `editorial`, and `hybrid`
+- `conversion` is the default: hero, value proposition, proof/specs, differentiators, FAQ, and CTA
+- `editorial` is narrative-first: atmosphere, milestones, research-backed story beats, and softer conversion
+- `hybrid` combines cinematic storytelling with conversion-oriented proof and CTA sections
+- The selected mode must materially change section structure, pacing, and CTA treatment, not just copy labels
+
 ### Match Complexity to Vision
 - **Maximalist design** = elaborate code with extensive animations, layered elements, complex interactions
 - **Minimalist design** = restraint, precision, pixel-perfect details, subtle micro-animations
@@ -68,7 +75,9 @@ Design reference for creating unforgettable, production-grade frontend interface
 - Research the product/topic and use actual specifications, features, and descriptions
 - Stats sections should contain real numbers, not placeholders
 - Copy should sound like it was written by a brand copywriter who understands the product
-- If real data isn't available, make informed estimates that feel authentic
+- Hero, proof, and spec/stat sections should prefer researched facts
+- Supporting narrative sections may use informed inferences only when research is incomplete
+- Source URLs and extracted facts should be preserved in metadata even if the page itself stays visually clean
 
 ### Responsive Is Non-Negotiable
 - Every layout must work on mobile, tablet, and desktop
@@ -140,8 +149,9 @@ Design reference for creating unforgettable, production-grade frontend interface
 This skill is referenced during the `writeScaffoldFiles()` phase of `build_futuristic_site.mjs`. When research data is available:
 
 1. The research step gathers real product data (specs, features, descriptions)
-2. `buildContentProfile()` uses that data to generate authentic content
-3. The scaffold applies design principles from this skill based on the product category
-4. Color palette, typography, and animation style are adapted to match the topic
+2. The pipeline normalizes that data into summaries, facts, proof points, FAQ candidates, and sources
+3. `buildContentProfile()` uses page mode plus research structure to generate authentic section layouts
+4. The scaffold applies design principles from this skill based on category and selected page mode
+5. Color palette, typography, and animation style are adapted to match the topic
 
 The goal: every generated site should look like it was purpose-built for that specific product, not generated from a template.

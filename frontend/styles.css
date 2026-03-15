@@ -115,6 +115,60 @@ h2 {
   gap: 0.5rem;
 }
 
+.mode-picker {
+  margin: 0.4rem 0 0;
+  padding: 0;
+  border: 0;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.mode-picker legend {
+  margin-bottom: 0.2rem;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.11em;
+  color: #b7cbde;
+}
+
+.mode-option {
+  display: block;
+}
+
+.mode-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.mode-option span {
+  display: grid;
+  gap: 0.24rem;
+  padding: 0.9rem 1rem;
+  border-radius: 0.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  transition: border-color 0.2s ease, transform 0.2s ease, background 0.2s ease;
+}
+
+.mode-option strong {
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+}
+
+.mode-option small {
+  color: var(--text-dim);
+  line-height: 1.45;
+}
+
+.mode-option input:checked + span {
+  border-color: rgba(0, 200, 255, 0.6);
+  background:
+    linear-gradient(135deg, rgba(0, 200, 255, 0.16), rgba(255, 84, 47, 0.12)),
+    rgba(255, 255, 255, 0.05);
+  transform: translateY(-1px);
+}
+
 .build-form label {
   font-size: 0.82rem;
   text-transform: uppercase;

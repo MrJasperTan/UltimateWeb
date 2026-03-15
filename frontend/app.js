@@ -1,5 +1,6 @@
 const form = document.getElementById("build-form");
 const topicInput = document.getElementById("topic");
+const pageModeInputs = document.querySelectorAll('input[name="pageMode"]');
 const submitButton = document.getElementById("submit-btn");
 const statusText = document.getElementById("status-text");
 const stageText = document.getElementById("stage-text");
@@ -160,6 +161,7 @@ function startJobPolling(jobId) {
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
   const topic = topicInput.value.trim();
+  const selectedPageMode = Array.from(pageModeInputs).find((input) => input.checked)?.value || "conversion";
   if (!topic) return;
 
   submitButton.disabled = true;
@@ -173,7 +175,7 @@ form.addEventListener("submit", async (event) => {
     const response = await fetch(apiEndpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ topic }),
+      body: JSON.stringify({ topic, pageMode: selectedPageMode }),
     });
     const data = await response.json().catch(() => ({}));
 
@@ -182,7 +184,7 @@ form.addEventListener("submit", async (event) => {
     }
 
     activeJobId = data.id;
-    setStatus(`Job ${activeJobId.slice(0, 8)} • RUNNING`);
+    setStatus(`Job ${activeJobId.slice(0, 8)} • RUNNING • ${selectedPageMode.toUpperCase()}`);
     setStage("Preparing pipeline");
     startJobPolling(activeJobId);
   } catch (error) {

@@ -1,6 +1,6 @@
 ---
 name: fal-futuristic-website-builder
-description: End-to-end futuristic website automation using fal.ai media generation, topic research, and scroll-driven frontend scaffolding. Handles products, people, and places. Use when the user asks for a site like "build a website about a 2025 Corvette Stingray" or "build a website about Michael Jordan" or "build a website about Tokyo" and wants the full pipeline handled automatically: research, first image, last image, start-end video, extracted frames, and assembled one-page website with real content.
+description: End-to-end futuristic website automation using fal.ai media generation, topic research, and scroll-driven frontend scaffolding. Handles products, people, and places. Use when the user asks for a site like "build a website about a 2025 Corvette Stingray" or "build a website about Michael Jordan" or "build a website about Tokyo" and wants the full pipeline handled automatically: research, first image, last image, start-end video, extracted frames, and an assembled landing page with real content and selectable site modes.
 ---
 
 # Fal Futuristic Website Builder
@@ -13,7 +13,7 @@ Follow the workflow:
 3. Generate start and end frames (prompts adapted to category).
 4. Generate transition video from those frames.
 5. Convert video to frame sequence.
-6. Assemble the scroll website with real researched content.
+6. Assemble the scroll website with real researched content and a deliberate site mode.
 
 ## Topic Categories
 
@@ -66,11 +66,12 @@ Before scaffolding the website, the pipeline queries SearXNG to gather real data
 - Geographic/cultural facts for places (population, founded, area)
 - Real snippets used as hero descriptions instead of generic copy
 
-Research is automatic and gracefully degrades — if SearXNG is unreachable, the pipeline falls back to template content.
+Research is automatic and best-effort mixed — hero/spec/proof sections should use real extracted facts when available, while supporting narrative sections may fall back to informed copy if SearXNG is weak or unavailable.
 
 ### Research Options
 
 - `--searxng-url URL` — Override the SearXNG endpoint (default: `http://192.168.0.166:8888`)
+- `--page-mode conversion|editorial|hybrid` — Choose the generated site strategy (`conversion` default)
 - `--no-research` — Skip the research step entirely, use template content
 
 ## Inputs
@@ -83,7 +84,7 @@ Research is automatic and gracefully degrades — if SearXNG is unreachable, the
   - `--video-path /path/to/existing.mp4` to skip fal media generation
   - `--start-prompt`, `--end-prompt`, `--motion-prompt`
   - `--start-model`, `--end-model`, `--video-model`
-  - `--searxng-url`, `--no-research`
+  - `--searxng-url`, `--page-mode`, `--no-research`
 
 ## Outputs
 
@@ -95,7 +96,7 @@ The script creates:
 - `index.html`
 - `css/style.css`
 - `js/app.js`
-- `pipeline-metadata.json` (includes category, research summary)
+- `pipeline-metadata.json` (includes category, page mode, structured research, and source URLs)
 
 ## Workflow
 
@@ -103,13 +104,13 @@ The script creates:
 Ask at most one clarifying question only if blocked. Otherwise, assume premium defaults and proceed.
 
 2. Research the topic.
-Query SearXNG for real product/person/place data. Extract specs, facts, and descriptions to populate the site with authentic content.
+Query SearXNG for real product/person/place data. Normalize the results into summaries, facts, proof points, FAQ candidates, and source URLs before building the site.
 
 3. Generate media with fal.ai.
 Run `scripts/build_futuristic_site.mjs` with the topic. Image prompts are adapted to the detected category (portrait for people, landscape for places, product shot for cars/products).
 
 4. Build the website from extracted frames.
-The script runs ffmpeg extraction and scaffolds a premium scroll page with canvas frame rendering, GSAP section choreography, and real researched content.
+The script runs ffmpeg extraction and scaffolds a premium scroll page with canvas frame rendering, GSAP section choreography, real researched content, and one of three section strategies: `conversion`, `editorial`, or `hybrid`.
 
 5. Review locally, then iterate.
 If the user gives feedback ("feature two appears too late"), update prompts or section ranges and rerun.

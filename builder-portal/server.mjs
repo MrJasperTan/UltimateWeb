@@ -50,6 +50,7 @@ loadEnvFromDotenv(join(ROOT_DIR, ".env"));
 const PORT = Number(process.env.PORT || 8787);
 const HOST = process.env.HOST || "127.0.0.1";
 const jobs = new Map();
+const PAGE_MODES = new Set(["conversion", "editorial", "hybrid"]);
 
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -154,6 +155,14 @@ function readJsonFile(filePath) {
   }
 }
 
+function normalizePageMode(rawMode) {
+  const mode = String(rawMode || "conversion").trim().toLowerCase();
+  if (!PAGE_MODES.has(mode)) {
+    throw new Error(`Invalid pageMode "${rawMode}". Expected conversion, editorial, or hybrid.`);
+  }
+  return mode;
+}
+
 function getGalleryEntries(limit = 80) {
   const entries = [];
   const dirents = readdirSync(GENERATED_DIR, { withFileTypes: true });
@@ -206,12 +215,13 @@ function getGalleryEntries(limit = 80) {
     .slice(0, limit);
 }
 
-function startBuildJob(topic) {
+function startBuildJob(topic, pageMode = "conversion") {
   const id = randomUUID();
   const slug = `${slugify(topic)}-${Date.now().toString(36)}`;
   const job = {
     id,
     topic,
+    pageMode,
     slug,
     status: "queued",
     createdAt: new Date().toISOString(),
@@ -231,6 +241,8 @@ function startBuildJob(topic) {
     slug,
     "--out-dir",
     GENERATED_DIR,
+    "--page-mode",
+    pageMode,
     "--start-model",
     "fal-ai/nano-banana-2",
     "--end-model",
@@ -309,16 +321,18 @@ const server = createServer(async (request, response) => {
     try {
       const body = await parseJsonBody(request);
       const topic = String(body.topic || "").trim();
+      const pageMode = normalizePageMode(body.pageMode);
       if (!topic) {
         sendJson(response, 400, { error: "Topic is required." });
         return;
       }
 
-      const job = startBuildJob(topic);
+      const job = startBuildJob(topic, pageMode);
       sendJson(response, 202, {
         id: job.id,
         slug: job.slug,
         status: job.status,
+        pageMode: job.pageMode,
       });
       return;
     } catch (error) {
