@@ -1648,8 +1648,10 @@ function setupSectionAnimations() {
         const enter = Number(section.dataset.enter) / 100;
         const leave = Number(section.dataset.leave) / 100;
         const visible = p >= enter && p <= leave;
+        const keepVisible = persist && p > leave;
+        section.style.opacity = visible || keepVisible ? "1" : "0";
         if (visible) tl.play();
-        else if (!(persist && p > leave)) tl.reverse();
+        else if (!keepVisible) tl.reverse();
       }
     });
   });
