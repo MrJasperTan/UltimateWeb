@@ -1,5 +1,13 @@
 const form = document.getElementById("build-form");
 const topicInput = document.getElementById("topic");
+const existingWebsiteInput = document.getElementById("existing-website");
+const colorsInput = document.getElementById("colors");
+const startImageInput = document.getElementById("start-image");
+const endImageInput = document.getElementById("end-image");
+const videoInput = document.getElementById("video");
+const startPromptInput = document.getElementById("start-prompt");
+const endPromptInput = document.getElementById("end-prompt");
+const videoPromptInput = document.getElementById("video-prompt");
 const pageModeInputs = document.querySelectorAll('input[name="pageMode"]');
 const submitButton = document.getElementById("submit-btn");
 const statusText = document.getElementById("status-text");
@@ -145,6 +153,14 @@ function startJobPolling(jobId) {
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
   const topic = topicInput.value.trim();
+  const existingWebsite = existingWebsiteInput.value.trim();
+  const colors = colorsInput.value.trim();
+  const startImage = startImageInput.value.trim();
+  const endImage = endImageInput.value.trim();
+  const video = videoInput.value.trim();
+  const startPrompt = startPromptInput.value.trim();
+  const endPrompt = endPromptInput.value.trim();
+  const videoPrompt = videoPromptInput.value.trim();
   const selectedPageMode = Array.from(pageModeInputs).find((input) => input.checked)?.value || "conversion";
   if (!topic) return;
 
@@ -158,7 +174,18 @@ form.addEventListener("submit", async (event) => {
     const response = await fetch("/api/build", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ topic, pageMode: selectedPageMode }),
+      body: JSON.stringify({
+        topic,
+        pageMode: selectedPageMode,
+        existingWebsite,
+        colors,
+        startImage,
+        endImage,
+        video,
+        startPrompt,
+        endPrompt,
+        videoPrompt,
+      }),
     });
     const data = await response.json().catch(() => ({}));
 

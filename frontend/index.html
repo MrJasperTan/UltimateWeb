@@ -26,6 +26,40 @@
           />
           <button id="submit-btn" type="submit">Launch Build</button>
         </div>
+        <div class="optional-grid">
+          <label class="field-block" for="existing-website">
+            <span>Existing Website</span>
+            <input id="existing-website" name="existingWebsite" type="url" inputmode="url" autocomplete="off" placeholder="https://example.com" />
+          </label>
+          <label class="field-block" for="colors">
+            <span>Colors</span>
+            <input id="colors" name="colors" type="text" autocomplete="off" placeholder="#49c0ff, #ff8a3d, #c9edff" />
+          </label>
+          <label class="field-block" for="start-image">
+            <span>Start Image</span>
+            <input id="start-image" name="startImage" type="text" autocomplete="off" placeholder="https://example.com/start.png or /path/to/start.png" />
+          </label>
+          <label class="field-block" for="end-image">
+            <span>End Image</span>
+            <input id="end-image" name="endImage" type="text" autocomplete="off" placeholder="https://example.com/end.png or /path/to/end.png" />
+          </label>
+          <label class="field-block" for="video">
+            <span>Video</span>
+            <input id="video" name="video" type="text" autocomplete="off" placeholder="https://example.com/clip.mp4 or /path/to/clip.mp4" />
+          </label>
+          <label class="field-block" for="start-prompt">
+            <span>Start Image Prompt</span>
+            <textarea id="start-prompt" name="startPrompt" rows="3" placeholder="Optional override for the first image prompt"></textarea>
+          </label>
+          <label class="field-block" for="end-prompt">
+            <span>End Image Prompt</span>
+            <textarea id="end-prompt" name="endPrompt" rows="3" placeholder="Optional override for the final image prompt"></textarea>
+          </label>
+          <label class="field-block" for="video-prompt">
+            <span>Video Prompt</span>
+            <textarea id="video-prompt" name="videoPrompt" rows="3" placeholder="Optional override for the video motion prompt"></textarea>
+          </label>
+        </div>
         <fieldset class="mode-picker">
           <legend>Site Mode</legend>
           <label class="mode-option">

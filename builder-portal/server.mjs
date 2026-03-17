@@ -163,6 +163,24 @@ function normalizePageMode(rawMode) {
   return mode;
 }
 
+function cleanOptionalString(value) {
+  const text = String(value || "").trim();
+  return text ? text : null;
+}
+
+function parseColorList(rawColors) {
+  const text = cleanOptionalString(rawColors);
+  if (!text) return [];
+  return Array.from(
+    new Set(
+      text
+        .split(/[,\n]+/)
+        .map((value) => value.trim())
+        .filter(Boolean)
+    )
+  ).slice(0, 6);
+}
+
 function getGalleryEntries(limit = 80) {
   const entries = [];
   const dirents = readdirSync(GENERATED_DIR, { withFileTypes: true });
@@ -215,7 +233,7 @@ function getGalleryEntries(limit = 80) {
     .slice(0, limit);
 }
 
-function startBuildJob(topic, pageMode = "conversion") {
+function startBuildJob(topic, pageMode = "conversion", options = {}) {
   const id = randomUUID();
   const slug = `${slugify(topic)}-${Date.now().toString(36)}`;
   const job = {
@@ -250,6 +268,26 @@ function startBuildJob(topic, pageMode = "conversion") {
     "--video-model",
     "fal-ai/kling-video/v3/pro/image-to-video",
   ];
+
+  const optionalArgs = [
+    ["--source-url", options.existingWebsite],
+    ["--start-image", options.startImage],
+    ["--end-image", options.endImage],
+    ["--video-path", options.videoPath],
+    ["--video-url", options.videoUrl],
+    ["--start-prompt", options.startPrompt],
+    ["--end-prompt", options.endPrompt],
+    ["--motion-prompt", options.videoPrompt],
+  ];
+
+  for (const [flag, value] of optionalArgs) {
+    if (!value) continue;
+    args.push(flag, value);
+  }
+
+  for (const color of options.colors || []) {
+    args.push("--color", color);
+  }
 
   const child = spawn("node", args, {
     cwd: ROOT_DIR,
@@ -311,23 +349,42 @@ const server = createServer(async (request, response) => {
   const { pathname } = url;
 
   if (request.method === "POST" && pathname === "/api/build") {
-    if (!process.env.FAL_KEY) {
-      sendJson(response, 500, {
-        error: "FAL_KEY is not set. Add it to .env or environment before starting the server.",
-      });
-      return;
-    }
-
     try {
       const body = await parseJsonBody(request);
       const topic = String(body.topic || "").trim();
       const pageMode = normalizePageMode(body.pageMode);
+      const existingWebsite = cleanOptionalString(body.existingWebsite);
+      const startImage = cleanOptionalString(body.startImage);
+      const endImage = cleanOptionalString(body.endImage);
+      const video = cleanOptionalString(body.video);
+      const startPrompt = cleanOptionalString(body.startPrompt);
+      const endPrompt = cleanOptionalString(body.endPrompt);
+      const videoPrompt = cleanOptionalString(body.videoPrompt);
+      const colors = parseColorList(body.colors);
       if (!topic) {
         sendJson(response, 400, { error: "Topic is required." });
         return;
       }
 
-      const job = startBuildJob(topic, pageMode);
+      if (!process.env.FAL_KEY && !video) {
+        sendJson(response, 500, {
+          error: "FAL_KEY is not set. Add it to .env or environment before starting the server, or provide an existing video.",
+        });
+        return;
+      }
+
+      const isVideoUrl = Boolean(video && /^https?:\/\//i.test(video));
+      const job = startBuildJob(topic, pageMode, {
+        existingWebsite,
+        colors,
+        startImage,
+        endImage,
+        videoPath: video && !isVideoUrl ? video : null,
+        videoUrl: isVideoUrl ? video : null,
+        startPrompt,
+        endPrompt,
+        videoPrompt,
+      });
       sendJson(response, 202, {
         id: job.id,
         slug: job.slug,

@@ -5,7 +5,7 @@ import { createWriteStream, existsSync, mkdirSync, readFileSync, readdirSync, wr
 import { basename, dirname, join, resolve } from "node:path";
 import { pipeline } from "node:stream/promises";
 import { Readable } from "node:stream";
-import { fileURLToPath } from "node:url";
+import { URL, fileURLToPath } from "node:url";
 
 const DEFAULT_START_MODEL = "fal-ai/nano-banana-2";
 const DEFAULT_END_MODEL = "fal-ai/nano-banana-2/edit";
@@ -52,7 +52,12 @@ Optional:
   --out-dir          Parent output directory (default: generated-sites)
   --slug             Output folder slug (default: derived from topic)
   --brand            Brand label used in the page copy
+  --source-url       Existing website URL used for reference context
+  --color            Palette override color; repeat flag for multiple values
+  --start-image      Existing start image URL or local path
+  --end-image        Existing end image URL or local path
   --video-path       Existing video path; skips fal media generation
+  --video-url        Existing video URL; skips fal media generation
   --start-prompt     Override first-frame prompt
   --end-prompt       Override last-frame prompt
   --motion-prompt    Override video motion prompt
@@ -62,7 +67,8 @@ Optional:
   --duration         Video duration seconds (default: 5)
   --page-mode        Site mode: conversion, editorial, or hybrid (default: conversion)
   --searxng-url      SearXNG instance URL for topic research (default: http://192.168.0.166:8888)
-  --no-research       Skip topic research step
+  --no-research      Skip topic research step
+  --qa               Run Playwright screenshot QA after scaffolding
   --help             Show this help
 `);
 }
@@ -80,7 +86,12 @@ function parseArgs(argv) {
       options[key] = true;
       continue;
     }
-    options[key] = next;
+    if (key === "color") {
+      if (!Array.isArray(options[key])) options[key] = [];
+      options[key].push(next);
+    } else {
+      options[key] = next;
+    }
     i += 1;
   }
   return options;
@@ -118,6 +129,131 @@ function normalizeVideoDuration(seconds) {
   // Kling v3 pro i2v supports 5s and 10s.
   if (seconds >= 8) return "10";
   return "5";
+}
+
+function extractSourceUrls(value) {
+  return Array.from(String(value || "").matchAll(/https?:\/\/[^\s,)]+/gi), (match) => match[0]);
+}
+
+function stripSourceUrls(value) {
+  return normalizeWhitespace(String(value || "").replace(/https?:\/\/[^\s,)]+/gi, " "));
+}
+
+function sanitizeTopic(value) {
+  return normalizeWhitespace(
+    stripSourceUrls(value)
+      .replace(/[|]+/g, " ")
+      .replace(/\s+,/g, ",")
+      .replace(/,\s*$/, "")
+      .replace(/\s{2,}/g, " ")
+  );
+}
+
+function parseTopicInput(rawTopic) {
+  const sourceUrls = extractSourceUrls(rawTopic);
+  const sourceUrl = sourceUrls[0] || null;
+  const topic = sanitizeTopic(rawTopic);
+  return { rawTopic: String(rawTopic || ""), topic, sourceUrl };
+}
+
+function stripHtml(value) {
+  return normalizeWhitespace(
+    String(value || "")
+      .replace(/<script[\s\S]*?<\/script>/gi, " ")
+      .replace(/<style[\s\S]*?<\/style>/gi, " ")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&nbsp;/gi, " ")
+      .replace(/&amp;/gi, "&")
+  );
+}
+
+function deriveBrandLabel(topic) {
+  const cleanTopic = sanitizeTopic(topic);
+  const beforeLocation = cleanTopic.split(/\s+(?:in|at|near)\s+/i)[0]?.trim();
+  const withoutDescriptors = beforeLocation
+    ?.replace(/\b(restaurant|bar|pub|cafe|café|bistro|grill|brewery|brewpub|tavern|lounge|steakhouse|hotel|resort)\b/gi, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+  return withoutDescriptors || beforeLocation || cleanTopic;
+}
+
+function isValidHttpUrl(value) {
+  if (!value) return false;
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function cleanOptionalString(value) {
+  const text = String(value || "").trim();
+  return text ? text : null;
+}
+
+function normalizePaletteOverride(rawColors) {
+  const input = Array.isArray(rawColors) ? rawColors : [rawColors];
+  return Array.from(
+    new Set(
+      input
+        .flatMap((value) => String(value || "").split(/[,\n]+/))
+        .map((value) => value.trim())
+        .filter(Boolean)
+    )
+  ).slice(0, 6);
+}
+
+function toAbsoluteUrl(baseUrl, maybeRelative) {
+  if (!baseUrl || !maybeRelative) return null;
+  try {
+    return new URL(maybeRelative, baseUrl).toString();
+  } catch {
+    return null;
+  }
+}
+
+function tokenizeText(value) {
+  return Array.from(
+    new Set(
+      normalizeWhitespace(value)
+        .toLowerCase()
+        .split(/[^a-z0-9]+/i)
+        .filter((token) => token.length >= 3)
+    )
+  );
+}
+
+function summarizePalette(colors) {
+  if (!colors || colors.length === 0) return null;
+  return colors.slice(0, 3).join(", ");
+}
+
+function pickLogoCandidate(imageUrls) {
+  return (imageUrls || []).find((url) => /logo|brand|mark|icon/i.test(url)) || imageUrls?.[0] || null;
+}
+
+function detectCategory(rawTopic) {
+  const topic = sanitizeTopic(rawTopic);
+  if (/(corvette|stingray|car|supercar|vehicle|sedan|truck|automotive|auto|tesla|porsche|ferrari|lamborghini|bmw|mercedes|mustang|camaro|mclaren|bugatti|aston\s*martin)/i.test(topic)) {
+    return "car";
+  }
+  if (/\b(restaurant|bar|pub|irish pub|tavern|brewery|brewpub|drinkery|cafe|café|coffee|bistro|grill|steakhouse|eatery|kitchen|lounge|hotel|resort|inn|club|saloon|menu|drinks|specials|catering|reservations?|happy hour)\b/i.test(topic)) {
+    return "venue";
+  }
+  if (/(city|town|village|country|island|mountain|lake|river|park|monument|landmark|tower|bridge|canyon|beach|resort|temple|palace|cathedral|museum|airport|harbor|port|district|borough|prefecture|province|state of|tokyo|kyoto|osaka|paris|london|new york|los angeles|dubai|rome|venice|barcelona|amsterdam|berlin|sydney|singapore|hong kong|bangkok|istanbul|cairo|mumbai|delhi|beijing|shanghai|seattle|chicago|miami|las vegas|san francisco|hawaii|bali|maldives|santorini|machu picchu|grand canyon|niagara|yellowstone|yosemite|everest|kilimanjaro|alps|sahara|amazon|patagonia|japan|france|italy|spain|germany|australia|brazil|mexico|india|china|egypt|greece|thailand|vietnam|morocco|peru|argentina|colombia|portugal|turkey|iceland|norway|switzerland|austria|croatia|czech|ireland|scotland|england|canada|alaska|africa|europe|asia|antarctica|\b[A-Z]{2}\b)/i.test(topic)) {
+    return "place";
+  }
+  if (/(dr\.?|mr\.?|mrs\.?|ms\.?|president|ceo|chef|coach|captain|king|queen|prince|princess|saint|st\.)/i.test(topic)) {
+    return "person";
+  }
+  const words = topic.trim().split(/\s+/);
+  const allCapitalized = words.length >= 2 && words.length <= 4 && words.every((word) => /^[A-Z]/.test(word));
+  const noProductWords = !/\d{4}|edition|pro|max|ultra|plus|series|model|version|gen\b/i.test(topic);
+  if (allCapitalized && noProductWords) {
+    return "person";
+  }
+  return "generic";
 }
 
 function ensureBinary(binary) {
@@ -290,6 +426,25 @@ async function downloadToFile(url, outputPath) {
   await pipeline(Readable.fromWeb(response.body), fileStream);
 }
 
+async function copyLocalFileToOutput(inputPath, outputPath) {
+  const sourcePath = resolve(String(inputPath));
+  if (!existsSync(sourcePath)) {
+    throw new Error(`Local asset not found: ${sourcePath}`);
+  }
+  writeFileSync(outputPath, readFileSync(sourcePath));
+  return sourcePath;
+}
+
+async function materializeAsset(inputValue, outputPath) {
+  const value = cleanOptionalString(inputValue);
+  if (!value) return null;
+  if (isValidHttpUrl(value)) {
+    await downloadToFile(value, outputPath);
+    return value;
+  }
+  return copyLocalFileToOutput(value, outputPath);
+}
+
 function escapeHtml(value) {
   return String(value)
     .replace(/&/g, "&amp;")
@@ -301,12 +456,165 @@ function escapeHtml(value) {
 
 const DEFAULT_SEARXNG_URL = "http://192.168.0.166:8888";
 
-async function researchTopic(topic, searxngUrl) {
-  const queries = [
-    `${topic} specifications features`,
-    `${topic} review details`,
-    `${topic} facts stats`,
-  ];
+function extractMetaContent(html, selectors) {
+  for (const selector of selectors) {
+    const pattern = new RegExp(`<meta[^>]+(?:name|property)=["']${selector}["'][^>]+content=["']([^"']+)["'][^>]*>`, "i");
+    const match = html.match(pattern);
+    if (match?.[1]) return normalizeWhitespace(match[1]);
+  }
+  return null;
+}
+
+function extractHtmlTitle(html) {
+  const match = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+  return match?.[1] ? normalizeWhitespace(match[1]) : null;
+}
+
+function extractCssColors(html) {
+  const colors = Array.from(new Set(Array.from(html.matchAll(/#(?:[0-9a-f]{3}|[0-9a-f]{6})\b/gi), (match) => match[0].toLowerCase())));
+  return colors.filter((color) => !/^#(?:fff(?:fff)?|000(?:000)?)$/i.test(color)).slice(0, 6);
+}
+
+function extractImageUrls(html, baseUrl) {
+  const urls = [];
+  for (const match of html.matchAll(/<(?:img|source)[^>]+(?:src|srcset)=["']([^"']+)["']/gi)) {
+    const value = match[1].split(",")[0]?.trim().split(/\s+/)[0];
+    const absolute = toAbsoluteUrl(baseUrl, value);
+    if (absolute) urls.push(absolute);
+  }
+  return Array.from(new Set(urls)).slice(0, 8);
+}
+
+async function fetchSourceContext(sourceUrl) {
+  if (!isValidHttpUrl(sourceUrl)) return null;
+  try {
+    const response = await fetch(sourceUrl, { signal: AbortSignal.timeout(8000) });
+    if (!response.ok) return null;
+    const html = await response.text();
+    const title = extractHtmlTitle(html);
+    const description =
+      extractMetaContent(html, ["description", "og:description", "twitter:description"]);
+    const themeColor = extractMetaContent(html, ["theme-color", "msapplication-TileColor"]);
+    const ogImage = extractMetaContent(html, ["og:image", "twitter:image"]);
+    const imageUrls = extractImageUrls(html, sourceUrl);
+    const pageText = clipText(stripHtml(html), 1200);
+    if (ogImage) {
+      const absolute = toAbsoluteUrl(sourceUrl, ogImage);
+      if (absolute && !imageUrls.includes(absolute)) imageUrls.unshift(absolute);
+    }
+    const palette = Array.from(new Set([themeColor, ...extractCssColors(html)].filter(Boolean))).slice(0, 4);
+    return {
+      url: sourceUrl,
+      title,
+      description,
+      pageText,
+      palette,
+      imageUrls,
+      logoUrl: pickLogoCandidate(imageUrls),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function inferCategoryFromSignals(topic, sourceContext = null, research = null) {
+  const categorySignals = [
+    topic,
+    sourceContext?.title,
+    sourceContext?.description,
+    sourceContext?.pageText,
+    ...(research?.snippets || []).slice(0, 6),
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  if (/\b(restaurant|bar|pub|tavern|brewery|brewpub|drinkery|cafe|café|coffee|bistro|grill|steakhouse|eatery|kitchen|lounge|menu|drinks|specials|catering|reservations?|happy hour|cocktails|beer|wine|craft beer|parties)\b/i.test(categorySignals)) {
+    return "venue";
+  }
+  return detectCategory(categorySignals || topic);
+}
+
+function buildBusinessProfile(topic, brand, sourceContext = null, research = null) {
+  const category = inferCategoryFromSignals(topic, sourceContext, research);
+  return {
+    topic,
+    brand,
+    category,
+    sourceContext,
+    research,
+    logoUrl: sourceContext?.logoUrl || null,
+    referenceMedia: (sourceContext?.imageUrls || []).slice(0, 6),
+    palette: sourceContext?.palette || [],
+    locationSignal: sourceContext?.title || research?.summary || null,
+  };
+}
+
+function buildResearchQueries(topic, category, sourceContext) {
+  const queries = [];
+  if (category === "car") {
+    queries.push(`${topic} specifications performance horsepower`);
+    queries.push(`${topic} review features interior`);
+    queries.push(`${topic} top speed 0-60`);
+  } else if (category === "person") {
+    queries.push(`${topic} biography achievements`);
+    queries.push(`${topic} career milestones`);
+    queries.push(`${topic} facts awards`);
+  } else if (category === "place") {
+    queries.push(`${topic} travel highlights skyline culture`);
+    queries.push(`${topic} population founded landmarks`);
+    queries.push(`${topic} destination guide neighborhoods`);
+  } else if (category === "venue") {
+    queries.push(`${topic} menu atmosphere reviews location`);
+    queries.push(`${topic} official site hours address`);
+    queries.push(`${topic} neighborhood events signature drinks`);
+  } else {
+    queries.push(`${topic} specifications features`);
+    queries.push(`${topic} review details`);
+    queries.push(`${topic} facts stats`);
+  }
+
+  if (sourceContext?.url) {
+    queries.unshift(`${topic} site:${new URL(sourceContext.url).hostname}`);
+  }
+
+  return queries.slice(0, 4);
+}
+
+function isLikelyIrrelevantResult(category, text) {
+  const haystack = normalizeWhitespace(text).toLowerCase();
+  if (!haystack) return false;
+  if (category === "venue") {
+    return /\b(font|typeface|template|mockup|vector|creative market|download|spec enterprise)\b/i.test(haystack);
+  }
+  return false;
+}
+
+function isRelevantSearchResult(topic, result, sourceContext) {
+  const haystack = normalizeWhitespace(`${result.title || ""} ${result.content || ""} ${result.url || ""}`).toLowerCase();
+  const category = inferCategoryFromSignals(topic, sourceContext, null);
+  if (isLikelyIrrelevantResult(category, haystack)) return false;
+  const topicTokens = tokenizeText(topic).slice(0, 6);
+  const tokenHits = topicTokens.filter((token) => haystack.includes(token)).length;
+  if (tokenHits >= Math.min(2, topicTokens.length)) return true;
+
+  const brandToken = tokenizeText(deriveBrandLabel(topic))[0];
+  if (brandToken && haystack.includes(brandToken)) return true;
+
+  if (sourceContext?.url) {
+    try {
+      const hostname = new URL(sourceContext.url).hostname.replace(/^www\./, "");
+      if (haystack.includes(hostname)) return true;
+    } catch {
+      // ignore invalid source context
+    }
+  }
+
+  return false;
+}
+
+async function researchTopic(topic, searxngUrl, sourceContext) {
+  const category = inferCategoryFromSignals(topic, sourceContext, null);
+  const queries = buildResearchQueries(topic, category, sourceContext);
 
   const allResults = [];
   const sources = [];
@@ -318,7 +626,7 @@ async function researchTopic(topic, searxngUrl) {
       if (!response.ok) continue;
       const data = await response.json();
       if (data.results && data.results.length > 0) {
-        const results = data.results.slice(0, 5);
+        const results = data.results.filter((result) => isRelevantSearchResult(topic, result, sourceContext)).slice(0, 5);
         allResults.push(...results);
         for (const result of results) {
           if (!result.url) continue;
@@ -351,6 +659,7 @@ async function researchTopic(topic, searxngUrl) {
   console.log(`Research: gathered ${allResults.length} results across ${queries.length} queries.`);
 
   const research = {
+    topic,
     snippets: [],
     attributes: {},
     sources: [],
@@ -372,7 +681,19 @@ async function researchTopic(topic, searxngUrl) {
   // Deduplicate snippets
   research.snippets = [...new Set(research.snippets)].slice(0, 10);
   research.sources = dedupeSources(sources, 8);
-  research.category = detectCategory(topic);
+  if (sourceContext?.description) {
+    research.snippets.unshift(sourceContext.description);
+  }
+  research.snippets = [...new Set(research.snippets)].slice(0, 10);
+  if (sourceContext?.url) {
+    research.sources = dedupeSources(
+      [{ url: sourceContext.url, title: sourceContext.title || topic, source: "source-site" }, ...sources],
+      8
+    );
+  } else {
+    research.sources = dedupeSources(sources, 8);
+  }
+  research.category = category;
   research.summary = buildResearchSummary(topic, research.snippets);
   research.facts = buildResearchFacts(research.category, research.attributes, research.snippets);
   research.proofPoints = buildProofPoints(research.category, topic, research.facts, research.snippets);
@@ -405,6 +726,20 @@ function clipText(value, maxLen) {
   return clean.slice(0, maxLen - 3).trimEnd() + "...";
 }
 
+function dedupeLines(items, normalizeForCompare = true) {
+  const seen = new Set();
+  const out = [];
+  for (const item of items || []) {
+    const clean = normalizeWhitespace(item);
+    if (!clean) continue;
+    const key = normalizeForCompare ? clean.toLowerCase().replace(/[^\w\s]/g, "") : clean;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(clean);
+  }
+  return out;
+}
+
 function titleizeFactLabel(value) {
   return normalizeWhitespace(value)
     .replace(/[_-]+/g, " ")
@@ -428,8 +763,22 @@ function dedupeSources(items, limit = 8) {
   return out;
 }
 
+function scoreSnippet(topic, snippet) {
+  const clean = normalizeWhitespace(snippet);
+  const lower = clean.toLowerCase();
+  let score = 0;
+  if (lower.includes(String(topic || "").toLowerCase())) score += 3;
+  if (/\b(menu|drinks|events|party|catering|craft beer|cocktail|patio|downtown|chandler)\b/i.test(clean)) score += 2;
+  if (!clean.includes("...")) score += 1;
+  if (clean.length >= 80 && clean.length <= 260) score += 2;
+  if (/last page|official website of|creative market|tiktok|spec enterprise/i.test(clean)) score -= 4;
+  return score;
+}
+
 function buildResearchSummary(topic, snippets) {
-  const best = pickBestSnippet({ snippets }, 240);
+  const candidates = dedupeLines(snippets)
+    .sort((a, b) => scoreSnippet(topic, b) - scoreSnippet(topic, a));
+  const best = candidates[0] ? clipText(candidates[0], 320) : null;
   if (best) return best;
   return `${topic} is presented through a research-informed narrative with premium positioning and category-specific proof points.`;
 }
@@ -486,6 +835,13 @@ function buildResearchFacts(category, attributes, snippets) {
     pushFact("Area", attributes["Area"] || attributes["Size"], "metric");
     pushFact("Elevation", attributes["Elevation"] || attributes["Altitude"], "metric");
   }
+  if (category === "venue") {
+    pushFact("Address", attributes["Address"] || attributes["Location"], "venue");
+    pushFact("Hours", attributes["Hours"] || attributes["Opening hours"], "venue");
+    pushFact("Cuisine", attributes["Cuisine"] || attributes["Specialties"], "venue");
+    pushFact("Rating", extractNumber(combined, /(\d\.\d)\s*(?:\/\s*5|stars?)/i), "venue");
+    pushFact("Tap count", extractNumber(combined, /(\d{1,3})\s*(?:beers?|taps?|drafts?)/i), "venue");
+  }
 
   return facts.slice(0, 8);
 }
@@ -520,6 +876,12 @@ function buildProofPoints(category, topic, facts, snippets) {
     return [
       `${topic} is defined through atmosphere, geography, and signature experiences.`,
       "The page should translate inspiration into planning intent with practical highlights.",
+    ];
+  }
+  if (category === "venue") {
+    return [
+      `${topic} is defined by room energy, real hospitality signals, and the feeling of being there.`,
+      "The page should convert curiosity into a visit, reservation, or event-night decision.",
     ];
   }
   return [
@@ -566,6 +928,17 @@ function buildFaqCandidates(category, topic, facts) {
         {
           question: "What should the page convert toward?",
           answer: "Convert inspiration into planning intent with concrete highlights, travel signals, and a destination-oriented CTA.",
+        }
+      );
+    } else if (category === "venue") {
+      faqs.push(
+        {
+          question: `Why go to ${topic}?`,
+          answer: `${topic} should feel specific to its neighborhood, offer, and crowd energy instead of reading like a generic food-and-drink listing.`,
+        },
+        {
+          question: "What should the page convert toward?",
+          answer: "Move visitors toward a real visit with hours, signature highlights, social proof, and a clear plan-the-night CTA.",
         }
       );
     } else {
@@ -623,6 +996,14 @@ function extractResearchStats(research, category) {
       return { population, elevation, founded, area };
     }
   }
+  if (category === "venue") {
+    const hours = attrs["Hours"] || attrs["Opening hours"];
+    const taps = extractNumber(snippetText, /(\d{1,3})\s*(?:beers?|taps?|drafts?)/i);
+    const rating = extractNumber(snippetText, /(\d\.\d)\s*(?:\/\s*5|stars?)/i);
+    if (hours || taps || rating) {
+      return { hours, taps, rating };
+    }
+  }
 
   return null;
 }
@@ -634,33 +1015,15 @@ function extractNumber(text, regex) {
 
 function pickBestSnippet(research, maxLen) {
   if (!research || !research.snippets || research.snippets.length === 0) return null;
-  // Return the longest snippet up to maxLen as it likely has the most info
-  const sorted = [...research.snippets].sort((a, b) => b.length - a.length);
+  const topic = research.topic || "";
+  const sorted = [...dedupeLines(research.snippets)].sort((a, b) => {
+    const scoreDelta = scoreSnippet(topic, b) - scoreSnippet(topic, a);
+    if (scoreDelta !== 0) return scoreDelta;
+    return b.length - a.length;
+  });
   const best = sorted[0];
   return best.length > maxLen ? best.slice(0, maxLen) + "..." : best;
 }
-
-function detectCategory(topic) {
-  if (/(corvette|stingray|car|supercar|vehicle|sedan|truck|automotive|auto|tesla|porsche|ferrari|lamborghini|bmw|mercedes|mustang|camaro|mclaren|bugatti|aston\s*martin)/i.test(topic)) {
-    return "car";
-  }
-  if (/(city|town|village|country|island|mountain|lake|river|park|monument|landmark|tower|bridge|canyon|beach|resort|temple|palace|cathedral|museum|airport|harbor|port|district|borough|prefecture|province|state of|tokyo|kyoto|osaka|paris|london|new york|los angeles|dubai|rome|venice|barcelona|amsterdam|berlin|sydney|singapore|hong kong|bangkok|istanbul|cairo|mumbai|delhi|beijing|shanghai|seattle|chicago|miami|las vegas|san francisco|hawaii|bali|maldives|santorini|machu picchu|grand canyon|niagara|yellowstone|yosemite|everest|kilimanjaro|alps|sahara|amazon|patagonia|japan|france|italy|spain|germany|australia|brazil|mexico|india|china|egypt|greece|thailand|vietnam|morocco|peru|argentina|colombia|portugal|turkey|iceland|norway|switzerland|austria|croatia|czech|ireland|scotland|england|canada|alaska|africa|europe|asia|antarctica)/i.test(topic)) {
-    return "place";
-  }
-  // Common person indicators — names with titles, or well-known figure patterns
-  if (/(dr\.?|mr\.?|mrs\.?|ms\.?|president|ceo|chef|coach|captain|king|queen|prince|princess|saint|st\.)/i.test(topic)) {
-    return "person";
-  }
-  // If it looks like a proper name (2-4 capitalized words, no product-like terms)
-  const words = topic.trim().split(/\s+/);
-  const allCapitalized = words.length >= 2 && words.length <= 4 && words.every(w => /^[A-Z]/.test(w));
-  const noProductWords = !/\d{4}|edition|pro|max|ultra|plus|series|model|version|gen\b/i.test(topic);
-  if (allCapitalized && noProductWords) {
-    return "person";
-  }
-  return "generic";
-}
-
 
 function generateDramaticCopy(category, topic, brand, research) {
   const bestSnippet = pickBestSnippet(research, 220);
@@ -690,6 +1053,14 @@ function generateDramaticCopy(category, topic, brand, research) {
       closingStatement: "Every journey ends here. Every story begins.",
     };
   }
+  if (category === "venue") {
+    return {
+      tagline: "PULL UP AFTER DARK",
+      introStatement: "A real venue needs tension, atmosphere, and a reason to walk through the door tonight.",
+      introSubtext,
+      closingStatement: "The room is the product. The night is the proof.",
+    };
+  }
   // generic
   return {
     tagline: "ENGINEERED BEYOND",
@@ -702,7 +1073,7 @@ function generateDramaticCopy(category, topic, brand, research) {
 function buildFeaturesFromResearch(category, topic, research) {
   const animations = ["slide-left", "clip-reveal", "slide-right", "stagger-up"];
   const alignments = ["left", "right", "left", "right"];
-  const snippets = (research && research.snippets) || [];
+  const snippets = dedupeLines((research && research.snippets) || []);
 
   function snip(i) {
     return (snippets[i] && snippets[i].length > 30) ? snippets[i] : null;
@@ -731,6 +1102,13 @@ function buildFeaturesFromResearch(category, topic, research) {
       { label: "003 / Cuisine", heading: "Flavour & Lifestyle", body: snip(2) || `Taste the locale \u2014 ingredients sourced from the land, techniques passed through generations, experiences shared around every table.` },
       { label: "004 / Architecture", heading: "Landmarks & Design", body: snip(3) || `Structures that define the skyline \u2014 from ancient stonework to contemporary glass, each building tells a story.` },
     ];
+  } else if (category === "venue") {
+    templates = [
+      { label: "001 / Atmosphere", heading: "Room Energy", body: snip(0) || `${topic} should feel like a place with its own pulse \u2014 lighting, sound, density, and social gravity all working together.` },
+      { label: "002 / Offer", heading: "What People Come For", body: snip(1) || `Build the page around the real draw: signature pours, standout dishes, events, and the reasons regulars keep returning.` },
+      { label: "003 / Setting", heading: "Neighborhood Context", body: snip(2) || `The venue should feel anchored to its block and city, with local cues that make the experience unmistakably rooted in place.` },
+      { label: "004 / Experience", heading: "Night-Of Momentum", body: snip(3) || `Translate the best parts of the visit into motion: arrival, first order, crowd energy, and the sense that the night is building.` },
+    ];
   } else {
     templates = [
       { label: "001 / Core", heading: "Core Technology", body: snip(0) || "A foundational system engineered for reliability, speed, and effortless scalability from day one." },
@@ -747,7 +1125,7 @@ function buildFeaturesFromResearch(category, topic, research) {
   }));
 }
 
-function buildTheme(category) {
+function buildTheme(category, sourceContext = null) {
   const themes = {
     car: {
       bg: "#070709",
@@ -788,6 +1166,19 @@ function buildTheme(category) {
       displayFont: "\"Syne\", \"Arial Narrow\", sans-serif",
       bodyFont: "\"Manrope\", \"Segoe UI\", sans-serif",
     },
+    venue: {
+      bg: "#120d0b",
+      bgElevated: "#1b1512",
+      text: "#f9f1e7",
+      muted: "#cbb7a3",
+      accent: "#d8893d",
+      accentSoft: "#f0d1aa",
+      accentAlt: "#5daaa8",
+      heroGlow: "rgba(216, 137, 61, 0.26)",
+      heroGlowAlt: "rgba(93, 170, 168, 0.18)",
+      displayFont: "\"Oswald\", \"Arial Narrow\", sans-serif",
+      bodyFont: "\"Manrope\", \"Segoe UI\", sans-serif",
+    },
     generic: {
       bg: "#08090c",
       bgElevated: "#11151c",
@@ -803,7 +1194,11 @@ function buildTheme(category) {
     },
   };
 
-  return themes[category] || themes.generic;
+  const theme = { ...(themes[category] || themes.generic) };
+  if (sourceContext?.palette?.[0]) theme.accent = sourceContext.palette[0];
+  if (sourceContext?.palette?.[1]) theme.accentAlt = sourceContext.palette[1];
+  if (sourceContext?.palette?.[2]) theme.accentSoft = sourceContext.palette[2];
+  return theme;
 }
 
 function formatStatValue(rawValue, fallbackValue, fallbackSuffix = "") {
@@ -851,6 +1246,13 @@ function buildStatEntries(category, researchStats) {
       { ...formatStatValue("3", 3, "must-sees"), label: "Core highlights" },
     ];
   }
+  if (category === "venue") {
+    return [
+      { ...formatStatValue(researchStats?.hours, 7, "days"), label: "Open rhythm" },
+      { ...formatStatValue(researchStats?.taps, 12, "taps"), label: "Signature pours" },
+      { ...formatStatValue(researchStats?.rating, 4.7, "/5"), label: "Review signal" },
+    ];
+  }
 
   return [
     { ...formatStatValue("24", 24, "mo"), label: "Roadmap horizon" },
@@ -887,6 +1289,15 @@ function buildCtaProfile(category, topic, brand, pageMode) {
       body: `Translate the atmosphere of ${topic} into a real itinerary with timing, highlights, and signature experiences.`,
       button: "Start Planning",
       headerCta: "Explore",
+    };
+  }
+  if (category === "venue") {
+    return {
+      label: "008 / Tonight",
+      heading: `Visit ${brand}`,
+      body: `Turn interest into foot traffic with the right mood, proof, and a clear reason to show up at ${topic}.`,
+      button: "Plan A Visit",
+      headerCta: "Visit",
     };
   }
 
@@ -983,13 +1394,13 @@ function buildSections(category, topic, research, pageMode, dramatic, features, 
   ];
 }
 
-function buildContentProfile(topic, brand, research, pageMode) {
-  const category = detectCategory(topic);
+function buildContentProfile(businessProfile, pageMode) {
+  const { topic, brand, research, sourceContext, category } = businessProfile;
   const researchStats = extractResearchStats(research, category);
-  const bestSnippet = pickBestSnippet(research, 180);
+  const bestSnippet = pickBestSnippet(research, 320);
   const dramatic = generateDramaticCopy(category, topic, brand, research);
   const features = buildFeaturesFromResearch(category, topic, research);
-  const theme = buildTheme(category);
+  const theme = buildTheme(category, sourceContext);
   const stats = buildStatEntries(category, researchStats);
   const cta = buildCtaProfile(category, topic, brand, pageMode);
   const heroSub =
@@ -1001,6 +1412,7 @@ function buildContentProfile(topic, brand, research, pageMode) {
   if (category === "car") heroKicker = pageMode === "editorial" ? "PERFORMANCE MONOGRAPH" : "AERODYNAMIC FUTURE PERFORMANCE";
   if (category === "person") heroKicker = pageMode === "conversion" ? "IDENTITY. PROOF. IMPACT." : "THE DEFINITIVE PORTRAIT";
   if (category === "place") heroKicker = pageMode === "conversion" ? "DESTINATION WITH INTENT" : "DESTINATION UNVEILED";
+  if (category === "venue") heroKicker = pageMode === "editorial" ? "ROOM. LIGHT. SIGNAL." : "NEIGHBORHOOD NIGHTLIFE";
 
   return {
     category,
@@ -1017,19 +1429,46 @@ function buildContentProfile(topic, brand, research, pageMode) {
     cta,
     trustLine:
       research && research.sources?.length
-        ? `${research.sources.length} live sources informed the hero, proof, and spec sections.`
+        ? `${research.sources.length} live sources${sourceContext?.url ? " plus the source site" : ""} informed the hero, proof, and spec sections.`
         : "Built with best-effort category research and premium design defaults.",
   };
 }
 
-function buildSectionTiming(count) {
+function estimateSectionWeight(section) {
+  let weight = 1;
+  weight += Math.min((section.heading || "").length / 60, 1.4);
+  weight += Math.min((section.body || "").length / 180, 2);
+  if (section.cards?.length) {
+    weight += section.cards.reduce((sum, card) => sum + Math.min(((card.title || "").length + (card.body || "").length) / 220, 0.8), 0);
+  }
+  if (section.items?.length) {
+    weight += section.items.reduce((sum, item) => sum + Math.min(((item.question || "").length + (item.answer || "").length) / 220, 0.8), 0);
+  }
+  if (section.stats?.length) weight += section.stats.length * 0.25;
+  if (section.kind === "cta") weight += 0.4;
+  return Math.max(1, weight);
+}
+
+function buildSectionTiming(sections) {
   const start = 10;
   const end = 100;
-  const span = (end - start) / count;
-  return Array.from({ length: count }, (_, index) => ({
-    enter: Number((start + index * span).toFixed(2)),
-    leave: Number((start + (index + 1) * span).toFixed(2)),
-  }));
+  const total = end - start;
+  const weights = sections.map((section) => estimateSectionWeight(section));
+  const weightTotal = weights.reduce((sum, value) => sum + value, 0) || sections.length || 1;
+  let cursor = start;
+  return sections.map((section, index) => {
+    const remaining = end - cursor;
+    const sectionsLeft = sections.length - index;
+    const reservedMinimum = Math.max(0, (sectionsLeft - 1) * 6);
+    const proportional = (weights[index] / weightTotal) * total;
+    const span = Math.max(6, Math.min(18, proportional, remaining - reservedMinimum));
+    const timing = {
+      enter: Number(cursor.toFixed(2)),
+      leave: Number((index === sections.length - 1 ? end : cursor + span).toFixed(2)),
+    };
+    cursor = timing.leave;
+    return timing;
+  });
 }
 
 function renderCardMarkup(cards) {
@@ -1113,11 +1552,15 @@ ${renderCardMarkup(
     </section>`;
 }
 
-function writeScaffoldFiles({ siteDir, topic, brand, pageMode, frameCount, frameExtension, research }) {
-  const profile = buildContentProfile(topic, brand, research, pageMode);
+function writeScaffoldFiles({ siteDir, topic, brand, pageMode, frameCount, frameExtension, research, sourceContext }) {
+  const businessProfile = buildBusinessProfile(topic, brand, sourceContext, research);
+  const profile = buildContentProfile(businessProfile, pageMode);
   const headline = escapeHtml(topic.toUpperCase());
   const safeTopic = escapeHtml(topic);
   const safeBrand = escapeHtml(brand);
+  const logoMarkup = sourceContext?.logoUrl
+    ? `<div class="brand-lockup"><img class="brand-logo" src="${escapeHtml(sourceContext.logoUrl)}" alt="${safeBrand} logo" /><span class="brand-text">${safeBrand}</span></div>`
+    : `<span class="brand-text">${safeBrand}</span>`;
   const taglineRepeated = escapeHtml(profile.tagline) + " \u00B7 " + escapeHtml(profile.tagline) + " \u00B7 " + escapeHtml(profile.tagline);
   const renderedSections = [
     ...profile.sections,
@@ -1131,7 +1574,7 @@ function writeScaffoldFiles({ siteDir, topic, brand, pageMode, frameCount, frame
       button: profile.cta.button,
     },
   ];
-  const timings = buildSectionTiming(renderedSections.length);
+  const timings = buildSectionTiming(renderedSections);
   const sectionsHtml = renderedSections
     .map((section, index) => renderSectionMarkup(section, timings[index], index, renderedSections.length))
     .join("\n");
@@ -1156,7 +1599,7 @@ function writeScaffoldFiles({ siteDir, topic, brand, pageMode, frameCount, frame
   </div>
 
   <header class="site-header">
-    <span class="brand">${safeBrand}</span>
+    <div class="brand">${logoMarkup}</div>
     <a href="#cta">${escapeHtml(profile.cta.headerCta)}</a>
   </header>
 
@@ -1254,7 +1697,8 @@ body { font-family: var(--font-body); overflow-x: hidden; }
 }
 
 .site-header a,
-.brand {
+.brand,
+.brand-text {
   color: #fff;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -1262,8 +1706,21 @@ body { font-family: var(--font-body); overflow-x: hidden; }
   font-size: 0.78rem;
 }
 
+.brand-lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.brand-logo {
+  width: auto;
+  height: 2.5rem;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.25));
+}
+
 .hero-standalone {
-  height: 100vh;
+  min-height: 100svh;
   padding: clamp(1.4rem, 4vw, 4rem);
   display: flex;
   flex-direction: column;
@@ -1286,9 +1743,10 @@ body { font-family: var(--font-body); overflow-x: hidden; }
 
 h1 {
   font-family: var(--font-display);
-  font-size: clamp(4rem, 14vw, 12rem);
+  font-size: clamp(3rem, 11vw, 12rem);
   letter-spacing: 0.03em;
   line-height: 0.95;
+  overflow-wrap: anywhere;
 }
 
 .hero-sub {
@@ -1361,6 +1819,7 @@ h1 {
   top: 50%;
   transform: translateY(-50%);
   opacity: 0;
+  padding-block: clamp(2rem, 7vh, 6rem);
 }
 
 .align-left { padding-left: 5vw; padding-right: 55vw; }
@@ -1368,12 +1827,14 @@ h1 {
 .align-center { padding: 0 10vw; text-align: center; }
 
 .section-inner {
-  max-width: 40vw;
+  width: min(40vw, 42rem);
+  max-width: 100%;
   display: grid;
   gap: 1rem;
 }
 
 .section-inner-wide {
+  width: min(88vw, 1120px);
   max-width: min(88vw, 1120px);
 }
 
@@ -1410,6 +1871,7 @@ h1 {
 .section-body {
   font-size: clamp(1rem, 1.6vw, 1.25rem);
   color: #d2d2cc;
+  line-height: 1.6;
 }
 
 .stats-grid {
@@ -1487,6 +1949,7 @@ h1 {
   }
   .section-inner {
     max-width: 86vw;
+    width: 86vw;
     margin-inline: auto;
     background: rgba(0, 0, 0, 0.58);
     padding: 1rem;
@@ -1495,6 +1958,9 @@ h1 {
   .stats-grid {
     grid-template-columns: 1fr;
     text-align: center;
+  }
+  .brand-logo {
+    height: 2rem;
   }
   .cta-button { justify-self: center; }
 }
@@ -1791,39 +2257,68 @@ function runFrameExtraction(videoPath, framesDir) {
   return { metadata, settings, frameCount: frameFiles.length, frameExtension };
 }
 
-function createPrompts(topic) {
-  const category = detectCategory(topic);
+function buildPromptContext(businessProfile) {
+  const sourceContext = businessProfile?.sourceContext;
+  const details = [];
+  const palette = summarizePalette(sourceContext?.palette);
+  if (sourceContext?.title) details.push(`brand reference ${sourceContext.title}`);
+  if (sourceContext?.description) details.push(`site cues ${clipText(sourceContext.description, 180)}`);
+  if (businessProfile?.logoUrl) details.push("preserve the brand mark silhouette and venue identity cues");
+  if (businessProfile?.referenceMedia?.some((url) => /\.mp4(\?|$)/i.test(url))) details.push("inspired by the source site's aerial or venue video coverage");
+  if (palette) details.push(`palette cues ${palette}`);
+  return details.length ? `, ${details.join(", ")}` : "";
+}
+
+function createPrompts(businessProfile) {
+  const { topic, category } = businessProfile;
+  const promptContext = buildPromptContext(businessProfile);
 
   if (category === "person") {
     const startPrompt =
       `Cinematic portrait of ${topic}, dramatic studio lighting, dark moody background, ` +
-      `editorial photography style, sharp focus on face and expression, no text, no logos, ultra detailed`;
+      `editorial photography style, sharp focus on face and expression, no text, no logos, ultra detailed${promptContext}`;
 
     const endPrompt =
       `Same ${topic} subject. Show a dynamic action or iconic pose that captures their essence, ` +
       `dramatic lighting with motion blur accents, dark atmospheric background, ` +
-      `no text, no logos, editorial photography, ultra detailed.`;
+      `no text, no logos, editorial photography, ultra detailed${promptContext}.`;
 
     const motionPrompt =
       `Cinematic portrait animation. Start from first frame. Smooth transition to the dynamic action pose. ` +
-      `Elegant camera movement, dramatic lighting shifts, no sudden warping, no text, dark atmospheric background.`;
+      `Elegant camera movement, dramatic lighting shifts, no sudden warping, no text, dark atmospheric background${promptContext}.`;
 
     return { startPrompt, endPrompt, motionPrompt };
   }
 
   if (category === "place") {
     const startPrompt =
-      `Cinematic wide establishing shot of ${topic}, golden hour lighting, dramatic atmosphere, ` +
-      `architectural detail, landscape photography, no people, no text, no logos, ultra detailed 8k`;
+      `Cinematic wide establishing shot of ${topic}, real cityscape or destination geography, golden hour lighting, dramatic atmosphere, ` +
+      `architectural detail, landscape photography, authentic location cues, no character illustration, no text, no logos, ultra detailed 8k${promptContext}`;
 
     const endPrompt =
       `Same ${topic} location, different dramatic perspective. Aerial or intimate detail view revealing ` +
       `hidden character of the place, atmospheric lighting, moody sky, ` +
-      `no people, no text, no logos, landscape photography, ultra detailed.`;
+      `no people, no character illustration, no text, no logos, landscape photography, ultra detailed${promptContext}.`;
 
     const motionPrompt =
       `Cinematic location reveal. Start from first frame. Smooth drone-like camera movement exploring the space. ` +
-      `Atmospheric particles, shifting light, no sudden warping, no text, no people, cinematic landscape.`;
+      `Atmospheric particles, shifting light, no sudden warping, no text, no people, cinematic landscape${promptContext}.`;
+
+    return { startPrompt, endPrompt, motionPrompt };
+  }
+
+  if (category === "venue") {
+    const startPrompt =
+      `Cinematic hospitality hero shot of ${topic}, authentic venue exterior or interior, moody practical lighting, ` +
+      `real neighborhood context, premium editorial photography, no text overlay, no posters, ultra detailed${promptContext}`;
+
+    const endPrompt =
+      `Same ${topic} venue in a more immersive perspective. Show signature atmosphere, seating, bar program or food presentation, ` +
+      `crowd energy suggested naturally without turning into generic stock food photography, no text overlay, ultra detailed${promptContext}.`;
+
+    const motionPrompt =
+      `Cinematic venue animation. Start from the establishing frame and move into the room with subtle camera drift, light changes, and lived-in energy. ` +
+      `Keep the business grounded in its real location and brand identity, avoid generic product deconstruction, no text${promptContext}.`;
 
     return { startPrompt, endPrompt, motionPrompt };
   }
@@ -1831,18 +2326,73 @@ function createPrompts(topic) {
   // Car / product / generic
   const startPrompt =
     `Professional studio hero shot of ${topic}, centered, cinematic lighting, ` +
-    `matte black seamless background, no logos, no text, no humans, no reflections, ultra detailed product photography`;
+    `matte black seamless background, no logos, no text, no humans, no reflections, ultra detailed product photography${promptContext}`;
 
   const endPrompt =
     `Same ${topic} subject and camera angle. Show a futuristic deconstruction state with key components ` +
     `separated and suspended in a controlled exploded-view composition. Keep matte black seamless background, ` +
-    `no logos, no text, no humans, no reflections, studio lighting, ultra detailed.`;
+    `no logos, no text, no humans, no reflections, studio lighting, ultra detailed${promptContext}.`;
 
   const motionPrompt =
     `Cinematic product animation. Start from first frame. Move smoothly toward the final exploded-view composition. ` +
-    `Controlled mechanical motion, no sudden warping, no camera shake, no text, no humans, black seamless background.`;
+    `Controlled mechanical motion, no sudden warping, no camera shake, no text, no humans, black seamless background${promptContext}.`;
 
   return { startPrompt, endPrompt, motionPrompt };
+}
+
+function ensureCommandAvailable(command, args = ["--version"]) {
+  const check = spawnSync(command, args, { stdio: "ignore" });
+  return check.status === 0;
+}
+
+function runPlaywrightQa({ siteDir, sourceContext }) {
+  if (!ensureCommandAvailable("npx", ["--version"])) {
+    return { ran: false, reason: "npx unavailable" };
+  }
+
+  const indexPath = resolve(siteDir, "index.html");
+  const qaDir = join(siteDir, "qa");
+  mkdirSync(qaDir, { recursive: true });
+
+  const jobs = [
+    {
+      name: "generatedDesktop",
+      args: ["playwright", "screenshot", "--browser=chromium", "--viewport-size=1440,900", "--wait-for-timeout=1500", `file://${indexPath}`, join(qaDir, "generated-desktop.png")],
+    },
+    {
+      name: "generatedMobile",
+      args: ["playwright", "screenshot", "--browser=chromium", "--viewport-size=393,852", "--wait-for-timeout=1500", `file://${indexPath}`, join(qaDir, "generated-mobile.png")],
+    },
+  ];
+
+  if (sourceContext?.url) {
+    jobs.push(
+      {
+        name: "liveDesktop",
+        args: ["playwright", "screenshot", "--browser=chromium", "--viewport-size=1440,900", "--wait-for-timeout=1500", sourceContext.url, join(qaDir, "live-desktop.png")],
+      },
+      {
+        name: "liveMobile",
+        args: ["playwright", "screenshot", "--browser=chromium", "--viewport-size=393,852", "--wait-for-timeout=1500", sourceContext.url, join(qaDir, "live-mobile.png")],
+      }
+    );
+  }
+
+  const results = [];
+  for (const job of jobs) {
+    const run = spawnSync("npx", job.args, { encoding: "utf-8" });
+    results.push({
+      name: job.name,
+      ok: run.status === 0,
+      output: clipText(`${run.stdout || ""} ${run.stderr || ""}`, 400),
+    });
+  }
+
+  return {
+    ran: true,
+    dir: qaDir,
+    results,
+  };
 }
 
 async function main() {
@@ -1852,7 +2402,8 @@ async function main() {
     return;
   }
 
-  const topic = String(options.topic || "").trim();
+  const parsedTopic = parseTopicInput(String(options.topic || "").trim());
+  const topic = parsedTopic.topic;
   if (!topic) {
     throw new Error("--topic is required");
   }
@@ -1874,12 +2425,22 @@ async function main() {
   mkdirSync(cssDir, { recursive: true });
   mkdirSync(jsDir, { recursive: true });
 
-  const brand = String(options.brand || topic.split(" ").slice(0, 2).join(" ")).trim();
+  const sourceUrl = cleanOptionalString(options["source-url"]) || parsedTopic.sourceUrl;
+  const sourceContext = (await fetchSourceContext(sourceUrl)) || {
+    url: sourceUrl,
+    title: null,
+    description: null,
+    pageText: null,
+    palette: [],
+    imageUrls: [],
+    logoUrl: null,
+  };
+  const brand = String(options.brand || sourceContext?.title || deriveBrandLabel(topic)).trim();
   const pageMode = normalizePageMode(options["page-mode"]);
-  const defaults = createPrompts(topic);
-  const startPrompt = String(options["start-prompt"] || defaults.startPrompt);
-  const endPrompt = String(options["end-prompt"] || defaults.endPrompt);
-  const motionPrompt = String(options["motion-prompt"] || defaults.motionPrompt);
+  const paletteOverride = normalizePaletteOverride(options.color);
+  if (paletteOverride.length > 0) {
+    sourceContext.palette = paletteOverride;
+  }
 
   const startModel = String(options["start-model"] || DEFAULT_START_MODEL);
   const endModel = String(options["end-model"] || DEFAULT_END_MODEL);
@@ -1887,11 +2448,33 @@ async function main() {
   const duration = Number(options.duration || 5);
   const normalizedDuration = normalizeVideoDuration(duration);
 
+  const searxngUrl = String(options["searxng-url"] || DEFAULT_SEARXNG_URL);
+  const skipResearch = options["no-research"] === true;
+  let research = null;
+
+  if (!skipResearch) {
+    console.log("Researching topic...");
+    try {
+      research = await researchTopic(topic, searxngUrl, sourceContext);
+    } catch (researchError) {
+      console.warn(`Research step failed: ${researchError.message}. Continuing with template content.`);
+    }
+  }
+
+  const businessProfile = buildBusinessProfile(topic, brand, sourceContext, research);
+  const defaults = createPrompts(businessProfile);
+  const startPrompt = String(options["start-prompt"] || defaults.startPrompt);
+  const endPrompt = String(options["end-prompt"] || defaults.endPrompt);
+  const motionPrompt = String(options["motion-prompt"] || defaults.motionPrompt);
+
   const metadata = {
     topic,
     brand,
+    businessProfile,
+    sourceUrl,
     pageMode,
     models: { startModel, endModel, videoModel },
+    paletteOverride,
     videoDurationSeconds: normalizedDuration,
     prompts: { startPrompt, endPrompt, motionPrompt },
     generatedAt: new Date().toISOString(),
@@ -1901,76 +2484,112 @@ async function main() {
   let startImageUrl = null;
   let endImageUrl = null;
   let videoUrl = null;
+  const startPath = join(mediaDir, "start-frame.png");
+  const endPath = join(mediaDir, "end-frame.png");
+  const outputVideoPath = join(mediaDir, "transition.mp4");
+  const providedStartImage = cleanOptionalString(options["start-image"]);
+  const providedEndImage = cleanOptionalString(options["end-image"]);
+  const providedVideoUrl = cleanOptionalString(options["video-url"]);
 
-  if (options["video-path"]) {
-    videoPath = resolve(String(options["video-path"]));
-    if (!existsSync(videoPath)) {
-      throw new Error(`--video-path not found: ${videoPath}`);
+  if (options["video-path"] || providedVideoUrl) {
+    if (providedStartImage) {
+      metadata.existingStartImage = await materializeAsset(providedStartImage, startPath);
     }
-    metadata.usedExistingVideo = true;
-    metadata.existingVideoPath = videoPath;
-    console.log(`Using existing video: ${videoPath}`);
+    if (providedEndImage) {
+      metadata.existingEndImage = await materializeAsset(providedEndImage, endPath);
+    }
+
+    if (providedVideoUrl) {
+      videoPath = outputVideoPath;
+      await downloadToFile(providedVideoUrl, videoPath);
+      metadata.usedExistingVideo = true;
+      metadata.existingVideoUrl = providedVideoUrl;
+      console.log(`Using existing video URL: ${providedVideoUrl}`);
+    } else {
+      videoPath = resolve(String(options["video-path"]));
+      if (!existsSync(videoPath)) {
+        throw new Error(`--video-path not found: ${videoPath}`);
+      }
+      metadata.usedExistingVideo = true;
+      metadata.existingVideoPath = videoPath;
+      console.log(`Using existing video: ${videoPath}`);
+    }
   } else {
     const falKey = process.env.FAL_KEY;
     if (!falKey) {
       throw new Error("FAL_KEY environment variable is required when --video-path is not provided.");
     }
 
-    console.log(`Generating start frame with ${startModel}...`);
-    const startResult = await runFalWithInputVariants(
-      startModel,
-      [
-        {
-          prompt: startPrompt,
-          num_images: 1,
-          aspect_ratio: "16:9",
-          resolution: "1K",
-          output_format: "png",
-          limit_generations: true,
-        },
-        {
-          prompt: startPrompt,
-          num_images: 1,
-          aspect_ratio: "16:9",
-          output_format: "png",
-        },
-      ],
-      falKey,
-      "start frame"
-    );
-    startImageUrl = pickImageUrl(startResult);
+    if (providedStartImage) {
+      metadata.existingStartImage = await materializeAsset(providedStartImage, startPath);
+      startImageUrl = isValidHttpUrl(metadata.existingStartImage) ? metadata.existingStartImage : null;
+      console.log(`Using existing start image: ${metadata.existingStartImage}`);
+    } else {
+      console.log(`Generating start frame with ${startModel}...`);
+      const startResult = await runFalWithInputVariants(
+        startModel,
+        [
+          {
+            prompt: startPrompt,
+            num_images: 1,
+            aspect_ratio: "16:9",
+            resolution: "1K",
+            output_format: "png",
+            limit_generations: true,
+          },
+          {
+            prompt: startPrompt,
+            num_images: 1,
+            aspect_ratio: "16:9",
+            output_format: "png",
+          },
+        ],
+        falKey,
+        "start frame"
+      );
+      startImageUrl = pickImageUrl(startResult);
+      await downloadToFile(startImageUrl, startPath);
+    }
 
-    console.log(`Generating end frame with ${endModel}...`);
-    const endResult = await runFalWithInputVariants(
-      endModel,
-      [
-        {
-          prompt: endPrompt,
-          image_urls: [startImageUrl],
-          num_images: 1,
-          aspect_ratio: "16:9",
-          resolution: "1K",
-          output_format: "png",
-          limit_generations: true,
-        },
-        {
-          prompt: endPrompt,
-          image_url: startImageUrl,
-          num_images: 1,
-          aspect_ratio: "16:9",
-          output_format: "png",
-        },
-        {
-          prompt: endPrompt,
-          image_urls: [startImageUrl],
-          num_images: 1,
-          output_format: "png",
-        },
-      ],
-      falKey,
-      "end frame"
-    );
-    endImageUrl = pickImageUrl(endResult);
+    if (providedEndImage) {
+      metadata.existingEndImage = await materializeAsset(providedEndImage, endPath);
+      endImageUrl = isValidHttpUrl(metadata.existingEndImage) ? metadata.existingEndImage : null;
+      console.log(`Using existing end image: ${metadata.existingEndImage}`);
+    } else {
+      const startImageInput = startImageUrl || startPath;
+      console.log(`Generating end frame with ${endModel}...`);
+      const endResult = await runFalWithInputVariants(
+        endModel,
+        [
+          {
+            prompt: endPrompt,
+            image_urls: [startImageInput],
+            num_images: 1,
+            aspect_ratio: "16:9",
+            resolution: "1K",
+            output_format: "png",
+            limit_generations: true,
+          },
+          {
+            prompt: endPrompt,
+            image_url: startImageInput,
+            num_images: 1,
+            aspect_ratio: "16:9",
+            output_format: "png",
+          },
+          {
+            prompt: endPrompt,
+            image_urls: [startImageInput],
+            num_images: 1,
+            output_format: "png",
+          },
+        ],
+        falKey,
+        "end frame"
+      );
+      endImageUrl = pickImageUrl(endResult);
+      await downloadToFile(endImageUrl, endPath);
+    }
 
     console.log(`Generating transition video with ${videoModel}...`);
     const videoResult = await runFalWithInputVariants(
@@ -1978,20 +2597,20 @@ async function main() {
       [
         {
           prompt: motionPrompt,
-          start_image_url: startImageUrl,
-          end_image_url: endImageUrl,
+          start_image_url: startImageUrl || startPath,
+          end_image_url: endImageUrl || endPath,
           duration: normalizedDuration,
           generate_audio: false,
         },
         {
           prompt: motionPrompt,
-          image_url: startImageUrl,
+          image_url: startImageUrl || startPath,
           duration: normalizedDuration,
           generate_audio: false,
         },
         {
           prompt: motionPrompt,
-          start_image_url: startImageUrl,
+          start_image_url: startImageUrl || startPath,
           duration: normalizedDuration,
           generate_audio: false,
         },
@@ -2000,32 +2619,14 @@ async function main() {
       "video"
     );
     videoUrl = pickVideoUrl(videoResult);
-
-    const startPath = join(mediaDir, "start-frame.png");
-    const endPath = join(mediaDir, "end-frame.png");
-    videoPath = join(mediaDir, "transition.mp4");
+    videoPath = outputVideoPath;
 
     console.log("Downloading media assets...");
-    await downloadToFile(startImageUrl, startPath);
-    await downloadToFile(endImageUrl, endPath);
     await downloadToFile(videoUrl, videoPath);
   }
 
   console.log("Extracting frames...");
   const extraction = runFrameExtraction(videoPath, framesDir);
-
-  const searxngUrl = String(options["searxng-url"] || DEFAULT_SEARXNG_URL);
-  const skipResearch = options["no-research"] === true;
-  let research = null;
-
-  if (!skipResearch) {
-    console.log("Researching topic...");
-    try {
-      research = await researchTopic(topic, searxngUrl);
-    } catch (researchError) {
-      console.warn(`Research step failed: ${researchError.message}. Continuing with template content.`);
-    }
-  }
 
   console.log("Scaffolding website...");
   const scaffold = writeScaffoldFiles({
@@ -2036,6 +2637,7 @@ async function main() {
     frameCount: extraction.frameCount,
     frameExtension: extraction.frameExtension,
     research,
+    sourceContext,
   });
 
   metadata.startImageUrl = startImageUrl;
@@ -2049,6 +2651,7 @@ async function main() {
   metadata.category = scaffold.category;
   metadata.sectionKinds = scaffold.sectionKinds;
   metadata.trustLine = scaffold.trustLine;
+  metadata.sourceContext = sourceContext;
   metadata.research = research || {
     category: scaffold.category,
     summary: null,
@@ -2061,6 +2664,12 @@ async function main() {
     inferredFallbackUsed: true,
     researchedFields: [],
   };
+
+  if (options.qa === true) {
+    console.log("Running Playwright QA...");
+    metadata.qa = runPlaywrightQa({ siteDir, sourceContext });
+  }
+
   writeFileSync(join(siteDir, "pipeline-metadata.json"), JSON.stringify(metadata, null, 2));
 
   console.log("");
