@@ -1,7 +1,8 @@
 const FRAME_COUNT = 101;
-const FRAME_SPEED = 2.0;
+const FRAME_SPEED = 1.0;
 const FRAME_PATH = (index) => `frames/frame_${String(index + 1).padStart(4, "0")}.webp`;
 const FRAME_WINDOW = 8;
+const VIDEO_BOOT_TIMEOUT_MS = 2500;
 
 const video = document.getElementById("scroll-video");
 const canvas = document.getElementById("canvas");
@@ -24,6 +25,7 @@ let usingVideo = false;
 let awaitingVideo = Boolean(video);
 let pendingVideoTime = 0;
 let rafScheduled = false;
+let videoBootstrapTimer = null;
 
 function resizeCanvas() {
   const ratio = window.devicePixelRatio || 1;
@@ -88,8 +90,10 @@ function ensureFrame(index) {
     frames[index] = img;
     if (index === 0) {
       fallbackReady = true;
-      drawFrame(0);
-      if (!usingVideo && !awaitingVideo) finishLoader();
+      if (!awaitingVideo) {
+        drawFrame(0);
+        if (!usingVideo) finishLoader();
+      }
     }
   };
   img.onerror = () => {
@@ -111,14 +115,37 @@ function drawFallbackFrame(index) {
 }
 
 function activateFallback() {
+  if (videoBootstrapTimer) {
+    clearTimeout(videoBootstrapTimer);
+    videoBootstrapTimer = null;
+  }
   awaitingVideo = false;
   if (!fallbackReady) ensureFrame(0);
   usingVideo = false;
-  if (video) video.style.opacity = "0";
+  if (video) {
+    video.style.opacity = "0";
+    video.removeAttribute("poster");
+  }
   canvasWrap.classList.add("is-active");
   ensureFrameWindow(currentFrame);
   drawFallbackFrame(currentFrame);
   if (fallbackReady) finishLoader();
+}
+
+function activateVideo() {
+  if (!video) return;
+  if (videoBootstrapTimer) {
+    clearTimeout(videoBootstrapTimer);
+    videoBootstrapTimer = null;
+  }
+  awaitingVideo = false;
+  usingVideo = true;
+  video.pause();
+  video.style.opacity = "1";
+  canvasWrap.classList.remove("is-active");
+  syncVideoToScroll(currentFrame / Math.max(FRAME_COUNT - 1, 1));
+  setLoaderProgress(100);
+  finishLoader();
 }
 
 function syncVideoToScroll(progress) {
@@ -136,26 +163,28 @@ function syncVideoToScroll(progress) {
 
 function setupMedia() {
   setLoaderProgress(8, "8%");
-  ensureFrame(0);
   if (!video) {
     activateFallback();
     return;
   }
 
+  video.preload = "metadata";
+  video.removeAttribute("poster");
+  video.addEventListener("loadedmetadata", () => {
+    setLoaderProgress(72, "72%");
+  }, { once: true });
+
   video.addEventListener("loadeddata", () => {
-    awaitingVideo = false;
-    usingVideo = true;
-    video.style.opacity = "1";
-    canvasWrap.classList.remove("is-active");
-    setLoaderProgress(100);
-    finishLoader();
+    activateVideo();
   }, { once: true });
 
   video.addEventListener("error", () => {
-    awaitingVideo = false;
     activateFallback();
   }, { once: true });
 
+  videoBootstrapTimer = setTimeout(() => {
+    if (awaitingVideo) activateFallback();
+  }, VIDEO_BOOT_TIMEOUT_MS);
   video.load();
   setLoaderProgress(45, "45%");
 }
