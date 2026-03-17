@@ -148,10 +148,21 @@ h2 {
   display: flex;
   flex-wrap: wrap;
   gap: 0.65rem;
+  margin-top: 0.4rem;
+}
+
+.auth-actions-primary {
+  margin-top: 0.8rem;
 }
 
 .auth-actions button {
   min-width: 8.6rem;
+}
+
+.google-auth-btn {
+  width: 100%;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .auth-user-email {
@@ -220,6 +231,9 @@ h2 {
   cursor: pointer;
   text-decoration: none;
   text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .ghost-btn {

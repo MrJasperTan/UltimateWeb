@@ -29,6 +29,7 @@ const authEmailInput = document.getElementById("auth-email");
 const authPasswordInput = document.getElementById("auth-password");
 const authUserEmail = document.getElementById("auth-user-email");
 const authMessage = document.getElementById("auth-message");
+const googleAuthButton = document.getElementById("google-auth-btn");
 const signInButton = document.getElementById("sign-in-btn");
 const signUpButton = document.getElementById("sign-up-btn");
 const signOutButton = document.getElementById("sign-out-btn");
@@ -93,7 +94,7 @@ function setAuthMessage(message, mode = "") {
 }
 
 function setAuthPending(isPending) {
-  [signInButton, signUpButton, signOutButton].forEach((button) => {
+  [googleAuthButton, signInButton, signUpButton, signOutButton].forEach((button) => {
     if (button) button.disabled = isPending;
   });
 }
@@ -130,9 +131,19 @@ function updateAuthUi() {
   } else if (!authState.configured) {
     setAuthMessage("Supabase is not configured. Add the env vars and local keys before using the portal.", "error");
   } else {
-    setAuthMessage("Sign in to access your private gallery and launch builds.");
+    setAuthMessage("Sign in with Google or use email and password to access your private gallery and launch builds.");
   }
   updateLockedState();
+}
+
+function startGoogleAuth() {
+  if (!authState.configured) {
+    setAuthMessage("Supabase is not configured. Add the env vars and local keys before using Google sign-in.", "error");
+    return;
+  }
+  setAuthPending(true);
+  setAuthMessage("Redirecting to Google...", "");
+  window.location.href = toApiUrl("/api/auth/google");
 }
 
 function formatDate(dateString) {
@@ -533,6 +544,10 @@ signInButton.addEventListener("click", () => {
 
 signUpButton.addEventListener("click", () => {
   void submitAuth("/api/auth/sign-up");
+});
+
+googleAuthButton.addEventListener("click", () => {
+  startGoogleAuth();
 });
 
 signOutButton.addEventListener("click", () => {

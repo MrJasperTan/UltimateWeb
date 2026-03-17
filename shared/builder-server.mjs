@@ -8,7 +8,9 @@ import { basename, dirname, extname, join, resolve } from "node:path";
 import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 
 import {
+  buildOAuthAuthorizeUrl,
   clearSessionCookies,
+  fetchUser,
   findBuildJobRecord,
   findGeneratedSiteRecord,
   insertBuildJobRecord,
@@ -88,6 +90,112 @@ function sendJavaScript(response, source) {
 function sendText(response, statusCode, message) {
   response.writeHead(statusCode, { "Content-Type": "text/plain; charset=utf-8" });
   response.end(message);
+}
+
+function getRequestOrigin(request) {
+  const forwardedProto = String(request.headers["x-forwarded-proto"] || "").split(",")[0].trim().toLowerCase();
+  const protocol = forwardedProto || (request.socket?.encrypted ? "https" : "http");
+  const host = String(request.headers["x-forwarded-host"] || request.headers.host || "127.0.0.1").split(",")[0].trim();
+  return `${protocol}://${host}`;
+}
+
+function sendHtml(response, statusCode, html) {
+  response.writeHead(statusCode, { "Content-Type": "text/html; charset=utf-8" });
+  response.end(html);
+}
+
+function sendOAuthCallbackPage(response) {
+  sendHtml(
+    response,
+    200,
+    `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Completing sign-in...</title>
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: #08111d;
+      color: #e9f4ff;
+      font: 16px/1.5 system-ui, sans-serif;
+    }
+    main {
+      width: min(28rem, calc(100vw - 2rem));
+      padding: 1.4rem;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 1rem;
+      background: linear-gradient(160deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
+    }
+    p { margin: 0; }
+    .muted { margin-top: 0.65rem; color: #9fb4c7; font-size: 0.95rem; }
+    .error { color: #ffb0a2; }
+  </style>
+</head>
+<body>
+  <main>
+    <p id="status">Completing Google sign-in...</p>
+    <p id="detail" class="muted">Your Supabase session is being attached to this app.</p>
+  </main>
+  <script>
+    const statusNode = document.getElementById("status");
+    const detailNode = document.getElementById("detail");
+
+    function setState(message, detail, isError) {
+      statusNode.textContent = message;
+      detailNode.textContent = detail;
+      detailNode.classList.toggle("error", Boolean(isError));
+    }
+
+    async function finalize() {
+      const hashParams = new URLSearchParams(window.location.hash.slice(1));
+      const queryParams = new URLSearchParams(window.location.search);
+      const error = hashParams.get("error_description") || queryParams.get("error_description") || hashParams.get("error") || queryParams.get("error");
+      if (error) {
+        setState("Google sign-in failed.", error, true);
+        return;
+      }
+
+      const accessToken = hashParams.get("access_token");
+      const refreshToken = hashParams.get("refresh_token");
+      const expiresIn = hashParams.get("expires_in");
+
+      if (!accessToken) {
+        setState("Google sign-in could not be completed.", "Supabase did not return an access token to the callback page.", true);
+        return;
+      }
+
+      const response = await fetch("/api/auth/oauth/session", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          accessToken,
+          refreshToken,
+          expiresIn,
+        }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setState("Google sign-in could not be completed.", data.error || "The app could not store the Supabase session.", true);
+        return;
+      }
+
+      setState("Signed in.", "Redirecting back to the builder...");
+      window.location.replace("/");
+    }
+
+    void finalize();
+  </script>
+</body>
+</html>`
+  );
 }
 
 function logBackend(message) {
@@ -725,6 +833,26 @@ export function startBuilderServer({ appDir, publicDir }) {
       return;
     }
 
+    if (request.method === "GET" && pathname === "/api/auth/google") {
+      if (!(await requireSupabase(response))) return;
+      try {
+        const redirectTo = `${getRequestOrigin(request)}/auth/callback`;
+        response.writeHead(302, {
+          Location: buildOAuthAuthorizeUrl("google", redirectTo),
+          "Cache-Control": "no-store",
+        });
+        response.end();
+      } catch (error) {
+        sendJson(response, 400, { error: error.message });
+      }
+      return;
+    }
+
+    if (request.method === "GET" && pathname === "/auth/callback") {
+      sendOAuthCallbackPage(response);
+      return;
+    }
+
     if (request.method === "POST" && pathname === "/api/auth/sign-in") {
       if (!(await requireSupabase(response))) return;
       try {
@@ -765,6 +893,33 @@ export function startBuilderServer({ appDir, publicDir }) {
           authenticated: Boolean(session.user),
           user: session.user ? presentUser(session.user) : null,
           message: session.session ? "Account created." : "Account created. Check your auth settings if confirmation is required.",
+        });
+      } catch (error) {
+        sendJson(response, 400, { error: error.message });
+      }
+      return;
+    }
+
+    if (request.method === "POST" && pathname === "/api/auth/oauth/session") {
+      if (!(await requireSupabase(response))) return;
+      try {
+        const body = await parseJsonBody(request);
+        const accessToken = cleanOptionalString(body.accessToken);
+        const refreshToken = cleanOptionalString(body.refreshToken);
+        const expiresIn = Number(body.expiresIn || 3600);
+        if (!accessToken) {
+          sendJson(response, 400, { error: "Access token is required." });
+          return;
+        }
+        const user = await fetchUser(accessToken);
+        setSessionCookies(response, request, {
+          access_token: accessToken,
+          refresh_token: refreshToken || "",
+          expires_in: Number.isFinite(expiresIn) && expiresIn > 0 ? expiresIn : 3600,
+        });
+        sendJson(response, 200, {
+          authenticated: true,
+          user: presentUser(user),
         });
       } catch (error) {
         sendJson(response, 400, { error: error.message });

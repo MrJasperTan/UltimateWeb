@@ -141,6 +141,20 @@ export async function signOut(accessToken) {
   }
 }
 
+export function buildOAuthAuthorizeUrl(provider, redirectTo) {
+  const { url, anonKey } = getSupabaseConfig();
+  if (!url || !anonKey) {
+    throw new Error("Supabase auth is not configured.");
+  }
+
+  const params = new URLSearchParams({
+    provider,
+    redirect_to: redirectTo,
+  });
+
+  return `${url}/auth/v1/authorize?${params.toString()}`;
+}
+
 function parseCookies(request) {
   const raw = String(request.headers.cookie || "");
   const entries = raw
