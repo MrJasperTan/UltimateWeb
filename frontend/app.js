@@ -171,9 +171,9 @@ form.addEventListener("submit", async (event) => {
   const topic = topicInput.value.trim();
   const existingWebsite = existingWebsiteInput.value.trim();
   const colors = colorsInput.value.trim();
-  const startImage = startImageInput.value.trim();
-  const endImage = endImageInput.value.trim();
-  const video = videoInput.value.trim();
+  const startImageFile = startImageInput.files?.[0] || null;
+  const endImageFile = endImageInput.files?.[0] || null;
+  const videoFile = videoInput.files?.[0] || null;
   const startPrompt = startPromptInput.value.trim();
   const endPrompt = endPromptInput.value.trim();
   const videoPrompt = videoPromptInput.value.trim();
@@ -188,21 +188,21 @@ form.addEventListener("submit", async (event) => {
 
   try {
     const apiEndpoint = toApiUrl("/api/build");
+    const payload = new FormData();
+    payload.append("topic", topic);
+    payload.append("pageMode", selectedPageMode);
+    payload.append("existingWebsite", existingWebsite);
+    payload.append("colors", colors);
+    payload.append("startPrompt", startPrompt);
+    payload.append("endPrompt", endPrompt);
+    payload.append("videoPrompt", videoPrompt);
+    if (startImageFile) payload.append("startImage", startImageFile);
+    if (endImageFile) payload.append("endImage", endImageFile);
+    if (videoFile) payload.append("video", videoFile);
+
     const response = await fetch(apiEndpoint, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        topic,
-        pageMode: selectedPageMode,
-        existingWebsite,
-        colors,
-        startImage,
-        endImage,
-        video,
-        startPrompt,
-        endPrompt,
-        videoPrompt,
-      }),
+      body: payload,
     });
     const data = await response.json().catch(() => ({}));
 
