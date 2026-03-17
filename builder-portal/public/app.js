@@ -185,7 +185,7 @@ function renderGallery(items) {
       const versionLabel = item.versionLabel ? `<p class="gallery-date">${item.versionLabel}</p>` : "";
       return `
         <article class="gallery-item">
-          <button class="gallery-delete" type="button" data-delete-slug="${item.slug}" data-delete-title="${item.title}" aria-label="Delete ${item.title}">Delete</button>
+          <button class="gallery-delete" type="button" data-delete-slug="${item.slug}" data-delete-title="${item.title}" aria-label="Delete ${item.title}">X</button>
           ${thumb ? `<a class="gallery-thumb" href="${toPublicAssetUrl(item.siteUrl)}" target="_blank" rel="noreferrer"><img src="${thumb}" alt="${item.title}" loading="lazy" /></a>` : ""}
           <div class="gallery-copy">
             <p class="gallery-date">${formatDate(item.createdAt)}</p>
