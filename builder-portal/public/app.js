@@ -5,9 +5,13 @@ const colorsInput = document.getElementById("colors");
 const startImageInput = document.getElementById("start-image");
 const endImageInput = document.getElementById("end-image");
 const videoInput = document.getElementById("video");
+const changeRequestInput = document.getElementById("change-request");
 const startPromptInput = document.getElementById("start-prompt");
 const endPromptInput = document.getElementById("end-prompt");
 const videoPromptInput = document.getElementById("video-prompt");
+const editBanner = document.getElementById("edit-banner");
+const editBannerText = document.getElementById("edit-banner-text");
+const cancelEditButton = document.getElementById("cancel-edit-btn");
 const pageModeInputs = document.querySelectorAll('input[name="pageMode"]');
 const submitButton = document.getElementById("submit-btn");
 const statusText = document.getElementById("status-text");
@@ -20,6 +24,7 @@ const galleryGrid = document.getElementById("gallery-grid");
 let jobPollingTimer = null;
 let galleryPollingTimer = null;
 let activeJobId = null;
+let activeEditSite = null;
 
 function setStatus(message) {
   statusText.textContent = message;
@@ -68,17 +73,68 @@ function renderGallery(items) {
   galleryGrid.innerHTML = items
     .map((item) => {
       const thumb = item.thumbnailUrl || "/generated-sites/2025-corvette-stingray/media/start-frame.png";
+      const versionLabel = item.versionLabel ? `<p class="gallery-date">${item.versionLabel}</p>` : "";
       return `
-        <a class="gallery-item" href="${item.siteUrl}" target="_blank" rel="noopener noreferrer">
+        <article class="gallery-item">
           <img src="${thumb}" alt="${item.title}" loading="lazy" />
           <div class="gallery-meta">
             <p class="gallery-title">${item.title}</p>
             <p class="gallery-date">${formatDate(item.createdAt)}</p>
+            ${versionLabel}
+            <div class="gallery-actions">
+              <a class="gallery-action gallery-link" href="${item.siteUrl}" target="_blank" rel="noopener noreferrer">Open</a>
+              <button class="gallery-action" type="button" data-edit-slug="${item.slug}">Edit</button>
+            </div>
           </div>
-        </a>
+        </article>
       `;
     })
     .join("");
+}
+
+async function fetchSiteConfig(slug) {
+  const response = await fetch(`/api/sites/${slug}`);
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({ error: "Unknown API error" }));
+    throw new Error(data.error || "Failed to load site config");
+  }
+  return response.json();
+}
+
+function setEditState(siteConfig) {
+  activeEditSite = siteConfig;
+  editBanner.classList.remove("hidden");
+  editBannerText.textContent = `Editing ${siteConfig.title} and creating a new version`;
+  submitButton.textContent = "Create Edited Version";
+  setStatus(`Editing ${siteConfig.title}`);
+  setStage("Review the config, describe changes, then create a new version");
+}
+
+function clearEditState() {
+  activeEditSite = null;
+  editBanner.classList.add("hidden");
+  editBannerText.textContent = "Editing version";
+  submitButton.textContent = "Launch Build";
+  form.reset();
+}
+
+async function beginEdit(slug) {
+  const siteConfig = await fetchSiteConfig(slug);
+  topicInput.value = siteConfig.topic || "";
+  existingWebsiteInput.value = siteConfig.existingWebsite || "";
+  colorsInput.value = siteConfig.colors || "";
+  changeRequestInput.value = "";
+  startPromptInput.value = siteConfig.startPrompt || "";
+  endPromptInput.value = siteConfig.endPrompt || "";
+  videoPromptInput.value = siteConfig.videoPrompt || "";
+  startImageInput.value = "";
+  endImageInput.value = "";
+  videoInput.value = "";
+  Array.from(pageModeInputs).forEach((input) => {
+    input.checked = input.value === (siteConfig.pageMode || "conversion");
+  });
+  setEditState(siteConfig);
+  form.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 async function refreshGallery() {
@@ -158,6 +214,7 @@ form.addEventListener("submit", async (event) => {
   const startImageFile = startImageInput.files?.[0] || null;
   const endImageFile = endImageInput.files?.[0] || null;
   const videoFile = videoInput.files?.[0] || null;
+  const changeRequest = changeRequestInput.value.trim();
   const startPrompt = startPromptInput.value.trim();
   const endPrompt = endPromptInput.value.trim();
   const videoPrompt = videoPromptInput.value.trim();
@@ -176,9 +233,11 @@ form.addEventListener("submit", async (event) => {
     payload.append("pageMode", selectedPageMode);
     payload.append("existingWebsite", existingWebsite);
     payload.append("colors", colors);
+    payload.append("changeRequest", changeRequest);
     payload.append("startPrompt", startPrompt);
     payload.append("endPrompt", endPrompt);
     payload.append("videoPrompt", videoPrompt);
+    if (activeEditSite?.slug) payload.append("editSourceSlug", activeEditSite.slug);
     if (startImageFile) payload.append("startImage", startImageFile);
     if (endImageFile) payload.append("endImage", endImageFile);
     if (videoFile) payload.append("video", videoFile);
@@ -196,12 +255,29 @@ form.addEventListener("submit", async (event) => {
     activeJobId = data.id;
     setStatus(`Job ${activeJobId.slice(0, 8)} • RUNNING • ${selectedPageMode.toUpperCase()}`);
     setStage("Preparing pipeline");
+    clearEditState();
     startJobPolling(activeJobId);
   } catch (error) {
     submitButton.disabled = false;
     setBusy(false);
     setStatus(`Could not start build: ${error.message}`);
   }
+});
+
+galleryGrid.addEventListener("click", async (event) => {
+  const editButton = event.target.closest("[data-edit-slug]");
+  if (!editButton) return;
+  try {
+    await beginEdit(editButton.getAttribute("data-edit-slug"));
+  } catch (error) {
+    setStatus(`Could not load edit config: ${error.message}`);
+  }
+});
+
+cancelEditButton.addEventListener("click", () => {
+  clearEditState();
+  setStatus("Edit cancelled");
+  setStage("Waiting for a new request");
 });
 
 setBusy(false);

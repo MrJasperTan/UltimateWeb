@@ -58,6 +58,8 @@ Optional:
   --end-image        Existing end image URL or local path
   --video-path       Existing video path; skips fal media generation
   --video-url        Existing video URL; skips fal media generation
+  --change-request   Plain-language edit request applied to generated prompts
+  --edit-source-slug Source site slug when creating a new version
   --start-prompt     Override first-frame prompt
   --end-prompt       Override last-frame prompt
   --motion-prompt    Override video motion prompt
@@ -202,6 +204,12 @@ function normalizePaletteOverride(rawColors) {
         .filter(Boolean)
     )
   ).slice(0, 6);
+}
+
+function applyChangeRequest(prompt, changeRequest) {
+  const request = cleanOptionalString(changeRequest);
+  if (!request) return prompt;
+  return `${String(prompt).trim()} Revision request: ${request}. Preserve overall quality and coherence.`;
 }
 
 function toAbsoluteUrl(baseUrl, maybeRelative) {
@@ -2463,9 +2471,10 @@ async function main() {
 
   const businessProfile = buildBusinessProfile(topic, brand, sourceContext, research);
   const defaults = createPrompts(businessProfile);
-  const startPrompt = String(options["start-prompt"] || defaults.startPrompt);
-  const endPrompt = String(options["end-prompt"] || defaults.endPrompt);
-  const motionPrompt = String(options["motion-prompt"] || defaults.motionPrompt);
+  const changeRequest = cleanOptionalString(options["change-request"]);
+  const startPrompt = applyChangeRequest(String(options["start-prompt"] || defaults.startPrompt), changeRequest);
+  const endPrompt = applyChangeRequest(String(options["end-prompt"] || defaults.endPrompt), changeRequest);
+  const motionPrompt = applyChangeRequest(String(options["motion-prompt"] || defaults.motionPrompt), changeRequest);
 
   const metadata = {
     topic,
@@ -2475,6 +2484,8 @@ async function main() {
     pageMode,
     models: { startModel, endModel, videoModel },
     paletteOverride,
+    changeRequest,
+    editSourceSlug: cleanOptionalString(options["edit-source-slug"]),
     videoDurationSeconds: normalizedDuration,
     prompts: { startPrompt, endPrompt, motionPrompt },
     generatedAt: new Date().toISOString(),

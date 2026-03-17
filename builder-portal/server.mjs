@@ -318,12 +318,40 @@ function getGalleryEntries(limit = 80) {
       createdAt,
       siteUrl: `/generated-sites/${slug}/index.html`,
       thumbnailUrl,
+      versionLabel: metadata.editSourceSlug ? "Edited version" : "Original version",
     });
   }
 
   return entries
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     .slice(0, limit);
+}
+
+function getSiteConfig(slug) {
+  const siteRoot = join(GENERATED_DIR, slug);
+  if (!existsSync(siteRoot) || !statSync(siteRoot).isDirectory()) return null;
+  const metadataPath = join(siteRoot, "pipeline-metadata.json");
+  const metadata = readJsonFile(metadataPath);
+  if (!metadata) return null;
+
+  const palette = Array.isArray(metadata.paletteOverride) && metadata.paletteOverride.length
+    ? metadata.paletteOverride
+    : Array.isArray(metadata.sourceContext?.palette)
+      ? metadata.sourceContext.palette
+      : [];
+
+  return {
+    slug,
+    title: String(metadata.topic || slug.replace(/-/g, " ")).trim(),
+    topic: String(metadata.topic || "").trim(),
+    pageMode: normalizePageMode(metadata.pageMode),
+    existingWebsite: cleanOptionalString(metadata.sourceUrl || metadata.sourceContext?.url),
+    colors: palette.join(", "),
+    startPrompt: cleanOptionalString(metadata.prompts?.startPrompt),
+    endPrompt: cleanOptionalString(metadata.prompts?.endPrompt),
+    videoPrompt: cleanOptionalString(metadata.prompts?.motionPrompt),
+    editSourceSlug: cleanOptionalString(metadata.editSourceSlug),
+  };
 }
 
 function startBuildJob(topic, pageMode = "conversion", options = {}) {
@@ -371,6 +399,8 @@ function startBuildJob(topic, pageMode = "conversion", options = {}) {
     ["--start-prompt", options.startPrompt],
     ["--end-prompt", options.endPrompt],
     ["--motion-prompt", options.videoPrompt],
+    ["--change-request", options.changeRequest],
+    ["--edit-source-slug", options.editSourceSlug],
   ];
 
   for (const [flag, value] of optionalArgs) {
@@ -456,6 +486,8 @@ const server = createServer(async (request, response) => {
       const startPrompt = cleanOptionalString(body.fields.startPrompt);
       const endPrompt = cleanOptionalString(body.fields.endPrompt);
       const videoPrompt = cleanOptionalString(body.fields.videoPrompt);
+      const changeRequest = cleanOptionalString(body.fields.changeRequest);
+      const editSourceSlug = cleanOptionalString(body.fields.editSourceSlug);
       const colors = parseColorList(body.fields.colors);
       if (!topic) {
         sendJson(response, 400, { error: "Topic is required." });
@@ -480,6 +512,8 @@ const server = createServer(async (request, response) => {
         startPrompt,
         endPrompt,
         videoPrompt,
+        changeRequest,
+        editSourceSlug,
       });
       sendJson(response, 202, {
         id: job.id,
@@ -515,6 +549,17 @@ const server = createServer(async (request, response) => {
 
   if (request.method === "GET" && pathname === "/api/gallery") {
     sendJson(response, 200, getGalleryEntries());
+    return;
+  }
+
+  if (request.method === "GET" && pathname.startsWith("/api/sites/")) {
+    const slug = pathname.split("/").pop();
+    const siteConfig = slug ? getSiteConfig(slug) : null;
+    if (!siteConfig) {
+      sendJson(response, 404, { error: "Site config not found." });
+      return;
+    }
+    sendJson(response, 200, siteConfig);
     return;
   }
 

@@ -115,6 +115,35 @@ h2 {
   gap: 0.5rem;
 }
 
+.edit-banner {
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid rgba(255, 199, 82, 0.32);
+  border-radius: 0.8rem;
+  background: linear-gradient(135deg, rgba(255, 199, 82, 0.14), rgba(255, 255, 255, 0.05));
+}
+
+.edit-banner p {
+  margin: 0;
+  color: #ffe3a5;
+  font-size: 0.9rem;
+}
+
+.edit-banner button,
+.gallery-action {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  padding: 0.5rem 0.85rem;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+  font: inherit;
+  cursor: pointer;
+}
+
 .optional-grid {
   display: grid;
   gap: 0.75rem;
@@ -125,6 +154,10 @@ h2 {
 .field-block {
   display: grid;
   gap: 0.38rem;
+}
+
+.field-span-2 {
+  grid-column: span 2;
 }
 
 .field-block span {
@@ -379,8 +412,6 @@ body.is-building .ring-b {
 
 .gallery-item {
   display: grid;
-  text-decoration: none;
-  color: inherit;
   border: 1px solid rgba(53, 223, 149, 0.24);
   border-radius: 0.8rem;
   overflow: hidden;
@@ -401,6 +432,22 @@ body.is-building .ring-b {
 
 .gallery-meta {
   padding: 0.66rem 0.72rem 0.72rem;
+}
+
+.gallery-actions {
+  display: flex;
+  gap: 0.55rem;
+  margin-top: 0.75rem;
+}
+
+.gallery-link {
+  text-decoration: none;
+}
+
+.gallery-action {
+  flex: 1;
+  text-align: center;
+  text-decoration: none;
 }
 
 .gallery-title {
@@ -450,6 +497,14 @@ body.is-building .ring-b {
 
   .optional-grid {
     grid-template-columns: 1fr;
+  }
+
+  .field-span-2 {
+    grid-column: auto;
+  }
+
+  .edit-banner {
+    display: grid;
   }
 
   .gallery-head {
