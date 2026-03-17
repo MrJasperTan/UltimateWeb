@@ -1618,7 +1618,12 @@ function writeScaffoldFiles({ siteDir, topic, brand, pageMode, frameCount, frame
     <p class="hero-trust">${escapeHtml(profile.trustLine)}</p>
   </section>
 
-  <div class="canvas-wrap"><canvas id="canvas"></canvas></div>
+  <div class="media-stage">
+    <video id="scroll-video" class="scroll-video" playsinline muted preload="auto" poster="media/start-frame.png">
+      <source src="media/transition.mp4" type="video/mp4" />
+    </video>
+    <div class="canvas-wrap"><canvas id="canvas"></canvas></div>
+  </div>
   <div id="dark-overlay"></div>
 
   <div class="marquee-wrap" data-scroll-speed="-30">
@@ -1771,6 +1776,7 @@ h1 {
   font-size: 0.74rem;
 }
 
+.media-stage,
 .canvas-wrap,
 #dark-overlay {
   position: fixed;
@@ -1778,8 +1784,12 @@ h1 {
   pointer-events: none;
 }
 
+.media-stage,
 .canvas-wrap {
   z-index: 5;
+}
+
+.media-stage {
   clip-path: circle(0% at 50% 50%);
 }
 
@@ -1789,10 +1799,26 @@ h1 {
   opacity: 0;
 }
 
+.scroll-video,
 #canvas {
   width: 100%;
   height: 100%;
   display: block;
+}
+
+.scroll-video {
+  object-fit: cover;
+  object-position: center;
+  background: #050607;
+}
+
+.canvas-wrap {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.canvas-wrap.is-active {
+  opacity: 1;
 }
 
 .marquee-wrap {
@@ -1977,20 +2003,29 @@ h1 {
   const js = `const FRAME_COUNT = ${frameCount};
 const FRAME_SPEED = 2.0;
 const FRAME_PATH = (index) => \`frames/frame_\${String(index + 1).padStart(4, "0")}.${frameExtension}\`;
+const FRAME_WINDOW = 8;
 
+const video = document.getElementById("scroll-video");
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 const loader = document.getElementById("loader");
 const loaderBar = document.getElementById("loader-bar");
 const loaderPercent = document.getElementById("loader-percent");
 const scrollContainer = document.getElementById("scroll-container");
+const mediaStage = document.querySelector(".media-stage");
 const canvasWrap = document.querySelector(".canvas-wrap");
 const hero = document.querySelector(".hero-standalone");
 const darkOverlay = document.getElementById("dark-overlay");
 
 const frames = new Array(FRAME_COUNT);
-let loaded = 0;
+const frameLoads = new Set();
 let currentFrame = 0;
+let fallbackReady = false;
+let runtimeReady = false;
+let usingVideo = false;
+let awaitingVideo = Boolean(video);
+let pendingVideoTime = 0;
+let rafScheduled = false;
 
 function resizeCanvas() {
   const ratio = window.devicePixelRatio || 1;
@@ -2002,6 +2037,11 @@ function resizeCanvas() {
 
 function drawFrame(index) {
   const img = frames[index];
+  if (!img) return;
+  drawImageToCanvas(img);
+}
+
+function drawImageToCanvas(img) {
   if (!img) return;
   const cw = canvas.width;
   const ch = canvas.height;
@@ -2017,34 +2057,111 @@ function drawFrame(index) {
   ctx.drawImage(img, dx, dy, dw, dh);
 }
 
-function updateLoader() {
-  const pct = Math.round((loaded / FRAME_COUNT) * 100);
-  loaderBar.style.width = pct + "%";
-  loaderPercent.textContent = pct + "%";
-  if (loaded >= FRAME_COUNT) {
-    loader.style.opacity = "0";
-    setTimeout(() => {
-      loader.style.display = "none";
-    }, 400);
-    drawFrame(0);
+function setLoaderProgress(pct, label = null) {
+  const safePct = Math.max(0, Math.min(100, Math.round(pct)));
+  loaderBar.style.width = safePct + "%";
+  loaderPercent.textContent = label || (safePct + "%");
+}
+
+function finishLoader() {
+  if (runtimeReady) return;
+  runtimeReady = true;
+  setLoaderProgress(100);
+  loader.style.opacity = "0";
+  setTimeout(() => {
+    loader.style.display = "none";
+  }, 400);
+}
+
+function getNearestLoadedFrame(index) {
+  if (frames[index]) return frames[index];
+  for (let distance = 1; distance < FRAME_COUNT; distance += 1) {
+    if (frames[index - distance]) return frames[index - distance];
+    if (frames[index + distance]) return frames[index + distance];
+  }
+  return null;
+}
+
+function ensureFrame(index) {
+  if (index < 0 || index >= FRAME_COUNT || frames[index] || frameLoads.has(index)) return;
+  frameLoads.add(index);
+  const img = new Image();
+  img.onload = () => {
+    frames[index] = img;
+    if (index === 0) {
+      fallbackReady = true;
+      drawFrame(0);
+      if (!usingVideo && !awaitingVideo) finishLoader();
+    }
+  };
+  img.onerror = () => {
+    frameLoads.delete(index);
+  };
+  img.src = FRAME_PATH(index);
+}
+
+function ensureFrameWindow(center) {
+  for (let offset = -FRAME_WINDOW; offset <= FRAME_WINDOW; offset += 1) {
+    ensureFrame(center + offset);
   }
 }
 
-function preloadFrames() {
-  for (let i = 0; i < FRAME_COUNT; i += 1) {
-    const img = new Image();
-    img.onload = () => {
-      frames[i] = img;
-      loaded += 1;
-      updateLoader();
-      if (i === 0) drawFrame(0);
-    };
-    img.onerror = () => {
-      loaded += 1;
-      updateLoader();
-    };
-    img.src = FRAME_PATH(i);
+function drawFallbackFrame(index) {
+  const frame = getNearestLoadedFrame(index);
+  if (!frame) return;
+  drawImageToCanvas(frame);
+}
+
+function activateFallback() {
+  awaitingVideo = false;
+  if (!fallbackReady) {
+    ensureFrame(0);
   }
+  usingVideo = false;
+  if (video) video.style.opacity = "0";
+  canvasWrap.classList.add("is-active");
+  ensureFrameWindow(currentFrame);
+  drawFallbackFrame(currentFrame);
+  if (fallbackReady) finishLoader();
+}
+
+function syncVideoToScroll(progress) {
+  if (!video || !Number.isFinite(video.duration) || video.duration <= 0) return;
+  pendingVideoTime = Math.min(progress * video.duration, Math.max(video.duration - 0.05, 0));
+  if (rafScheduled) return;
+  rafScheduled = true;
+  requestAnimationFrame(() => {
+    rafScheduled = false;
+    if (Math.abs(video.currentTime - pendingVideoTime) > 0.033) {
+      video.currentTime = pendingVideoTime;
+    }
+  });
+}
+
+function setupMedia() {
+  setLoaderProgress(8, "8%");
+  ensureFrame(0);
+  if (!video) {
+    activateFallback();
+    return;
+  }
+
+  video.addEventListener("loadeddata", () => {
+    awaitingVideo = false;
+    usingVideo = true;
+    video.style.opacity = "1";
+    canvasWrap.classList.remove("is-active");
+    setLoaderProgress(100);
+    finishLoader();
+  }, { once: true });
+
+  video.addEventListener("error", () => {
+    awaitingVideo = false;
+    activateFallback();
+  }, { once: true });
+
+  video.load();
+  setLoaderProgress(45, "45%");
 }
 
 function setupSmoothScroll() {
@@ -2077,7 +2194,14 @@ function setupFrameBinding() {
       const nextFrame = Math.min(Math.floor(accelerated * (FRAME_COUNT - 1)), FRAME_COUNT - 1);
       if (nextFrame !== currentFrame) {
         currentFrame = nextFrame;
-        requestAnimationFrame(() => drawFrame(currentFrame));
+        if (usingVideo) {
+          syncVideoToScroll(accelerated);
+        } else {
+          ensureFrameWindow(currentFrame);
+          requestAnimationFrame(() => drawFallbackFrame(currentFrame));
+        }
+      } else if (usingVideo) {
+        syncVideoToScroll(accelerated);
       }
     }
   });
@@ -2208,18 +2332,18 @@ function setupHeroTransition() {
       const p = self.progress;
       hero.style.opacity = String(Math.max(0, 1 - p * 15));
       const wipe = Math.min(1, Math.max(0, (p - 0.01) / 0.06));
-      canvasWrap.style.clipPath = \`circle(\${wipe * 75}% at 50% 50%)\`;
+      mediaStage.style.clipPath = \`circle(\${wipe * 75}% at 50% 50%)\`;
     }
   });
 }
 
 window.addEventListener("resize", () => {
   resizeCanvas();
-  drawFrame(currentFrame);
+  if (!usingVideo) drawFallbackFrame(currentFrame);
 });
 
 resizeCanvas();
-preloadFrames();
+setupMedia();
 setupSmoothScroll();
 placeSections();
 setupFrameBinding();
@@ -2246,10 +2370,25 @@ function runFrameExtraction(videoPath, framesDir) {
   const settings = chooseExtractionSettings(metadata);
   const vf = `fps=${settings.fps},scale=${settings.width}:-1`;
 
-  const frameExtension = "png";
+  const frameExtension = "webp";
   const ffmpeg = spawnSync(
     "ffmpeg",
-    ["-y", "-i", videoPath, "-vf", vf, "-c:v", "png", join(framesDir, `frame_%04d.${frameExtension}`)],
+    [
+      "-y",
+      "-i",
+      videoPath,
+      "-vf",
+      vf,
+      "-c:v",
+      "libwebp",
+      "-quality",
+      "72",
+      "-compression_level",
+      "6",
+      "-preset",
+      "picture",
+      join(framesDir, `frame_%04d.${frameExtension}`),
+    ],
     { stdio: "inherit" }
   );
   if (ffmpeg.status !== 0) {

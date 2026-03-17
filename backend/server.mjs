@@ -3,9 +3,10 @@
 import { randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
 import { createServer } from "node:http";
-import { dirname, extname, join, resolve } from "node:path";
+import { tmpdir } from "node:os";
+import { basename, dirname, extname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { existsSync, mkdirSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 
 const APP_DIR = dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = resolve(APP_DIR, "..");
@@ -137,6 +138,98 @@ function parseJsonBody(request) {
   });
 }
 
+function sanitizeUploadFilename(filename, fallbackBase) {
+  const raw = basename(String(filename || "").trim()) || fallbackBase;
+  const cleaned = raw.replace(/[^a-zA-Z0-9._-]+/g, "-");
+  const extension = extname(cleaned);
+  const base = cleaned.slice(0, cleaned.length - extension.length) || fallbackBase;
+  return `${base.slice(0, 48)}${extension.slice(0, 12)}`;
+}
+
+function splitBuffer(buffer, separator) {
+  const parts = [];
+  let start = 0;
+  let index = buffer.indexOf(separator, start);
+  while (index !== -1) {
+    parts.push(buffer.slice(start, index));
+    start = index + separator.length;
+    index = buffer.indexOf(separator, start);
+  }
+  parts.push(buffer.slice(start));
+  return parts;
+}
+
+function parseMultipartBody(request) {
+  return new Promise((resolveBody, rejectBody) => {
+    const contentType = String(request.headers["content-type"] || "");
+    const boundaryMatch = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/i);
+    if (!boundaryMatch) {
+      rejectBody(new Error("Missing multipart boundary"));
+      return;
+    }
+
+    const boundary = boundaryMatch[1] || boundaryMatch[2];
+    const chunks = [];
+    let totalSize = 0;
+
+    request.on("data", (chunk) => {
+      totalSize += chunk.length;
+      if (totalSize > 250 * 1024 * 1024) {
+        rejectBody(new Error("Upload too large"));
+        request.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
+
+    request.on("end", () => {
+      try {
+        const body = Buffer.concat(chunks);
+        const boundaryMarker = Buffer.from(`--${boundary}`);
+        const sections = splitBuffer(body, boundaryMarker).slice(1, -1);
+        const fields = {};
+        const files = {};
+        const uploadDir = mkdtempSync(join(tmpdir(), "ultimateweb-upload-"));
+
+        for (const section of sections) {
+          let part = section;
+          if (part.subarray(0, 2).equals(Buffer.from("\r\n"))) {
+            part = part.subarray(2);
+          }
+          if (part.length >= 2 && part.subarray(part.length - 2).equals(Buffer.from("\r\n"))) {
+            part = part.subarray(0, part.length - 2);
+          }
+
+          const headerEnd = part.indexOf(Buffer.from("\r\n\r\n"));
+          if (headerEnd === -1) continue;
+
+          const headerText = part.subarray(0, headerEnd).toString("utf8");
+          const content = part.subarray(headerEnd + 4);
+          const dispositionMatch = headerText.match(/content-disposition:[^\r\n]*name="([^"]+)"/i);
+          if (!dispositionMatch) continue;
+
+          const fieldName = dispositionMatch[1];
+          const filenameMatch = headerText.match(/filename="([^"]*)"/i);
+          if (filenameMatch && filenameMatch[1]) {
+            const safeFilename = sanitizeUploadFilename(filenameMatch[1], fieldName);
+            const storedPath = join(uploadDir, `${Date.now().toString(36)}-${safeFilename}`);
+            writeFileSync(storedPath, content);
+            files[fieldName] = { path: storedPath, filename: filenameMatch[1] };
+          } else {
+            fields[fieldName] = content.toString("utf8");
+          }
+        }
+
+        resolveBody({ fields, files });
+      } catch (error) {
+        rejectBody(new Error(`Invalid multipart body: ${error.message}`));
+      }
+    });
+
+    request.on("error", (error) => rejectBody(error));
+  });
+}
+
 function appendJobLog(job, chunk) {
   const lines = String(chunk).split(/\r?\n/).filter(Boolean);
   if (!lines.length) return;
@@ -161,6 +254,24 @@ function normalizePageMode(rawMode) {
     throw new Error(`Invalid pageMode "${rawMode}". Expected conversion, editorial, or hybrid.`);
   }
   return mode;
+}
+
+function cleanOptionalString(value) {
+  const text = String(value || "").trim();
+  return text ? text : null;
+}
+
+function parseColorList(rawColors) {
+  const text = cleanOptionalString(rawColors);
+  if (!text) return [];
+  return Array.from(
+    new Set(
+      text
+        .split(/[,\n]+/)
+        .map((value) => value.trim())
+        .filter(Boolean)
+    )
+  ).slice(0, 6);
 }
 
 function getGalleryEntries(limit = 80) {
@@ -207,6 +318,7 @@ function getGalleryEntries(limit = 80) {
       createdAt,
       siteUrl: `/generated-sites/${slug}/index.html`,
       thumbnailUrl,
+      versionLabel: metadata.editSourceSlug ? "Edited version" : "Original version",
     });
   }
 
@@ -215,7 +327,34 @@ function getGalleryEntries(limit = 80) {
     .slice(0, limit);
 }
 
-function startBuildJob(topic, pageMode = "conversion") {
+function getSiteConfig(slug) {
+  const siteRoot = join(GENERATED_DIR, slug);
+  if (!existsSync(siteRoot) || !statSync(siteRoot).isDirectory()) return null;
+  const metadataPath = join(siteRoot, "pipeline-metadata.json");
+  const metadata = readJsonFile(metadataPath);
+  if (!metadata) return null;
+
+  const palette = Array.isArray(metadata.paletteOverride) && metadata.paletteOverride.length
+    ? metadata.paletteOverride
+    : Array.isArray(metadata.sourceContext?.palette)
+      ? metadata.sourceContext.palette
+      : [];
+
+  return {
+    slug,
+    title: String(metadata.topic || slug.replace(/-/g, " ")).trim(),
+    topic: String(metadata.topic || "").trim(),
+    pageMode: normalizePageMode(metadata.pageMode),
+    existingWebsite: cleanOptionalString(metadata.sourceUrl || metadata.sourceContext?.url),
+    colors: palette.join(", "),
+    startPrompt: cleanOptionalString(metadata.prompts?.startPrompt),
+    endPrompt: cleanOptionalString(metadata.prompts?.endPrompt),
+    videoPrompt: cleanOptionalString(metadata.prompts?.motionPrompt),
+    editSourceSlug: cleanOptionalString(metadata.editSourceSlug),
+  };
+}
+
+function startBuildJob(topic, pageMode = "conversion", options = {}) {
   const id = randomUUID();
   const slug = `${slugify(topic)}-${Date.now().toString(36)}`;
   const job = {
@@ -250,6 +389,28 @@ function startBuildJob(topic, pageMode = "conversion") {
     "--video-model",
     "fal-ai/kling-video/v3/pro/image-to-video",
   ];
+
+  const optionalArgs = [
+    ["--source-url", options.existingWebsite],
+    ["--start-image", options.startImage],
+    ["--end-image", options.endImage],
+    ["--video-path", options.videoPath],
+    ["--video-url", options.videoUrl],
+    ["--start-prompt", options.startPrompt],
+    ["--end-prompt", options.endPrompt],
+    ["--motion-prompt", options.videoPrompt],
+    ["--change-request", options.changeRequest],
+    ["--edit-source-slug", options.editSourceSlug],
+  ];
+
+  for (const [flag, value] of optionalArgs) {
+    if (!value) continue;
+    args.push(flag, value);
+  }
+
+  for (const color of options.colors || []) {
+    args.push("--color", color);
+  }
 
   const child = spawn("node", args, {
     cwd: ROOT_DIR,
@@ -311,23 +472,49 @@ const server = createServer(async (request, response) => {
   const { pathname } = url;
 
   if (request.method === "POST" && pathname === "/api/build") {
-    if (!process.env.FAL_KEY) {
-      sendJson(response, 500, {
-        error: "FAL_KEY is not set. Add it to .env or environment before starting the server.",
-      });
-      return;
-    }
-
     try {
-      const body = await parseJsonBody(request);
-      const topic = String(body.topic || "").trim();
-      const pageMode = normalizePageMode(body.pageMode);
+      const contentType = String(request.headers["content-type"] || "");
+      const body = contentType.includes("multipart/form-data")
+        ? await parseMultipartBody(request)
+        : { fields: await parseJsonBody(request), files: {} };
+      const topic = String(body.fields.topic || "").trim();
+      const pageMode = normalizePageMode(body.fields.pageMode);
+      const existingWebsite = cleanOptionalString(body.fields.existingWebsite);
+      const startImage = body.files.startImage?.path || cleanOptionalString(body.fields.startImage);
+      const endImage = body.files.endImage?.path || cleanOptionalString(body.fields.endImage);
+      const video = body.files.video?.path || cleanOptionalString(body.fields.video);
+      const startPrompt = cleanOptionalString(body.fields.startPrompt);
+      const endPrompt = cleanOptionalString(body.fields.endPrompt);
+      const videoPrompt = cleanOptionalString(body.fields.videoPrompt);
+      const changeRequest = cleanOptionalString(body.fields.changeRequest);
+      const editSourceSlug = cleanOptionalString(body.fields.editSourceSlug);
+      const colors = parseColorList(body.fields.colors);
       if (!topic) {
         sendJson(response, 400, { error: "Topic is required." });
         return;
       }
 
-      const job = startBuildJob(topic, pageMode);
+      if (!process.env.FAL_KEY && !video) {
+        sendJson(response, 500, {
+          error: "FAL_KEY is not set. Add it to .env or environment before starting the server, or provide an existing video.",
+        });
+        return;
+      }
+
+      const isVideoUrl = Boolean(video && /^https?:\/\//i.test(video));
+      const job = startBuildJob(topic, pageMode, {
+        existingWebsite,
+        colors,
+        startImage,
+        endImage,
+        videoPath: video && !isVideoUrl ? video : null,
+        videoUrl: isVideoUrl ? video : null,
+        startPrompt,
+        endPrompt,
+        videoPrompt,
+        changeRequest,
+        editSourceSlug,
+      });
       sendJson(response, 202, {
         id: job.id,
         slug: job.slug,
@@ -362,6 +549,17 @@ const server = createServer(async (request, response) => {
 
   if (request.method === "GET" && pathname === "/api/gallery") {
     sendJson(response, 200, getGalleryEntries());
+    return;
+  }
+
+  if (request.method === "GET" && pathname.startsWith("/api/sites/")) {
+    const slug = pathname.split("/").pop();
+    const siteConfig = slug ? getSiteConfig(slug) : null;
+    if (!siteConfig) {
+      sendJson(response, 404, { error: "Site config not found." });
+      return;
+    }
+    sendJson(response, 200, siteConfig);
     return;
   }
 
