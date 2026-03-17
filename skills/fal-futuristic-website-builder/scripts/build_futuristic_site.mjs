@@ -1619,10 +1619,7 @@ function writeScaffoldFiles({ siteDir, topic, brand, pageMode, frameCount, frame
   </section>
 
   <div class="media-stage">
-    <video id="scroll-video" class="scroll-video" playsinline muted preload="metadata">
-      <source src="media/transition.mp4" type="video/mp4" />
-    </video>
-    <div class="canvas-wrap"><canvas id="canvas"></canvas></div>
+    <div class="canvas-wrap is-active"><canvas id="canvas"></canvas></div>
   </div>
   <div id="dark-overlay"></div>
 
@@ -1799,25 +1796,13 @@ h1 {
   opacity: 0;
 }
 
-.scroll-video,
 #canvas {
   width: 100%;
   height: 100%;
   display: block;
 }
 
-.scroll-video {
-  object-fit: cover;
-  object-position: center;
-  background: #050607;
-}
-
 .canvas-wrap {
-  opacity: 0;
-  transition: opacity 0.2s ease;
-}
-
-.canvas-wrap.is-active {
   opacity: 1;
 }
 
@@ -2004,9 +1989,7 @@ h1 {
 const FRAME_SPEED = 1.0;
 const FRAME_PATH = (index) => \`frames/frame_\${String(index + 1).padStart(4, "0")}.${frameExtension}\`;
 const FRAME_WINDOW = 8;
-const VIDEO_BOOT_TIMEOUT_MS = 2500;
 
-const video = document.getElementById("scroll-video");
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 const loader = document.getElementById("loader");
@@ -2023,11 +2006,6 @@ const frameLoads = new Set();
 let currentFrame = 0;
 let fallbackReady = false;
 let runtimeReady = false;
-let usingVideo = false;
-let awaitingVideo = Boolean(video);
-let pendingVideoTime = 0;
-let rafScheduled = false;
-let videoBootstrapTimer = null;
 
 function resizeCanvas() {
   const ratio = window.devicePixelRatio || 1;
@@ -2092,10 +2070,8 @@ function ensureFrame(index) {
     frames[index] = img;
     if (index === 0) {
       fallbackReady = true;
-      if (!awaitingVideo) {
-        drawFrame(0);
-        if (!usingVideo) finishLoader();
-      }
+      drawFrame(0);
+      finishLoader();
     }
   };
   img.onerror = () => {
@@ -2117,79 +2093,18 @@ function drawFallbackFrame(index) {
 }
 
 function activateFallback() {
-  if (videoBootstrapTimer) {
-    clearTimeout(videoBootstrapTimer);
-    videoBootstrapTimer = null;
-  }
-  awaitingVideo = false;
   if (!fallbackReady) {
     ensureFrame(0);
   }
-  usingVideo = false;
-  if (video) {
-    video.style.opacity = "0";
-    video.removeAttribute("poster");
-  }
-  canvasWrap.classList.add("is-active");
   ensureFrameWindow(currentFrame);
   drawFallbackFrame(currentFrame);
   if (fallbackReady) finishLoader();
 }
 
-function activateVideo() {
-  if (!video) return;
-  if (videoBootstrapTimer) {
-    clearTimeout(videoBootstrapTimer);
-    videoBootstrapTimer = null;
-  }
-  awaitingVideo = false;
-  usingVideo = true;
-  video.pause();
-  video.style.opacity = "1";
-  canvasWrap.classList.remove("is-active");
-  syncVideoToScroll(currentFrame / Math.max(FRAME_COUNT - 1, 1));
-  setLoaderProgress(100);
-  finishLoader();
-}
-
-function syncVideoToScroll(progress) {
-  if (!video || !Number.isFinite(video.duration) || video.duration <= 0) return;
-  pendingVideoTime = Math.min(progress * video.duration, Math.max(video.duration - 0.05, 0));
-  if (rafScheduled) return;
-  rafScheduled = true;
-  requestAnimationFrame(() => {
-    rafScheduled = false;
-    if (Math.abs(video.currentTime - pendingVideoTime) > 0.033) {
-      video.currentTime = pendingVideoTime;
-    }
-  });
-}
-
 function setupMedia() {
   setLoaderProgress(8, "8%");
-  if (!video) {
-    activateFallback();
-    return;
-  }
-
-  video.preload = "metadata";
-  video.removeAttribute("poster");
-  video.addEventListener("loadedmetadata", () => {
-    setLoaderProgress(72, "72%");
-  }, { once: true });
-
-  video.addEventListener("loadeddata", () => {
-    activateVideo();
-  }, { once: true });
-
-  video.addEventListener("error", () => {
-    activateFallback();
-  }, { once: true });
-
-  videoBootstrapTimer = setTimeout(() => {
-    if (awaitingVideo) activateFallback();
-  }, VIDEO_BOOT_TIMEOUT_MS);
-  video.load();
+  ensureFrame(0);
+  ensureFrameWindow(0);
   setLoaderProgress(45, "45%");
 }
 
@@ -2223,14 +2138,8 @@ function setupFrameBinding() {
       const nextFrame = Math.min(Math.floor(accelerated * (FRAME_COUNT - 1)), FRAME_COUNT - 1);
       if (nextFrame !== currentFrame) {
         currentFrame = nextFrame;
-        if (usingVideo) {
-          syncVideoToScroll(accelerated);
-        } else {
-          ensureFrameWindow(currentFrame);
-          requestAnimationFrame(() => drawFallbackFrame(currentFrame));
-        }
-      } else if (usingVideo) {
-        syncVideoToScroll(accelerated);
+        ensureFrameWindow(currentFrame);
+        requestAnimationFrame(() => drawFallbackFrame(currentFrame));
       }
     }
   });
@@ -2368,7 +2277,7 @@ function setupHeroTransition() {
 
 window.addEventListener("resize", () => {
   resizeCanvas();
-  if (!usingVideo) drawFallbackFrame(currentFrame);
+  drawFallbackFrame(currentFrame);
 });
 
 resizeCanvas();

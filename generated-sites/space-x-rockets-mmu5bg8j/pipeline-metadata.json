@@ -1,0 +1,248 @@
+{
+  "topic": "Space-X Rockets",
+  "brand": "Space-X Rockets",
+  "businessProfile": {
+    "topic": "Space-X Rockets",
+    "brand": "Space-X Rockets",
+    "category": "place",
+    "sourceContext": {
+      "url": null,
+      "title": null,
+      "description": null,
+      "pageText": null,
+      "palette": [],
+      "imageUrls": [],
+      "logoUrl": null
+    },
+    "research": {
+      "topic": "Space-X Rockets",
+      "snippets": [
+        "The first step to making this possible was landing an orbital first-stage rocket. SpaceX achieved this feat in 2015 with its historic first unmanned upright landing with a Falcon 9 rocket booster.",
+        "SpaceX designs, manufactures and launches advanced rockets and spacecraft. The company was founded in 2002 to revolutionize space technology, with the ultimate goal of enabling people to live on other planets.",
+        "SpaceX has had more consecutive successful landings of a F9/H family booster than any other rocket family has had successful consecutive launches. More on reddit.com",
+        "Learn about SpaceX's history and milestones, from its founding to recent achievements in space exploration and technology innovations.",
+        "Falcon Heavy, built from three Falcon 9 boosters, first flew in 2018 after a more than decade-long development process. As of May 2025, the company's Falcon 9 rockets have landed and flown again more than 450 times, reaching 1–3 launches a week. These milestones attracted additional private ...",
+        "SpaceX designs, manufactures and launches advanced rockets and spacecraft. The company was founded in 2002 to revolutionize space technology, ...",
+        "The milestone prompted worldwide acclaim. It was the first time a private spacecraft docked with the space station. SpaceX has since upgraded its uncrewed Dragon cargo ships to be reusable for at least two flights. Grasshopper was a 100-foot-tall rocket prototype flown at SpaceX's McGregor, Texas, proving grounds to give the company more experience in landing boosters vertically.",
+        "SpaceX is credited as the very first developer of reusable rocket technology. Prior to the Falcon 9, their first spacecraft of this type, rockets would normally be designed for single use. After the delivery of the payload, they would either burn up upon atmosphere re-entry or suffer a controlled crash into the ocean. The SpaceX innovations that made it possible to reuse rockets (in part) consist of engines that can be used in both launching and landing, as well the development of superior light",
+        "The company also received $278 million from NASA under the agency's Commercial Orbital Transportation Services, as well as funding for its first two Falcon launches from the United States Department of Defense.",
+        "Musk split his remaining $30 million ... contract awarding $1.6 billion to SpaceX in December, thus financially saving the company. Based on these factors and the further business operations they enabled, the Falcon 1 was soon retired following its second successful, and fifth total, launch ..."
+      ],
+      "attributes": {},
+      "sources": [
+        {
+          "url": "https://interestingengineering.com/science/destination-mars-15-incredible-spacex-milestones-past-and-future",
+          "title": "25 significant milestones from the past and future of SpaceX",
+          "source": "brave"
+        },
+        {
+          "url": "https://www.spacex.com/mission/",
+          "title": "SpaceX - Mission",
+          "source": "brave"
+        },
+        {
+          "url": "https://www.spacex.com/achievements",
+          "title": "Making life multiplanetary - SpaceX",
+          "source": "duckduckgo"
+        },
+        {
+          "url": "https://www.reddit.com/r/SpaceXLounge/comments/17uhhvx/what_are_your_goto_cool_spacex_factsachievements/",
+          "title": "r/SpaceXLounge on Reddit: What are your “go-to” cool SpaceX facts/achievements for casuals who don’t follow space stuff?",
+          "source": "brave"
+        },
+        {
+          "url": "https://www.cgaa.org/article/spacex",
+          "title": "SpaceX History: Key Milestones and Achievements - CGAA",
+          "source": "duckduckgo"
+        },
+        {
+          "url": "https://en.wikipedia.org/wiki/SpaceX",
+          "title": "SpaceX - Wikipedia",
+          "source": "brave"
+        },
+        {
+          "url": "https://www.space.com/40547-spacex-rocket-evolution.html",
+          "title": "See the evolution of SpaceX rockets in pictures | Space",
+          "source": "brave"
+        },
+        {
+          "url": "https://www.officetimeline.com/blog/spacex-timeline",
+          "title": "How did SpaceX achieve reusable rockets?",
+          "source": "brave"
+        }
+      ],
+      "category": "person",
+      "summary": "The first step to making this possible was landing an orbital first-stage rocket. SpaceX achieved this feat in 2015 with its historic first unmanned upright landing with a Falcon 9 rocket booster.",
+      "facts": [],
+      "proofPoints": [
+        "The first step to making this possible was landing an orbital first-stage rocket. SpaceX achieved this feat in 2015 with its historic fir...",
+        "SpaceX designs, manufactures and launches advanced rockets and spacecraft. The company was founded in 2002 to revolutionize space technol...",
+        "SpaceX has had more consecutive successful landings of a F9/H family booster than any other rocket family has had successful consecutive...",
+        "Learn about SpaceX's history and milestones, from its founding to recent achievements in space exploration and technology innovations."
+      ],
+      "faqCandidates": [
+        {
+          "question": "What makes Space-X Rockets distinct?",
+          "answer": "Space-X Rockets should be defined by measurable achievements, narrative arc, and cultural resonance rather than generic praise."
+        },
+        {
+          "question": "How should a visitor move through the page?",
+          "answer": "Start with identity, move into milestone proof, and end with a clear invitation to explore the full story."
+        }
+      ],
+      "researchedFields": [],
+      "inferredFallbackUsed": true,
+      "confidence": "medium",
+      "coverage": {
+        "snippetCount": 10,
+        "attributeCount": 0,
+        "sourceCount": 8,
+        "factCount": 0
+      }
+    },
+    "logoUrl": null,
+    "referenceMedia": [],
+    "palette": [],
+    "locationSignal": "The first step to making this possible was landing an orbital first-stage rocket. SpaceX achieved this feat in 2015 with its historic first unmanned upright landing with a Falcon 9 rocket booster."
+  },
+  "sourceUrl": null,
+  "pageMode": "editorial",
+  "models": {
+    "startModel": "fal-ai/nano-banana-2",
+    "endModel": "fal-ai/nano-banana-2/edit",
+    "videoModel": "fal-ai/kling-video/v3/pro/image-to-video"
+  },
+  "paletteOverride": [],
+  "changeRequest": null,
+  "editSourceSlug": null,
+  "videoDurationSeconds": "5",
+  "prompts": {
+    "startPrompt": "Cinematic wide establishing shot of Space-X Rockets, real cityscape or destination geography, golden hour lighting, dramatic atmosphere, architectural detail, landscape photography, authentic location cues, no character illustration, no text, no logos, ultra detailed 8k",
+    "endPrompt": "Same Space-X Rockets location, different dramatic perspective. Aerial or intimate detail view revealing hidden character of the place, atmospheric lighting, moody sky, no people, no character illustration, no text, no logos, landscape photography, ultra detailed.",
+    "motionPrompt": "Cinematic location reveal. Start from first frame. Smooth drone-like camera movement exploring the space. Atmospheric particles, shifting light, no sudden warping, no text, no people, cinematic landscape."
+  },
+  "generatedAt": "2026-03-17T05:02:22.216Z",
+  "startImageUrl": "https://v3b.fal.media/files/b/0a927cd6/vWS_27sWf2Lm27FuqyblZ_jZciHg8z.png",
+  "endImageUrl": "https://v3b.fal.media/files/b/0a927cda/QfIB0siofFOT4r8JNeJN5_FkW1tfV7.png",
+  "videoUrl": "https://v3b.fal.media/files/b/0a927cef/KzbbpAT8-ZIBbTmznmp0N_output.mp4",
+  "localVideo": "/home/thejaspertan/agents/Ultimateweb/generated-sites/space-x-rockets-mmu5bg8j/media/transition.mp4",
+  "videoMeta": {
+    "width": 1924,
+    "height": 1076,
+    "duration": 5.041667,
+    "fps": 24
+  },
+  "frameExtraction": {
+    "fps": 20,
+    "width": 1920
+  },
+  "frameCount": 101,
+  "frameExtension": "webp",
+  "category": "place",
+  "sectionKinds": [
+    "copy",
+    "copy",
+    "copy",
+    "cards",
+    "stats",
+    "cards",
+    "copy",
+    "cta"
+  ],
+  "trustLine": "8 live sources informed the hero, proof, and spec sections.",
+  "sourceContext": {
+    "url": null,
+    "title": null,
+    "description": null,
+    "pageText": null,
+    "palette": [],
+    "imageUrls": [],
+    "logoUrl": null
+  },
+  "research": {
+    "topic": "Space-X Rockets",
+    "snippets": [
+      "The first step to making this possible was landing an orbital first-stage rocket. SpaceX achieved this feat in 2015 with its historic first unmanned upright landing with a Falcon 9 rocket booster.",
+      "SpaceX designs, manufactures and launches advanced rockets and spacecraft. The company was founded in 2002 to revolutionize space technology, with the ultimate goal of enabling people to live on other planets.",
+      "SpaceX has had more consecutive successful landings of a F9/H family booster than any other rocket family has had successful consecutive launches. More on reddit.com",
+      "Learn about SpaceX's history and milestones, from its founding to recent achievements in space exploration and technology innovations.",
+      "Falcon Heavy, built from three Falcon 9 boosters, first flew in 2018 after a more than decade-long development process. As of May 2025, the company's Falcon 9 rockets have landed and flown again more than 450 times, reaching 1–3 launches a week. These milestones attracted additional private ...",
+      "SpaceX designs, manufactures and launches advanced rockets and spacecraft. The company was founded in 2002 to revolutionize space technology, ...",
+      "The milestone prompted worldwide acclaim. It was the first time a private spacecraft docked with the space station. SpaceX has since upgraded its uncrewed Dragon cargo ships to be reusable for at least two flights. Grasshopper was a 100-foot-tall rocket prototype flown at SpaceX's McGregor, Texas, proving grounds to give the company more experience in landing boosters vertically.",
+      "SpaceX is credited as the very first developer of reusable rocket technology. Prior to the Falcon 9, their first spacecraft of this type, rockets would normally be designed for single use. After the delivery of the payload, they would either burn up upon atmosphere re-entry or suffer a controlled crash into the ocean. The SpaceX innovations that made it possible to reuse rockets (in part) consist of engines that can be used in both launching and landing, as well the development of superior light",
+      "The company also received $278 million from NASA under the agency's Commercial Orbital Transportation Services, as well as funding for its first two Falcon launches from the United States Department of Defense.",
+      "Musk split his remaining $30 million ... contract awarding $1.6 billion to SpaceX in December, thus financially saving the company. Based on these factors and the further business operations they enabled, the Falcon 1 was soon retired following its second successful, and fifth total, launch ..."
+    ],
+    "attributes": {},
+    "sources": [
+      {
+        "url": "https://interestingengineering.com/science/destination-mars-15-incredible-spacex-milestones-past-and-future",
+        "title": "25 significant milestones from the past and future of SpaceX",
+        "source": "brave"
+      },
+      {
+        "url": "https://www.spacex.com/mission/",
+        "title": "SpaceX - Mission",
+        "source": "brave"
+      },
+      {
+        "url": "https://www.spacex.com/achievements",
+        "title": "Making life multiplanetary - SpaceX",
+        "source": "duckduckgo"
+      },
+      {
+        "url": "https://www.reddit.com/r/SpaceXLounge/comments/17uhhvx/what_are_your_goto_cool_spacex_factsachievements/",
+        "title": "r/SpaceXLounge on Reddit: What are your “go-to” cool SpaceX facts/achievements for casuals who don’t follow space stuff?",
+        "source": "brave"
+      },
+      {
+        "url": "https://www.cgaa.org/article/spacex",
+        "title": "SpaceX History: Key Milestones and Achievements - CGAA",
+        "source": "duckduckgo"
+      },
+      {
+        "url": "https://en.wikipedia.org/wiki/SpaceX",
+        "title": "SpaceX - Wikipedia",
+        "source": "brave"
+      },
+      {
+        "url": "https://www.space.com/40547-spacex-rocket-evolution.html",
+        "title": "See the evolution of SpaceX rockets in pictures | Space",
+        "source": "brave"
+      },
+      {
+        "url": "https://www.officetimeline.com/blog/spacex-timeline",
+        "title": "How did SpaceX achieve reusable rockets?",
+        "source": "brave"
+      }
+    ],
+    "category": "person",
+    "summary": "The first step to making this possible was landing an orbital first-stage rocket. SpaceX achieved this feat in 2015 with its historic first unmanned upright landing with a Falcon 9 rocket booster.",
+    "facts": [],
+    "proofPoints": [
+      "The first step to making this possible was landing an orbital first-stage rocket. SpaceX achieved this feat in 2015 with its historic fir...",
+      "SpaceX designs, manufactures and launches advanced rockets and spacecraft. The company was founded in 2002 to revolutionize space technol...",
+      "SpaceX has had more consecutive successful landings of a F9/H family booster than any other rocket family has had successful consecutive...",
+      "Learn about SpaceX's history and milestones, from its founding to recent achievements in space exploration and technology innovations."
+    ],
+    "faqCandidates": [
+      {
+        "question": "What makes Space-X Rockets distinct?",
+        "answer": "Space-X Rockets should be defined by measurable achievements, narrative arc, and cultural resonance rather than generic praise."
+      },
+      {
+        "question": "How should a visitor move through the page?",
+        "answer": "Start with identity, move into milestone proof, and end with a clear invitation to explore the full story."
+      }
+    ],
+    "researchedFields": [],
+    "inferredFallbackUsed": true,
+    "confidence": "medium",
+    "coverage": {
+      "snippetCount": 10,
+      "attributeCount": 0,
+      "sourceCount": 8,
+      "factCount": 0
+    }
+  }
+}

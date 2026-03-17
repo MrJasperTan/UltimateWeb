@@ -28,6 +28,12 @@ function resizeCanvas() {
   canvas.style.height = window.innerHeight + "px";
 }
 
+function drawFrame(index) {
+  const img = frames[index];
+  if (!img) return;
+  drawImageToCanvas(img);
+}
+
 function drawImageToCanvas(img) {
   if (!img) return;
   const cw = canvas.width;
@@ -42,12 +48,6 @@ function drawImageToCanvas(img) {
   ctx.fillStyle = "#0a0a0a";
   ctx.fillRect(0, 0, cw, ch);
   ctx.drawImage(img, dx, dy, dw, dh);
-}
-
-function drawFrame(index) {
-  const img = frames[index];
-  if (!img) return;
-  drawImageToCanvas(img);
 }
 
 function setLoaderProgress(pct, label = null) {
@@ -106,7 +106,9 @@ function drawFallbackFrame(index) {
 }
 
 function activateFallback() {
-  if (!fallbackReady) ensureFrame(0);
+  if (!fallbackReady) {
+    ensureFrame(0);
+  }
   ensureFrameWindow(currentFrame);
   drawFallbackFrame(currentFrame);
   if (fallbackReady) finishLoader();

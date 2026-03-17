@@ -124,25 +124,13 @@ h1 {
   opacity: 0;
 }
 
-.scroll-video,
 #canvas {
   width: 100%;
   height: 100%;
   display: block;
 }
 
-.scroll-video {
-  object-fit: cover;
-  object-position: center;
-  background: #050607;
-}
-
 .canvas-wrap {
-  opacity: 0;
-  transition: opacity 0.2s ease;
-}
-
-.canvas-wrap.is-active {
   opacity: 1;
 }
 
