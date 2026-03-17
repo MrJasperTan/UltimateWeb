@@ -2,7 +2,7 @@
 
 import { spawnSync } from "node:child_process";
 import { createWriteStream, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
-import { basename, dirname, join, resolve } from "node:path";
+import { basename, dirname, extname, join, resolve } from "node:path";
 import { pipeline } from "node:stream/promises";
 import { Readable } from "node:stream";
 import { URL, fileURLToPath } from "node:url";
@@ -304,6 +304,41 @@ function chooseExtractionSettings(meta) {
   return { fps, width };
 }
 
+function extractVideoFrame(videoPath, outputPath, seekSeconds = null) {
+  const args = ["-y"];
+  if (typeof seekSeconds === "number" && Number.isFinite(seekSeconds) && seekSeconds > 0) {
+    args.push("-ss", seekSeconds.toFixed(3));
+  }
+  args.push(
+    "-i",
+    videoPath,
+    "-frames:v",
+    "1",
+    "-c:v",
+    "libwebp",
+    "-quality",
+    "82",
+    "-compression_level",
+    "6",
+    outputPath
+  );
+  const ffmpeg = spawnSync("ffmpeg", args, { stdio: "pipe", encoding: "utf-8" });
+  if (ffmpeg.status !== 0) {
+    throw new Error(`ffmpeg frame capture failed: ${ffmpeg.stderr || "unknown error"}`);
+  }
+}
+
+function extractVideoEdgeFrames(videoPath, startPath = null, endPath = null) {
+  const meta = readVideoMetadata(videoPath);
+  if (startPath) {
+    extractVideoFrame(videoPath, startPath, 0);
+  }
+  if (endPath) {
+    const endTime = Math.max((meta.duration || 0) - 0.1, 0);
+    extractVideoFrame(videoPath, endPath, endTime);
+  }
+}
+
 function extractPayload(raw) {
   if (raw?.data && typeof raw.data === "object") return raw.data;
   if (raw?.output && typeof raw.output === "object") return raw.output;
@@ -491,6 +526,17 @@ async function downloadImageAsWebp(url, outputPath) {
   await downloadToFile(url, tempPath);
   convertImageToWebp(tempPath, outputPath);
   rmSync(tempPath, { force: true });
+}
+
+function imagePathToDataUri(imagePath) {
+  const ext = extname(String(imagePath)).toLowerCase();
+  const mimeType = ext === ".webp"
+    ? "image/webp"
+    : ext === ".jpg" || ext === ".jpeg"
+      ? "image/jpeg"
+      : "image/png";
+  const buffer = readFileSync(imagePath);
+  return `data:${mimeType};base64,${buffer.toString("base64")}`;
 }
 
 function escapeHtml(value) {
@@ -2067,7 +2113,7 @@ function drawImageToCanvas(img) {
   const ch = canvas.height;
   const iw = img.naturalWidth;
   const ih = img.naturalHeight;
-  const scale = Math.max(cw / iw, ch / ih) * 0.86;
+  const scale = Math.min(cw / iw, ch / ih);
   const dw = iw * scale;
   const dh = ih * scale;
   const dx = (cw - dw) / 2;
@@ -2642,6 +2688,17 @@ async function main() {
       metadata.existingVideoPath = videoPath;
       console.log(`Using existing video: ${videoPath}`);
     }
+
+    if (!providedStartImage || !providedEndImage) {
+      console.log("Deriving edge frames from provided video...");
+      extractVideoEdgeFrames(
+        videoPath,
+        providedStartImage ? null : startPath,
+        providedEndImage ? null : endPath
+      );
+      if (!providedStartImage) metadata.derivedStartImageFromVideo = true;
+      if (!providedEndImage) metadata.derivedEndImageFromVideo = true;
+    }
   } else {
     const falKey = process.env.FAL_KEY;
     if (!falKey) {
@@ -2684,7 +2741,7 @@ async function main() {
       endImageUrl = isValidHttpUrl(metadata.existingEndImage) ? metadata.existingEndImage : null;
       console.log(`Using existing end image: ${metadata.existingEndImage}`);
     } else {
-      const startImageInput = startImageUrl || startPath;
+      const startImageInput = startImageUrl || imagePathToDataUri(startPath);
       console.log(`Generating end frame with ${endModel}...`);
       const endResult = await runFalWithInputVariants(
         endModel,
@@ -2725,20 +2782,20 @@ async function main() {
       [
         {
           prompt: motionPrompt,
-          start_image_url: startImageUrl || startPath,
-          end_image_url: endImageUrl || endPath,
+          start_image_url: startImageUrl || imagePathToDataUri(startPath),
+          end_image_url: endImageUrl || imagePathToDataUri(endPath),
           duration: normalizedDuration,
           generate_audio: false,
         },
         {
           prompt: motionPrompt,
-          image_url: startImageUrl || startPath,
+          image_url: startImageUrl || imagePathToDataUri(startPath),
           duration: normalizedDuration,
           generate_audio: false,
         },
         {
           prompt: motionPrompt,
-          start_image_url: startImageUrl || startPath,
+          start_image_url: startImageUrl || imagePathToDataUri(startPath),
           duration: normalizedDuration,
           generate_audio: false,
         },

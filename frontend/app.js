@@ -95,6 +95,7 @@ function renderGallery(items) {
       const versionLabel = item.versionLabel ? `<p class="gallery-date">${item.versionLabel}</p>` : "";
       return `
         <article class="gallery-item">
+          <button class="gallery-delete" type="button" data-delete-slug="${item.slug}" data-delete-title="${item.title}" aria-label="Delete ${item.title}" title="Delete site">×</button>
           <img src="${thumb}" alt="${item.title}" loading="lazy" />
           <div class="gallery-meta">
             <p class="gallery-title">${item.title}</p>
@@ -109,6 +110,14 @@ function renderGallery(items) {
       `;
     })
     .join("");
+}
+
+async function deleteSite(slug, title) {
+  const response = await fetch(toApiUrl(`/api/sites/${slug}`), { method: "DELETE" });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.error || `Failed to delete ${title || "site"}`);
+  }
 }
 
 async function fetchSiteConfig(slug) {
@@ -322,6 +331,23 @@ form.addEventListener("submit", async (event) => {
 });
 
 galleryGrid.addEventListener("click", async (event) => {
+  const deleteButton = event.target.closest("[data-delete-slug]");
+  if (deleteButton) {
+    const slug = deleteButton.getAttribute("data-delete-slug");
+    const title = deleteButton.getAttribute("data-delete-title") || "this site";
+    if (!slug) return;
+    if (!window.confirm(`Delete ${title}? This will remove the generated site files permanently.`)) return;
+    try {
+      await deleteSite(slug, title);
+      if (activeEditSite?.slug === slug) clearEditState();
+      setStatus(`Deleted ${title}`);
+      await refreshGallery();
+    } catch (error) {
+      setStatus(`Could not delete site: ${error.message}`);
+    }
+    return;
+  }
+
   const editButton = event.target.closest("[data-edit-slug]");
   if (!editButton) return;
   try {

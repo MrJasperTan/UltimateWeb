@@ -436,6 +436,7 @@ body.is-building .ring-b {
 }
 
 .gallery-item {
+  position: relative;
   display: grid;
   border: 1px solid rgba(53, 223, 149, 0.24);
   border-radius: 0.8rem;
@@ -453,6 +454,40 @@ body.is-building .ring-b {
   width: 100%;
   aspect-ratio: 16 / 9;
   object-fit: cover;
+}
+
+.gallery-delete {
+  position: absolute;
+  top: 0.65rem;
+  right: 0.65rem;
+  width: 2rem;
+  height: 2rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  background: rgba(5, 7, 9, 0.72);
+  color: #fff;
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 0.18s ease, transform 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+}
+
+.gallery-item:hover .gallery-delete,
+.gallery-item:focus-within .gallery-delete {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.gallery-delete:hover,
+.gallery-delete:focus-visible {
+  background: rgba(255, 84, 47, 0.9);
+  border-color: rgba(255, 132, 102, 0.9);
+  outline: none;
 }
 
 .gallery-meta {

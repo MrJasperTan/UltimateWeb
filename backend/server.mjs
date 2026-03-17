@@ -6,7 +6,7 @@ import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { basename, dirname, extname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 
 const APP_DIR = dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = resolve(APP_DIR, "..");
@@ -50,6 +50,7 @@ loadEnvFromDotenv(join(ROOT_DIR, ".env"));
 
 const PORT = Number(process.env.PORT || 8787);
 const HOST = process.env.HOST || "127.0.0.1";
+const BACKEND_LOG_PATH = "/tmp/ultimateweb-backend.log";
 const jobs = new Map();
 const PAGE_MODES = new Set(["conversion", "editorial", "hybrid"]);
 
@@ -85,6 +86,14 @@ function sendJson(response, statusCode, payload) {
 function sendText(response, statusCode, message) {
   response.writeHead(statusCode, { "Content-Type": "text/plain; charset=utf-8" });
   response.end(message);
+}
+
+function logBackend(message) {
+  try {
+    appendFileSync(BACKEND_LOG_PATH, `[${new Date().toISOString()}] ${message}\n`, "utf8");
+  } catch {
+    // Ignore file logging failures.
+  }
 }
 
 function safeResolve(baseDir, requestPath) {
@@ -144,6 +153,26 @@ function sanitizeUploadFilename(filename, fallbackBase) {
   const extension = extname(cleaned);
   const base = cleaned.slice(0, cleaned.length - extension.length) || fallbackBase;
   return `${base.slice(0, 48)}${extension.slice(0, 12)}`;
+}
+
+function pickUploadedFile(files, preferredFieldName, matcher) {
+  const preferred = files?.[preferredFieldName];
+  if (preferred?.path) return preferred.path;
+
+  for (const file of Object.values(files || {})) {
+    if (!file?.path) continue;
+    if (!matcher || matcher(file)) return file.path;
+  }
+
+  return null;
+}
+
+function isUploadedImage(file) {
+  return /\.(png|jpe?g|webp|gif|bmp|svg|avif)$/i.test(String(file?.filename || ""));
+}
+
+function isUploadedVideo(file) {
+  return /\.(mp4|mov|webm|m4v|avi|mkv)$/i.test(String(file?.filename || ""));
 }
 
 function splitBuffer(buffer, separator) {
@@ -233,6 +262,9 @@ function parseMultipartBody(request) {
 function appendJobLog(job, chunk) {
   const lines = String(chunk).split(/\r?\n/).filter(Boolean);
   if (!lines.length) return;
+  for (const line of lines) {
+    logBackend(`[job ${job.id}] ${line}`);
+  }
   job.logs.push(...lines);
   if (job.logs.length > 240) {
     job.logs.splice(0, job.logs.length - 240);
@@ -407,6 +439,21 @@ function resolveEditSourceMedia(slug) {
   };
 }
 
+function deleteGeneratedSite(slug) {
+  const cleanSlug = cleanOptionalString(slug);
+  if (!cleanSlug || cleanSlug !== basename(cleanSlug)) {
+    throw new Error("Invalid site slug.");
+  }
+
+  const siteRoot = join(GENERATED_DIR, cleanSlug);
+  if (!existsSync(siteRoot) || !statSync(siteRoot).isDirectory()) {
+    return false;
+  }
+
+  rmSync(siteRoot, { recursive: true, force: true });
+  return true;
+}
+
 function startBuildJob(topic, pageMode = "conversion", options = {}) {
   const id = randomUUID();
   const slug = `${slugify(topic)}-${Date.now().toString(36)}`;
@@ -465,6 +512,16 @@ function startBuildJob(topic, pageMode = "conversion", options = {}) {
     args.push("--color", color);
   }
 
+  const mediaMode = options.videoPath
+    ? `video-path:${options.videoPath}`
+    : options.videoUrl
+      ? `video-url:${options.videoUrl}`
+      : "fal-generate-video";
+  logBackend(
+    `Starting job ${id} slug=${slug} mode=${pageMode} editSource=${options.editSourceSlug || "none"} ` +
+    `startImage=${options.startImage || "none"} endImage=${options.endImage || "none"} media=${mediaMode}`
+  );
+
   const child = spawn("node", args, {
     cwd: ROOT_DIR,
     env: { ...process.env, FAL_KEY: process.env.FAL_KEY || "" },
@@ -515,7 +572,7 @@ function startBuildJob(topic, pageMode = "conversion", options = {}) {
 
 const server = createServer(async (request, response) => {
   response.setHeader("Access-Control-Allow-Origin", "*");
-  response.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  response.setHeader("Access-Control-Allow-Methods", "GET,POST,DELETE,OPTIONS");
   response.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
   if (request.method === "OPTIONS") {
@@ -541,21 +598,32 @@ const server = createServer(async (request, response) => {
       const topic = String(body.fields.topic || "").trim();
       const pageMode = normalizePageMode(body.fields.pageMode);
       const existingWebsite = cleanOptionalString(body.fields.existingWebsite);
-      const uploadedStartImage = body.files.startImage?.path || cleanOptionalString(body.fields.startImage);
-      const uploadedEndImage = body.files.endImage?.path || cleanOptionalString(body.fields.endImage);
-      const uploadedVideo = body.files.video?.path || cleanOptionalString(body.fields.video);
+      const uploadedStartImage = pickUploadedFile(body.files, "startImage", isUploadedImage) || cleanOptionalString(body.fields.startImage);
+      const uploadedEndImage = pickUploadedFile(body.files, "endImage", isUploadedImage) || cleanOptionalString(body.fields.endImage);
+      const uploadedVideo = pickUploadedFile(body.files, "video", isUploadedVideo) || cleanOptionalString(body.fields.video);
       const startPrompt = cleanOptionalString(body.fields.startPrompt);
       const endPrompt = cleanOptionalString(body.fields.endPrompt);
       const videoPrompt = cleanOptionalString(body.fields.videoPrompt);
       const changeRequest = cleanOptionalString(body.fields.changeRequest);
       const editSourceSlug = cleanOptionalString(body.fields.editSourceSlug);
       const colors = parseColorList(body.fields.colors);
-      const existingMedia = !uploadedStartImage && !uploadedEndImage && !uploadedVideo && editSourceSlug
+      const hasUploadedMedia = Boolean(uploadedStartImage || uploadedEndImage || uploadedVideo);
+      const existingMedia = !hasUploadedMedia && editSourceSlug
         ? resolveEditSourceMedia(editSourceSlug)
         : null;
       const startImage = uploadedStartImage || existingMedia?.startImage || null;
       const endImage = uploadedEndImage || existingMedia?.endImage || null;
       const video = uploadedVideo || existingMedia?.videoPath || null;
+      logBackend(
+        `POST /api/build topic="${topic}" editSource=${editSourceSlug || "none"} ` +
+        `uploadedFiles=${JSON.stringify({
+          keys: Object.keys(body.files || {}),
+          startImage: body.files.startImage?.filename || null,
+          endImage: body.files.endImage?.filename || null,
+          video: body.files.video?.filename || null,
+        })} ` +
+        `resolvedMedia=${JSON.stringify({ startImage, endImage, video })}`
+      );
       if (!topic) {
         sendJson(response, 400, { error: "Topic is required." });
         return;
@@ -628,6 +696,23 @@ const server = createServer(async (request, response) => {
     }
     sendJson(response, 200, siteConfig);
     return;
+  }
+
+  if (request.method === "DELETE" && pathname.startsWith("/api/sites/")) {
+    const slug = pathname.split("/").pop();
+    try {
+      const deleted = slug ? deleteGeneratedSite(slug) : false;
+      if (!deleted) {
+        sendJson(response, 404, { error: "Site not found." });
+        return;
+      }
+      logBackend(`Deleted generated site slug=${slug}`);
+      sendJson(response, 200, { ok: true, slug });
+      return;
+    } catch (error) {
+      sendJson(response, 400, { error: error.message });
+      return;
+    }
   }
 
   if (pathname.startsWith("/generated-sites/")) {
