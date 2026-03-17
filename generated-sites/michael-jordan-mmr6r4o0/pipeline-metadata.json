@@ -1,0 +1,33 @@
+{
+  "topic": "Michael Jordan",
+  "brand": "Michael Jordan",
+  "models": {
+    "startModel": "fal-ai/nano-banana-2",
+    "endModel": "fal-ai/nano-banana-2/edit",
+    "videoModel": "fal-ai/kling-video/v3/pro/image-to-video"
+  },
+  "videoDurationSeconds": "5",
+  "prompts": {
+    "startPrompt": "Cinematic portrait of Michael Jordan, dramatic studio lighting, dark moody background, editorial photography style, sharp focus on face and expression, no text, no logos, ultra detailed",
+    "endPrompt": "Same Michael Jordan subject. Show a dynamic action or iconic pose that captures their essence, dramatic lighting with motion blur accents, dark atmospheric background, no text, no logos, editorial photography, ultra detailed.",
+    "motionPrompt": "Cinematic portrait animation. Start from first frame. Smooth transition to the dynamic action pose. Elegant camera movement, dramatic lighting shifts, no sudden warping, no text, dark atmospheric background."
+  },
+  "generatedAt": "2026-03-15T03:19:11.883Z",
+  "startImageUrl": "https://v3b.fal.media/files/b/0a9236eb/JKoQTwv8mwbfnMWW4IhrN_zoUKqprl.png",
+  "endImageUrl": "https://v3b.fal.media/files/b/0a9236ee/Re7nhdU5iqB5Hmjh0Y8_F_xSjPtPQ0.png",
+  "videoUrl": "https://v3b.fal.media/files/b/0a9236fb/gSmh0f2z_Av4urxsKvI6X_output.mp4",
+  "localVideo": "/home/thejaspertan/agents/Ultimateweb/generated-sites/michael-jordan-mmr6r4o0/media/transition.mp4",
+  "videoMeta": {
+    "width": 1924,
+    "height": 1076,
+    "duration": 5.041667,
+    "fps": 24
+  },
+  "frameExtraction": {
+    "fps": 20,
+    "width": 1920
+  },
+  "frameCount": 101,
+  "frameExtension": "webp",
+  "category": "person"
+}

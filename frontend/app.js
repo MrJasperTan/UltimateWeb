@@ -5,6 +5,9 @@ const colorsInput = document.getElementById("colors");
 const startImageInput = document.getElementById("start-image");
 const endImageInput = document.getElementById("end-image");
 const videoInput = document.getElementById("video");
+const startImageState = document.getElementById("start-image-state");
+const endImageState = document.getElementById("end-image-state");
+const videoState = document.getElementById("video-state");
 const changeRequestInput = document.getElementById("change-request");
 const startPromptInput = document.getElementById("start-prompt");
 const endPromptInput = document.getElementById("end-prompt");
@@ -120,10 +123,11 @@ async function fetchSiteConfig(slug) {
 function setEditState(siteConfig) {
   activeEditSite = siteConfig;
   editBanner.classList.remove("hidden");
-  editBannerText.textContent = `Editing ${siteConfig.title} and creating a new version`;
+  editBannerText.textContent = `Editing ${siteConfig.title}. Empty media fields will reuse the current assets.`;
   submitButton.textContent = "Create Edited Version";
   setStatus(`Editing ${siteConfig.title}`);
   setStage("Review the config, describe changes, then create a new version");
+  refreshMediaStates();
 }
 
 function clearEditState() {
@@ -132,6 +136,34 @@ function clearEditState() {
   editBannerText.textContent = "Editing version";
   submitButton.textContent = "Launch Build";
   form.reset();
+  refreshMediaStates();
+}
+
+function setMediaState(element, mode, message) {
+  element.textContent = message;
+  element.classList.remove("is-reuse", "is-replace");
+  if (mode) element.classList.add(mode);
+}
+
+function buildMediaStateMessage(kind, file, currentMedia) {
+  if (file) return { mode: "is-replace", message: `Replacing with ${file.name}` };
+  if (activeEditSite) {
+    if (currentMedia?.available) {
+      return { mode: "is-reuse", message: `Reusing current ${kind}: ${currentMedia.filename}` };
+    }
+    return { mode: "", message: `No current ${kind}. Leave empty to use the default build behavior.` };
+  }
+  return { mode: "", message: "Optional. Leave empty to use the default build behavior." };
+}
+
+function refreshMediaStates() {
+  const media = activeEditSite?.media || {};
+  const startState = buildMediaStateMessage("start image", startImageInput.files?.[0] || null, media.startImage);
+  const endState = buildMediaStateMessage("end image", endImageInput.files?.[0] || null, media.endImage);
+  const videoStateValue = buildMediaStateMessage("video", videoInput.files?.[0] || null, media.video);
+  setMediaState(startImageState, startState.mode, startState.message);
+  setMediaState(endImageState, endState.mode, endState.message);
+  setMediaState(videoState, videoStateValue.mode, videoStateValue.message);
 }
 
 async function beginEdit(slug) {
@@ -241,7 +273,15 @@ form.addEventListener("submit", async (event) => {
   setLogs([]);
   setBusy(true);
   setStage("Submitting request");
-  setStatus("Submitting build request...");
+  if (activeEditSite) {
+    const parts = [];
+    parts.push(startImageFile ? `Replacing start image with ${startImageFile.name}` : "Reusing current start image");
+    parts.push(endImageFile ? `Replacing end image with ${endImageFile.name}` : "Reusing current end image");
+    parts.push(videoFile ? `Replacing video with ${videoFile.name}` : "Reusing current video");
+    setStatus(parts.join(" • "));
+  } else {
+    setStatus("Submitting build request...");
+  }
 
   try {
     const apiEndpoint = toApiUrl("/api/build");
@@ -291,6 +331,10 @@ galleryGrid.addEventListener("click", async (event) => {
   }
 });
 
+startImageInput.addEventListener("change", refreshMediaStates);
+endImageInput.addEventListener("change", refreshMediaStates);
+videoInput.addEventListener("change", refreshMediaStates);
+
 cancelEditButton.addEventListener("click", () => {
   clearEditState();
   setStatus("Edit cancelled");
@@ -307,4 +351,5 @@ if (window.location.hostname.endsWith("vercel.app") || window.location.hostname.
 refreshGallery().catch(() => {
   // Keep page usable even if gallery fetch fails initially.
 });
+refreshMediaStates();
 startGalleryPolling();

@@ -167,6 +167,21 @@ h2 {
   color: #b7cbde;
 }
 
+.media-state {
+  display: block;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--text-dim);
+}
+
+.media-state.is-reuse {
+  color: #ffe39a;
+}
+
+.media-state.is-replace {
+  color: #8ff2c1;
+}
+
 .field-block input,
 .field-block textarea {
   width: 100%;

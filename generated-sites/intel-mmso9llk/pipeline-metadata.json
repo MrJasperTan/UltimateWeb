@@ -1,0 +1,130 @@
+{
+  "topic": "Intel",
+  "brand": "Intel",
+  "pageMode": "conversion",
+  "models": {
+    "startModel": "fal-ai/nano-banana-2",
+    "endModel": "fal-ai/nano-banana-2/edit",
+    "videoModel": "fal-ai/kling-video/v3/pro/image-to-video"
+  },
+  "videoDurationSeconds": "5",
+  "prompts": {
+    "startPrompt": "Professional studio hero shot of Intel, centered, cinematic lighting, matte black seamless background, no logos, no text, no humans, no reflections, ultra detailed product photography",
+    "endPrompt": "Same Intel subject and camera angle. Show a futuristic deconstruction state with key components separated and suspended in a controlled exploded-view composition. Keep matte black seamless background, no logos, no text, no humans, no reflections, studio lighting, ultra detailed.",
+    "motionPrompt": "Cinematic product animation. Start from first frame. Move smoothly toward the final exploded-view composition. Controlled mechanical motion, no sudden warping, no camera shake, no text, no humans, black seamless background."
+  },
+  "generatedAt": "2026-03-16T04:17:13.274Z",
+  "startImageUrl": "https://v3b.fal.media/files/b/0a925a07/XpB6oxbz2UQ87jQ5c47Lo_Ql4SN4Rg.png",
+  "endImageUrl": "https://v3b.fal.media/files/b/0a925a0f/y7-0NPRYgrfc222nHyhL7_yWoXXCl0.png",
+  "videoUrl": "https://v3b.fal.media/files/b/0a925a1e/ctmSzGcZxJG1DuiUrhIDA_output.mp4",
+  "localVideo": "/home/thejaspertan/agents/Ultimateweb/generated-sites/intel-mmso9llk/media/transition.mp4",
+  "videoMeta": {
+    "width": 1924,
+    "height": 1076,
+    "duration": 5.041667,
+    "fps": 24
+  },
+  "frameExtraction": {
+    "fps": 20,
+    "width": 1920
+  },
+  "frameCount": 101,
+  "frameExtension": "webp",
+  "category": "generic",
+  "sectionKinds": [
+    "copy",
+    "copy",
+    "copy",
+    "stats",
+    "cards",
+    "cards",
+    "faq",
+    "cta"
+  ],
+  "trustLine": "8 live sources informed the hero, proof, and spec sections.",
+  "research": {
+    "snippets": [
+      "Intel® product specifications, features and compatibility quick reference guide and code name decoder. Compare products including processors, desktop boards, server products and networking products.",
+      "Intel® Core™ Processors product listing with links to detailed product features and specifications.",
+      "Intel® processors for edge, IoT, and industrial applications deliver power-efficient, ruggedized performance and support next-generation AI-powered2 capabilities. ... Navigating the endless PC options can be overwhelming. Whether you need a powerhouse for work, a creative tool for your projects, or a gaming rig for play, we've got you covered! Start Your Journey! With the features, flexibility, and performance users want, Intel has laptops, desktops, and other devices for gaming, business, produ",
+      "Aug 2, 2024 ... Intel Core i5 · Target Users: Mainstream users, casual gamers · Typical Uses: Multitasking, light content creation, moderate gaming · Key Features:.",
+      "With Intel® Thread Director, the Intel Core processors dynamically allocate workload tasks between efficiency and performance cores. So users can render in the ...",
+      "Companies on Trustpilot aren't allowed to offer incentives or pay to hide reviews. Reviews are the opinions of individual users and not of Trustpilot. Read more ... I have a Core I9 14900k processor, which Intel has admitted can cause instability, leading them to extend everyone’s warranty to five years.",
+      "Software Engineer (2357), Process Engineer (1086), Intern (732), Manufacturing Technician (720), Engineer (604), Soc Design Engineer (600), Senior Software Engineer (590), Product Development Engineer (448), Component Design Engineer (371), Design Engineer (326), Internship (318), Engineering Manager (287), Graduate Technical Intern (282), Hardware Engineer (273), Validation Engineer (268)",
+      "I ad a strong career at Intel with plenty of upward movement. People were great. There was a lot of bureaucracy which created a lot of unnecessary work and stifled innovation.",
+      "Jan 8, 2026 ... Without revealing every detail about the new Core Ultra Series 3 product line, Intel shared enough to show that it made substantial changes from ...",
+      "Mar 7, 2013 ... Intel is a high-stress, fast-paced place to work. Their number one value is results orientation, and that can translate in to bad work/life ..."
+    ],
+    "attributes": {},
+    "sources": [
+      {
+        "url": "https://www.intel.com/content/www/us/en/ark.html",
+        "title": "Intel® Product Specifications",
+        "source": "brave"
+      },
+      {
+        "url": "https://www.intel.com/content/www/us/en/ark/products/series/122139/intel-core-processors.html",
+        "title": "Intel® Core™ Processors Product Specifications",
+        "source": "brave"
+      },
+      {
+        "url": "https://www.intel.com/content/www/us/en/products/details/processors.html",
+        "title": "Intel® Processors – Intel",
+        "source": "brave"
+      },
+      {
+        "url": "https://www.hp.com/us-en/shop/tech-takes/intel-processor-guide",
+        "title": "A Complete Guide To Intel Processors | HP® Tech Takes",
+        "source": "duckduckgo"
+      },
+      {
+        "url": "https://www.intel.com/content/www/us/en/products/details/processors/core.html",
+        "title": "Intel® Core™ Processors - View Latest Generation Core Processors",
+        "source": "brave"
+      },
+      {
+        "url": "https://www.trustpilot.com/review/www.intel.com",
+        "title": "Intel Reviews | Read Customer Service Reviews of www.intel.com",
+        "source": "startpage"
+      },
+      {
+        "url": "https://www.glassdoor.com/Reviews/Intel-Corporation-Reviews-E1519.htm",
+        "title": "Intel Corporation Reviews (31,651): Pros & Cons of Working At Intel Corporation | Glassdoor",
+        "source": "brave"
+      },
+      {
+        "url": "https://www.indeed.com/cmp/Intel-Corporation/reviews",
+        "title": "Working at Intel Corporation: 4,744 Reviews | Indeed.com",
+        "source": "startpage"
+      }
+    ],
+    "category": "generic",
+    "summary": "Intel® processors for edge, IoT, and industrial applications deliver power-efficient, ruggedized performance and support next-generation AI-powered2 capabilities. ... Navigating the endless PC options can be overwhelming. Whether you need a...",
+    "facts": [],
+    "proofPoints": [
+      "Intel® product specifications, features and compatibility quick reference guide and code name decoder. Compare products including process...",
+      "Intel® Core™ Processors product listing with links to detailed product features and specifications.",
+      "Intel® processors for edge, IoT, and industrial applications deliver power-efficient, ruggedized performance and support next-generation...",
+      "Aug 2, 2024 ... Intel Core i5 · Target Users: Mainstream users, casual gamers · Typical Uses: Multitasking, light content creation, moder..."
+    ],
+    "faqCandidates": [
+      {
+        "question": "What differentiates Intel?",
+        "answer": "Intel should pair a strong visual point of view with real proof points so the page feels persuasive instead of generic."
+      },
+      {
+        "question": "How should this landing page convert?",
+        "answer": "Structure the page so visitors quickly understand the offer, trust it, and move naturally into the primary call to action."
+      }
+    ],
+    "researchedFields": [],
+    "inferredFallbackUsed": true,
+    "confidence": "medium",
+    "coverage": {
+      "snippetCount": 10,
+      "attributeCount": 0,
+      "sourceCount": 8,
+      "factCount": 0
+    }
+  }
+}

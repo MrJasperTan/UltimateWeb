@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { createWriteStream, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { createWriteStream, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import { pipeline } from "node:stream/promises";
 import { Readable } from "node:stream";
@@ -443,6 +443,30 @@ async function copyLocalFileToOutput(inputPath, outputPath) {
   return sourcePath;
 }
 
+function convertImageToWebp(inputPath, outputPath) {
+  const ffmpeg = spawnSync(
+    "ffmpeg",
+    [
+      "-y",
+      "-i",
+      inputPath,
+      "-frames:v",
+      "1",
+      "-c:v",
+      "libwebp",
+      "-quality",
+      "82",
+      "-compression_level",
+      "6",
+      outputPath,
+    ],
+    { stdio: "pipe", encoding: "utf-8" }
+  );
+  if (ffmpeg.status !== 0) {
+    throw new Error(`ffmpeg image conversion failed: ${ffmpeg.stderr || "unknown error"}`);
+  }
+}
+
 async function materializeAsset(inputValue, outputPath) {
   const value = cleanOptionalString(inputValue);
   if (!value) return null;
@@ -451,6 +475,22 @@ async function materializeAsset(inputValue, outputPath) {
     return value;
   }
   return copyLocalFileToOutput(value, outputPath);
+}
+
+async function materializeImageAsset(inputValue, outputPath) {
+  const tempPath = `${outputPath}.source`;
+  const source = await materializeAsset(inputValue, tempPath);
+  if (!source) return null;
+  convertImageToWebp(tempPath, outputPath);
+  rmSync(tempPath, { force: true });
+  return source;
+}
+
+async function downloadImageAsWebp(url, outputPath) {
+  const tempPath = `${outputPath}.source`;
+  await downloadToFile(url, tempPath);
+  convertImageToWebp(tempPath, outputPath);
+  rmSync(tempPath, { force: true });
 }
 
 function escapeHtml(value) {
@@ -2572,8 +2612,8 @@ async function main() {
   let startImageUrl = null;
   let endImageUrl = null;
   let videoUrl = null;
-  const startPath = join(mediaDir, "start-frame.png");
-  const endPath = join(mediaDir, "end-frame.png");
+  const startPath = join(mediaDir, "start-frame.webp");
+  const endPath = join(mediaDir, "end-frame.webp");
   const outputVideoPath = join(mediaDir, "transition.mp4");
   const providedStartImage = cleanOptionalString(options["start-image"]);
   const providedEndImage = cleanOptionalString(options["end-image"]);
@@ -2581,10 +2621,10 @@ async function main() {
 
   if (options["video-path"] || providedVideoUrl) {
     if (providedStartImage) {
-      metadata.existingStartImage = await materializeAsset(providedStartImage, startPath);
+      metadata.existingStartImage = await materializeImageAsset(providedStartImage, startPath);
     }
     if (providedEndImage) {
-      metadata.existingEndImage = await materializeAsset(providedEndImage, endPath);
+      metadata.existingEndImage = await materializeImageAsset(providedEndImage, endPath);
     }
 
     if (providedVideoUrl) {
@@ -2609,7 +2649,7 @@ async function main() {
     }
 
     if (providedStartImage) {
-      metadata.existingStartImage = await materializeAsset(providedStartImage, startPath);
+      metadata.existingStartImage = await materializeImageAsset(providedStartImage, startPath);
       startImageUrl = isValidHttpUrl(metadata.existingStartImage) ? metadata.existingStartImage : null;
       console.log(`Using existing start image: ${metadata.existingStartImage}`);
     } else {
@@ -2636,11 +2676,11 @@ async function main() {
         "start frame"
       );
       startImageUrl = pickImageUrl(startResult);
-      await downloadToFile(startImageUrl, startPath);
+      await downloadImageAsWebp(startImageUrl, startPath);
     }
 
     if (providedEndImage) {
-      metadata.existingEndImage = await materializeAsset(providedEndImage, endPath);
+      metadata.existingEndImage = await materializeImageAsset(providedEndImage, endPath);
       endImageUrl = isValidHttpUrl(metadata.existingEndImage) ? metadata.existingEndImage : null;
       console.log(`Using existing end image: ${metadata.existingEndImage}`);
     } else {
@@ -2676,7 +2716,7 @@ async function main() {
         "end frame"
       );
       endImageUrl = pickImageUrl(endResult);
-      await downloadToFile(endImageUrl, endPath);
+      await downloadImageAsWebp(endImageUrl, endPath);
     }
 
     console.log(`Generating transition video with ${videoModel}...`);

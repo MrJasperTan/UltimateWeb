@@ -1,6 +1,6 @@
 const FRAME_COUNT = 101;
 const FRAME_SPEED = 2.0;
-const FRAME_PATH = (index) => `frames/frame_${String(index + 1).padStart(4, "0")}.png`;
+const FRAME_PATH = (index) => `frames/frame_${String(index + 1).padStart(4, "0")}.webp`;
 
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");

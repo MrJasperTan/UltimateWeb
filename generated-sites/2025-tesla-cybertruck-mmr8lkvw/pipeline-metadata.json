@@ -1,0 +1,33 @@
+{
+  "topic": "2025 Tesla Cybertruck",
+  "brand": "2025 Tesla",
+  "models": {
+    "startModel": "fal-ai/nano-banana-2",
+    "endModel": "fal-ai/nano-banana-2/edit",
+    "videoModel": "fal-ai/kling-video/v3/pro/image-to-video"
+  },
+  "videoDurationSeconds": "5",
+  "prompts": {
+    "startPrompt": "Professional studio hero shot of 2025 Tesla Cybertruck, centered, cinematic lighting, matte black seamless background, no logos, no text, no humans, no reflections, ultra detailed product photography",
+    "endPrompt": "Same 2025 Tesla Cybertruck subject and camera angle. Show a futuristic deconstruction state with key components separated and suspended in a controlled exploded-view composition. Keep matte black seamless background, no logos, no text, no humans, no reflections, studio lighting, ultra detailed.",
+    "motionPrompt": "Cinematic product animation. Start from first frame. Move smoothly toward the final exploded-view composition. Controlled mechanical motion, no sudden warping, no camera shake, no text, no humans, black seamless background."
+  },
+  "generatedAt": "2026-03-15T04:10:52.221Z",
+  "startImageUrl": "https://v3b.fal.media/files/b/0a923821/jq0ee-mE7EiwJz1QViceJ_Ko7CJ2ox.png",
+  "endImageUrl": "https://v3b.fal.media/files/b/0a923823/BmMq2ZHu4EkkYJ51A9g4C_EvvArlyo.png",
+  "videoUrl": "https://v3b.fal.media/files/b/0a92383b/6Djo3-7uK40Rcwu0nZuAB_output.mp4",
+  "localVideo": "/home/thejaspertan/agents/Ultimateweb/generated-sites/2025-tesla-cybertruck-mmr8lkvw/media/transition.mp4",
+  "videoMeta": {
+    "width": 1924,
+    "height": 1076,
+    "duration": 5.041667,
+    "fps": 24
+  },
+  "frameExtraction": {
+    "fps": 20,
+    "width": 1920
+  },
+  "frameCount": 101,
+  "frameExtension": "webp",
+  "category": "car"
+}

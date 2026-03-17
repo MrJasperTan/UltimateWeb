@@ -1,0 +1,130 @@
+{
+  "topic": "Murphy’s Law in Chandler, AZ",
+  "brand": "Murphy’s Law",
+  "pageMode": "conversion",
+  "models": {
+    "startModel": "fal-ai/nano-banana-2",
+    "endModel": "fal-ai/nano-banana-2/edit",
+    "videoModel": "fal-ai/kling-video/v3/pro/image-to-video"
+  },
+  "videoDurationSeconds": "5",
+  "prompts": {
+    "startPrompt": "Professional studio hero shot of Murphy’s Law in Chandler, AZ, centered, cinematic lighting, matte black seamless background, no logos, no text, no humans, no reflections, ultra detailed product photography",
+    "endPrompt": "Same Murphy’s Law in Chandler, AZ subject and camera angle. Show a futuristic deconstruction state with key components separated and suspended in a controlled exploded-view composition. Keep matte black seamless background, no logos, no text, no humans, no reflections, studio lighting, ultra detailed.",
+    "motionPrompt": "Cinematic product animation. Start from first frame. Move smoothly toward the final exploded-view composition. Controlled mechanical motion, no sudden warping, no camera shake, no text, no humans, black seamless background."
+  },
+  "generatedAt": "2026-03-15T23:46:34.485Z",
+  "startImageUrl": "https://v3b.fal.media/files/b/0a9253af/Dr-V1NFgTy-0tS_nqw2jm_RuEENdcq.png",
+  "endImageUrl": "https://v3b.fal.media/files/b/0a9253b1/yLj2Uskiibav407HrBgET_dDKd7gk6.png",
+  "videoUrl": "https://v3b.fal.media/files/b/0a9253c9/QrZ1b3aZViSqc5SCan0Is_output.mp4",
+  "localVideo": "/home/thejaspertan/agents/Ultimateweb/generated-sites/murphy-s-law-in-chandler-az-mmseljo1/media/transition.mp4",
+  "videoMeta": {
+    "width": 1924,
+    "height": 1076,
+    "duration": 5.041667,
+    "fps": 24
+  },
+  "frameExtraction": {
+    "fps": 20,
+    "width": 1920
+  },
+  "frameCount": 101,
+  "frameExtension": "webp",
+  "category": "generic",
+  "sectionKinds": [
+    "copy",
+    "copy",
+    "copy",
+    "stats",
+    "cards",
+    "cards",
+    "faq",
+    "cta"
+  ],
+  "trustLine": "8 live sources informed the hero, proof, and spec sections.",
+  "research": {
+    "snippets": [
+      "We're steeped in tradition but we're not bound by it. Our goal is to bring the best of the vibrant Dublin pub scene to Chandler, AZ.",
+      "501 W RAY RD | CHANDLER, AZ 85225. KATY HAUG. D: 480.623.2328. M: 816.808 ... Murphy's Law Irish Pub. DC Steak House. Original ChopShop. Flix Brewhouse. El ...",
+      "FIBBER MAGEES - Try Our New Menu - 1989 W Elliot Rd, Chandler, AZ 85224, 306 Photos, (480) 722-9434, Mon - 11:00 am - 11:00 pm, Tue - 11:00 am - 11:00 pm, ...",
+      "Feb 18, 2026 ... Let's go! The party is coming to Tucson, Arizona! Join us for our Rodeo After Party at Cocoraque Ranch on February 28th!",
+      "... Specifications and Standard Details for street design and ... These prototypes show many mobility hub features that have applicability to Chandler and.",
+      "Specialties: Traditional not trendy ... vibrant Dublin pub scene to Chandler, AZ. That means a memorable experience with the best food, drink, music, and banter for everyone....",
+      "Love it! Actually there's nothing I don't love about Murphy's law. Great atmosphere, great beer, great food!",
+      "Chandler, AZ · Good Money cool place to work. Big party bar lots of fun. Have to enjoy a loud environment and drunk people but if you have been in the bar industry before this is the place for you...Show more · Report review · Copy link · Share your experience to help others · See more Murphy's Law Irish Pub reviews ·",
+      "Murphy's Law Irish Pub in Chandler, AZ. Call us at (480) 812-1588. Check out our location and hours, and latest menu with photos and reviews.",
+      "MURPHY'S LAW - Try Our New Menu - 58 S San Marcos Pl, Chandler, AZ 85225, 410 Photos, (480) 812-1588, Mon - 11:00 am - 2:00 am, Tue - 11:00 am - 2:00 am, ..."
+    ],
+    "attributes": {},
+    "sources": [
+      {
+        "url": "https://www.murphyslaw.pub/",
+        "title": "Home - Murphy's Law Irish Pub - Pub in Chandler, AZ",
+        "source": "brave"
+      },
+      {
+        "url": "https://images1.showcase.com/d2/tMQzDfaFAuNXicF7MHtihlP-umiqvsHt9N-Khjii3As/document.pdf",
+        "title": "SANTA FE SQUARE",
+        "source": "startpage"
+      },
+      {
+        "url": "https://www.yelp.com/biz/fibber-magees-chandler-3?start=80",
+        "title": "FIBBER MAGEES - Updated March 2026 - 306 Photos & 389 Reviews",
+        "source": "startpage"
+      },
+      {
+        "url": "https://www.facebook.com/alanslids/posts/lets-go-the-party-is-coming-to-tucson-arizona-join-us-for-our-rodeo-after-party-/1693162884974434/",
+        "title": "Let's go! The party is coming to Tucson, Arizona! Join us ... - Facebook",
+        "source": "startpage"
+      },
+      {
+        "url": "https://www.chandleraz.gov/sites/default/files/Chandler-TMP_Final-Report_01-09-20_lr.pdf",
+        "title": "Transportation Master Plan 2019 Update - Chandler, Arizona",
+        "source": "startpage"
+      },
+      {
+        "url": "https://www.yelp.com/biz/murphys-law-chandler-4",
+        "title": "MURPHY’S LAW - Updated February 2026 - 409 Photos & 430 Reviews - 58 S San Marcos Pl, Chandler, Arizona - Irish - Restaurant Reviews - Phone Number - Yelp",
+        "source": "startpage"
+      },
+      {
+        "url": "https://www.murphyslaw.pub/reviews",
+        "title": "Raves & Reviews - Murphy's Law Irish Pub - Pub in Chandler, AZ",
+        "source": "startpage"
+      },
+      {
+        "url": "https://www.indeed.com/cmp/Murphy's-Law-Irish-Pub/reviews?fcountry=US&floc=Chandler%2C+AZ",
+        "title": "Working at Murphy's Law Irish Pub in Chandler, AZ: Employee Reviews | Indeed.com",
+        "source": "startpage"
+      }
+    ],
+    "category": "generic",
+    "summary": "Chandler, AZ · Good Money cool place to work. Big party bar lots of fun. Have to enjoy a loud environment and drunk people but if you have been in the bar industry before this is the place for you...Show more · Report review · Copy link · S...",
+    "facts": [],
+    "proofPoints": [
+      "We're steeped in tradition but we're not bound by it. Our goal is to bring the best of the vibrant Dublin pub scene to Chandler, AZ.",
+      "501 W RAY RD | CHANDLER, AZ 85225. KATY HAUG. D: 480.623.2328. M: 816.808 ... Murphy's Law Irish Pub. DC Steak House. Original ChopShop....",
+      "FIBBER MAGEES - Try Our New Menu - 1989 W Elliot Rd, Chandler, AZ 85224, 306 Photos, (480) 722-9434, Mon - 11:00 am - 11:00 pm, Tue - 11:...",
+      "Feb 18, 2026 ... Let's go! The party is coming to Tucson, Arizona! Join us for our Rodeo After Party at Cocoraque Ranch on February 28th!"
+    ],
+    "faqCandidates": [
+      {
+        "question": "What differentiates Murphy’s Law in Chandler, AZ?",
+        "answer": "Murphy’s Law in Chandler, AZ should pair a strong visual point of view with real proof points so the page feels persuasive instead of generic."
+      },
+      {
+        "question": "How should this landing page convert?",
+        "answer": "Structure the page so visitors quickly understand the offer, trust it, and move naturally into the primary call to action."
+      }
+    ],
+    "researchedFields": [],
+    "inferredFallbackUsed": true,
+    "confidence": "medium",
+    "coverage": {
+      "snippetCount": 10,
+      "attributeCount": 0,
+      "sourceCount": 8,
+      "factCount": 0
+    }
+  }
+}

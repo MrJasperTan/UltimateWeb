@@ -1,0 +1,149 @@
+{
+  "topic": "Quarthaus",
+  "brand": "QuartHaus - Chandler, AZ",
+  "pageMode": "conversion",
+  "models": {
+    "startModel": "fal-ai/nano-banana-2",
+    "endModel": "fal-ai/nano-banana-2/edit",
+    "videoModel": "fal-ai/kling-video/v3/pro/image-to-video"
+  },
+  "videoDurationSeconds": "5",
+  "prompts": {
+    "startPrompt": "Professional studio hero shot of Quarthaus, centered, cinematic lighting, matte black seamless background, no logos, no text, no humans, no reflections, ultra detailed product photography, brand reference QuartHaus - Chandler, AZ, palette cues #353638, #1a1a1a, #e0e0e0",
+    "endPrompt": "Same Quarthaus subject and camera angle. Show a futuristic deconstruction state with key components separated and suspended in a controlled exploded-view composition. Keep matte black seamless background, no logos, no text, no humans, no reflections, studio lighting, ultra detailed, brand reference QuartHaus - Chandler, AZ, palette cues #353638, #1a1a1a, #e0e0e0.",
+    "motionPrompt": "Cinematic product animation. Start from first frame. Move smoothly toward the final exploded-view composition. Controlled mechanical motion, no sudden warping, no camera shake, no text, no humans, black seamless background, brand reference QuartHaus - Chandler, AZ, palette cues #353638, #1a1a1a, #e0e0e0."
+  },
+  "generatedAt": "2026-03-16T22:20:53.022Z",
+  "startImageUrl": "https://v3b.fal.media/files/b/0a92736d/TdqcBa-qK_UrF1k1rbNUS_Aw65DiBn.png",
+  "endImageUrl": "https://v3b.fal.media/files/b/0a92736f/mkzYlIBkd8Srx-Je9A1Px_IqeMHSdb.png",
+  "videoUrl": "https://v3b.fal.media/files/b/0a92737d/3ofvz0hZAKDdNbQQMpME7_output.mp4",
+  "localVideo": "/home/thejaspertan/agents/Ultimateweb/generated-sites/quarthaus-https-quarthaus-com-mmtqz6w7/media/transition.mp4",
+  "videoMeta": {
+    "width": 1924,
+    "height": 1076,
+    "duration": 5.041667,
+    "fps": 24
+  },
+  "frameExtraction": {
+    "fps": 20,
+    "width": 1920
+  },
+  "frameCount": 101,
+  "frameExtension": "webp",
+  "category": "generic",
+  "sectionKinds": [
+    "copy",
+    "copy",
+    "copy",
+    "stats",
+    "cards",
+    "cards",
+    "faq",
+    "cta"
+  ],
+  "trustLine": "8 live sources plus the source site informed the hero, proof, and spec sections.",
+  "sourceContext": {
+    "url": "https://quarthaus.com/",
+    "title": "QuartHaus - Chandler, AZ",
+    "description": null,
+    "palette": [
+      "#353638",
+      "#1a1a1a",
+      "#e0e0e0",
+      "#0f0f0f"
+    ],
+    "imageUrls": [
+      "https://static.spotapps.co/website_images/ab_websites/64061_website_v1/logo_new.png",
+      "https://static.spotapps.co/website_videos/QuartHaus_New_Video_Vimeo_720p30.mp4",
+      "https://static.spotapps.co/web/placeholder.png",
+      "https://res.cloudinary.com/spothopper/image/fetch/f_auto",
+      "https://static.spotapps.co/website_images/default_template_images/spothopper_logo.png"
+    ],
+    "logoUrl": "https://static.spotapps.co/website_images/ab_websites/64061_website_v1/logo_new.png"
+  },
+  "research": {
+    "snippets": [
+      "Welcome to QuartHaus in historic downtown Chandler! Enjoy 25 beers on tap in a vibrant space where food and coffee are coming soon to pair with your pint. While we're prepping exciting new offerings, explore our lively atmosphere with happy hour specials, live music, and events. QuartHaus: the perfect spot for craft beer, great company, and more to come! Cheers!",
+      "Welcome to QuartHaus in historic downtown Chandler! Enjoy 25 beers on tap in a vibrant space where food and coffee are coming soon to pair with your pint. While we’re prepping exciting new...",
+      "Welcome to QuartHaus in historic downtown Chandler! Enjoy 25 beers on tap in a vibrant space where food and coffee are coming soon to pair with your pint. While we're prepping exciting new...",
+      "The facility features roll-up garage-style doors that open to a courtyard featuring a grassy area for lawn games including cornhole and a basketball court perfect for a fun and casual evening.",
+      "Apr 1, 2025 ... Quarthaus is a bold condensed sans serif font with clean lines ... Product Specs. File Size: 87.04 KB; Vector; Web Font; Created: Apr 01 ...",
+      "QuartHaus stands out as a vibrant and inviting destination that seamlessly blends leisure and entertainment. The establishment boasts a visually appealing ambiance, featuring a cozy interior complemented by an outdoor space that includes a half-court basketball area, a grassy yard for games, and a charming dog-friendly enclosure reminiscent of a mini dog park.",
+      "Welcome to QuartHaus in historic downtown Chandler! Enjoy 25 beers on tap in a vibrant space where food and coffee are coming soon to pair with your pint. While we’re prepping exciting new offerings, explore our lively atmosphere with happy hour specials, live music, and events.",
+      "... QUARTHAUS, L.L.C.\",QuartHaus,201 S WASHINGTON ST BLDG B,CHANDLER,82225,,0 AZ ... SPEC ENTERPRISE, LLC\",Spec Enterprise,75 W BASELINE RD STE 40,GILBERT ...",
+      "“We ordered pizza from Civic Market across the game area and they walked them over, which was great.” in 5 reviews ... Isaac and Michelle A. ... Welcome to Quarthaus, a local drinkery, in historic downtown Chandler! Explore our 25 beers on tap amidst a vibrant campus offering food and coffee ...",
+      "From customized menus to table settings, we'll handle all the details so you can focus on enjoying the occasion. ... Welcome to QuartHaus in historic downtown Chandler! Enjoy 25 beers on tap in a vibrant space where food and coffee are coming soon to pair with your pint."
+    ],
+    "attributes": {},
+    "sources": [
+      {
+        "url": "https://quarthaus.com/",
+        "title": "QuartHaus - Chandler, AZ",
+        "source": "source-site"
+      },
+      {
+        "url": "https://quarthaus.com/-party",
+        "title": "Group Reservations and Parties - QuartHaus",
+        "source": "brave"
+      },
+      {
+        "url": "https://quarthaus.com/chandler-quarthaus-food-menu",
+        "title": "QuartHaus - Food Menu",
+        "source": "duckduckgo"
+      },
+      {
+        "url": "https://quarthaus.com/chandler-quarthaus-happy-hours-specials",
+        "title": "QuartHaus - Specials",
+        "source": "brave"
+      },
+      {
+        "url": "https://quarthaus.com/-catering",
+        "title": "QuartHaus - Catering",
+        "source": "brave"
+      },
+      {
+        "url": "https://www.visitchandler.com/listing/quarthaus/998/",
+        "title": "QuartHaus",
+        "source": "brave"
+      },
+      {
+        "url": "https://creativemarket.com/hustlesupplyco/291265922-Quarthaus-Bold-Condensed-Sans-Serif",
+        "title": "Quarthaus: Bold Condensed Sans Serif - Creative Market",
+        "source": "startpage"
+      },
+      {
+        "url": "https://quarthaus.wheree.com/",
+        "title": "QuartHaus - Reviews, Photos & Phone Number - Updated July 2025 - Beer Bars in Chandler City, Maricopa County - Wheree",
+        "source": "brave"
+      }
+    ],
+    "category": "generic",
+    "summary": "Welcome to QuartHaus in historic downtown Chandler! Enjoy 25 beers on tap in a vibrant space where food and coffee are coming soon to pair with your pint. While we're prepping exciting new offerings, explore our lively atmosphere with happy...",
+    "facts": [],
+    "proofPoints": [
+      "Welcome to QuartHaus in historic downtown Chandler! Enjoy 25 beers on tap in a vibrant space where food and coffee are coming soon to pai...",
+      "The facility features roll-up garage-style doors that open to a courtyard featuring a grassy area for lawn games including cornhole and a...",
+      "Apr 1, 2025 ... Quarthaus is a bold condensed sans serif font with clean lines ... Product Specs. File Size: 87.04 KB; Vector; Web Font;...",
+      "QuartHaus stands out as a vibrant and inviting destination that seamlessly blends leisure and entertainment. The establishment boasts a v..."
+    ],
+    "faqCandidates": [
+      {
+        "question": "What differentiates Quarthaus?",
+        "answer": "Quarthaus should pair a strong visual point of view with real proof points so the page feels persuasive instead of generic."
+      },
+      {
+        "question": "How should this landing page convert?",
+        "answer": "Structure the page so visitors quickly understand the offer, trust it, and move naturally into the primary call to action."
+      }
+    ],
+    "researchedFields": [],
+    "inferredFallbackUsed": true,
+    "confidence": "medium",
+    "coverage": {
+      "snippetCount": 10,
+      "attributeCount": 0,
+      "sourceCount": 8,
+      "factCount": 0
+    }
+  }
+}

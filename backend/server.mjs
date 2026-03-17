@@ -290,9 +290,11 @@ function getGalleryEntries(limit = 80) {
     const title = String(metadata.topic || slug.replace(/-/g, " ")).trim();
 
     const thumbCandidates = [
+      "start-frame.webp",
       "start-frame.png",
       "start-frame.jpg",
       "start-frame.jpeg",
+      "end-frame.webp",
       "end-frame.png",
       "end-frame.jpg",
       "end-frame.jpeg",
@@ -333,6 +335,7 @@ function getSiteConfig(slug) {
   const metadataPath = join(siteRoot, "pipeline-metadata.json");
   const metadata = readJsonFile(metadataPath);
   if (!metadata) return null;
+  const currentMedia = resolveEditSourceMedia(slug);
 
   const palette = Array.isArray(metadata.paletteOverride) && metadata.paletteOverride.length
     ? metadata.paletteOverride
@@ -351,6 +354,56 @@ function getSiteConfig(slug) {
     endPrompt: cleanOptionalString(metadata.prompts?.endPrompt),
     videoPrompt: cleanOptionalString(metadata.prompts?.motionPrompt),
     editSourceSlug: cleanOptionalString(metadata.editSourceSlug),
+    media: {
+      startImage: currentMedia?.startImage
+        ? {
+            available: true,
+            filename: basename(currentMedia.startImage),
+            url: `/generated-sites/${slug}/media/${basename(currentMedia.startImage)}`,
+          }
+        : { available: false, filename: null, url: null },
+      endImage: currentMedia?.endImage
+        ? {
+            available: true,
+            filename: basename(currentMedia.endImage),
+            url: `/generated-sites/${slug}/media/${basename(currentMedia.endImage)}`,
+          }
+        : { available: false, filename: null, url: null },
+      video: currentMedia?.videoPath
+        ? {
+            available: true,
+            filename: basename(currentMedia.videoPath),
+            url: `/generated-sites/${slug}/media/${basename(currentMedia.videoPath)}`,
+          }
+        : { available: false, filename: null, url: null },
+    },
+  };
+}
+
+function resolveEditSourceMedia(slug) {
+  const cleanSlug = cleanOptionalString(slug);
+  if (!cleanSlug) return null;
+
+  const siteRoot = join(GENERATED_DIR, cleanSlug);
+  if (!existsSync(siteRoot) || !statSync(siteRoot).isDirectory()) return null;
+
+  const mediaDir = join(siteRoot, "media");
+  const startCandidates = ["start-frame.png", "start-frame.jpg", "start-frame.jpeg", "start-frame.webp"];
+  const endCandidates = ["end-frame.png", "end-frame.jpg", "end-frame.jpeg", "end-frame.webp"];
+
+  const pickExistingFile = (candidates) => {
+    for (const fileName of candidates) {
+      const filePath = join(mediaDir, fileName);
+      if (existsSync(filePath) && statSync(filePath).isFile()) return filePath;
+    }
+    return null;
+  };
+
+  const videoPath = join(mediaDir, "transition.mp4");
+  return {
+    startImage: pickExistingFile(startCandidates),
+    endImage: pickExistingFile(endCandidates),
+    videoPath: existsSync(videoPath) && statSync(videoPath).isFile() ? videoPath : null,
   };
 }
 
@@ -440,7 +493,15 @@ function startBuildJob(topic, pageMode = "conversion", options = {}) {
     if (code === 0) {
       job.status = "completed";
       job.siteUrl = `/generated-sites/${slug}/index.html`;
-      job.thumbnailUrl = `/generated-sites/${slug}/media/start-frame.png`;
+      if (existsSync(join(GENERATED_DIR, slug, "media", "start-frame.webp"))) {
+        job.thumbnailUrl = `/generated-sites/${slug}/media/start-frame.webp`;
+      } else if (existsSync(join(GENERATED_DIR, slug, "media", "start-frame.png"))) {
+        job.thumbnailUrl = `/generated-sites/${slug}/media/start-frame.png`;
+      } else if (existsSync(join(GENERATED_DIR, slug, "media", "end-frame.webp"))) {
+        job.thumbnailUrl = `/generated-sites/${slug}/media/end-frame.webp`;
+      } else {
+        job.thumbnailUrl = `/generated-sites/${slug}/media/end-frame.png`;
+      }
       job.metadataUrl = `/generated-sites/${slug}/pipeline-metadata.json`;
     } else {
       job.status = "failed";
@@ -480,15 +541,21 @@ const server = createServer(async (request, response) => {
       const topic = String(body.fields.topic || "").trim();
       const pageMode = normalizePageMode(body.fields.pageMode);
       const existingWebsite = cleanOptionalString(body.fields.existingWebsite);
-      const startImage = body.files.startImage?.path || cleanOptionalString(body.fields.startImage);
-      const endImage = body.files.endImage?.path || cleanOptionalString(body.fields.endImage);
-      const video = body.files.video?.path || cleanOptionalString(body.fields.video);
+      const uploadedStartImage = body.files.startImage?.path || cleanOptionalString(body.fields.startImage);
+      const uploadedEndImage = body.files.endImage?.path || cleanOptionalString(body.fields.endImage);
+      const uploadedVideo = body.files.video?.path || cleanOptionalString(body.fields.video);
       const startPrompt = cleanOptionalString(body.fields.startPrompt);
       const endPrompt = cleanOptionalString(body.fields.endPrompt);
       const videoPrompt = cleanOptionalString(body.fields.videoPrompt);
       const changeRequest = cleanOptionalString(body.fields.changeRequest);
       const editSourceSlug = cleanOptionalString(body.fields.editSourceSlug);
       const colors = parseColorList(body.fields.colors);
+      const existingMedia = !uploadedStartImage && !uploadedEndImage && !uploadedVideo && editSourceSlug
+        ? resolveEditSourceMedia(editSourceSlug)
+        : null;
+      const startImage = uploadedStartImage || existingMedia?.startImage || null;
+      const endImage = uploadedEndImage || existingMedia?.endImage || null;
+      const video = uploadedVideo || existingMedia?.videoPath || null;
       if (!topic) {
         sendJson(response, 400, { error: "Topic is required." });
         return;
