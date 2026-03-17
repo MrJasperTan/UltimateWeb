@@ -698,8 +698,13 @@ const server = createServer(async (request, response) => {
     return;
   }
 
-  if (request.method === "DELETE" && pathname.startsWith("/api/sites/")) {
-    const slug = pathname.split("/").pop();
+  if (
+    (request.method === "DELETE" && pathname.startsWith("/api/sites/")) ||
+    (request.method === "POST" && pathname.startsWith("/api/sites/") && pathname.endsWith("/delete"))
+  ) {
+    const slug = pathname.endsWith("/delete")
+      ? pathname.split("/").slice(-2, -1)[0]
+      : pathname.split("/").pop();
     try {
       const deleted = slug ? deleteGeneratedSite(slug) : false;
       if (!deleted) {

@@ -113,7 +113,7 @@ function renderGallery(items) {
 }
 
 async function deleteSite(slug, title) {
-  const response = await fetch(toApiUrl(`/api/sites/${slug}`), { method: "DELETE" });
+  const response = await fetch(toApiUrl(`/api/sites/${slug}/delete`), { method: "POST" });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
     throw new Error(data.error || `Failed to delete ${title || "site"}`);
