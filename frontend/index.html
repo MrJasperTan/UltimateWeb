@@ -9,15 +9,46 @@
 <body>
   <main class="portal-shell">
     <section class="hero">
-      <p class="badge">Nano Banana 2 + Kling 3.0</p>
-      <h1>What kind of website are we building today?</h1>
-      <p class="subhead">Type a product concept and launch a full animated website pipeline.</p>
+      <div class="hero-head">
+        <div>
+          <p class="badge">Nano Banana 2 + Kling 3.0</p>
+          <h1>What kind of website are we building today?</h1>
+          <p class="subhead">Type a product concept and launch a full animated website pipeline.</p>
+        </div>
+        <section class="auth-card">
+          <div id="auth-signed-out">
+            <p class="auth-label">Authentication Required</p>
+            <div class="auth-grid">
+              <label class="field-block" for="auth-email">
+                <span>Email</span>
+                <input id="auth-email" name="email" type="email" autocomplete="email" placeholder="you@example.com" />
+              </label>
+              <label class="field-block" for="auth-password">
+                <span>Password</span>
+                <input id="auth-password" name="password" type="password" autocomplete="current-password" placeholder="Minimum 8 characters" />
+              </label>
+            </div>
+            <div class="auth-actions">
+              <button id="sign-in-btn" type="button">Sign In</button>
+              <button id="sign-up-btn" type="button" class="ghost-btn">Create Account</button>
+            </div>
+          </div>
+          <div id="auth-signed-in" class="hidden">
+            <p class="auth-label">Signed In</p>
+            <p id="auth-user-email" class="auth-user-email">No active session</p>
+            <div class="auth-actions">
+              <button id="sign-out-btn" type="button" class="ghost-btn">Sign Out</button>
+            </div>
+          </div>
+          <p id="auth-message" class="auth-message">Sign in to access your private gallery and launch builds.</p>
+        </section>
+      </div>
       <div id="edit-banner" class="edit-banner hidden">
         <p id="edit-banner-text">Editing version</p>
         <button id="cancel-edit-btn" type="button">Cancel Edit</button>
       </div>
 
-      <form id="build-form" class="build-form">
+      <form id="build-form" class="build-form auth-locked">
         <label for="topic">Website Topic</label>
         <div class="input-row">
           <input
@@ -115,9 +146,9 @@
     <section class="gallery-card">
       <div class="gallery-head">
         <h2>Generated Websites</h2>
-        <p>Auto-refreshes and keeps all generated entries</p>
+        <p>Your Supabase-backed private build history</p>
       </div>
-      <div id="gallery-empty" class="empty-state">No generated sites found yet.</div>
+      <div id="gallery-empty" class="empty-state">Sign in to load your generated sites.</div>
       <div id="gallery-grid" class="gallery-grid"></div>
     </section>
   </main>

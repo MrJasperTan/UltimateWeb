@@ -1,5 +1,7 @@
 node_modules/
 .env
 .vercel/
+supabase/.branches/
+supabase/.temp/
 generated-sites/*/frames/
 generated-sites/*/media/*.mp4

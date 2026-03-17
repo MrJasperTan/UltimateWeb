@@ -66,6 +66,13 @@ body::before {
   overflow: hidden;
 }
 
+.hero-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(20rem, 0.7fr);
+  gap: 1rem;
+  align-items: start;
+}
+
 .hero::after {
   content: "";
   position: absolute;
@@ -113,10 +120,69 @@ h2 {
   max-width: 75ch;
 }
 
+.auth-card {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 1rem;
+  background: linear-gradient(155deg, rgba(255, 255, 255, 0.07), rgba(0, 0, 0, 0.18));
+}
+
+.auth-label {
+  margin: 0;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #a9dfff;
+}
+
+.auth-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.auth-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.auth-actions button {
+  min-width: 8.6rem;
+}
+
+.auth-user-email {
+  margin: 0;
+  font-size: 1rem;
+  word-break: break-word;
+}
+
+.auth-message {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.auth-message[data-mode="success"] {
+  color: #8ff2c1;
+}
+
+.auth-message[data-mode="error"] {
+  color: #ffb0a2;
+}
+
 .build-form {
   margin-top: 1.2rem;
   display: grid;
   gap: 0.5rem;
+}
+
+.auth-locked {
+  opacity: 0.58;
 }
 
 .edit-banner {
@@ -142,7 +208,9 @@ h2 {
 }
 
 .edit-banner button,
-.gallery-action {
+.gallery-action,
+.gallery-link,
+.auth-actions button {
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 999px;
   padding: 0.5rem 0.85rem;
@@ -150,6 +218,12 @@ h2 {
   background: rgba(255, 255, 255, 0.06);
   font: inherit;
   cursor: pointer;
+  text-decoration: none;
+  text-align: center;
+}
+
+.ghost-btn {
+  background: transparent;
 }
 
 .optional-grid {
@@ -494,14 +568,18 @@ body.is-building .ring-b {
   padding: 0.66rem 0.72rem 0.72rem;
 }
 
+.gallery-copy {
+  padding: 0.8rem;
+}
+
+.gallery-copy h3 {
+  margin: 0.3rem 0 0;
+}
+
 .gallery-actions {
   display: flex;
   gap: 0.55rem;
   margin-top: 0.75rem;
-}
-
-.gallery-link {
-  text-decoration: none;
 }
 
 .gallery-action {
@@ -545,6 +623,10 @@ body.is-building .ring-b {
 }
 
 @media (max-width: 760px) {
+  .hero-head {
+    grid-template-columns: 1fr;
+  }
+
   .portal-shell {
     width: min(98vw, 620px);
     margin-top: 1rem;

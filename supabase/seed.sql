@@ -1,0 +1,2 @@
+-- Seed data is intentionally empty.
+-- Create users through the app or Supabase Studio Auth panel.
