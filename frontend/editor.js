@@ -22,7 +22,6 @@ let editableContent = null;
 let mediaDraft = null;
 let activeModal = null;
 let pollTimer = null;
-let handleTimer = null;
 
 function toApiUrl(path) {
   if (configuredApiBase) return `${configuredApiBase}${path}`;
@@ -104,6 +103,7 @@ function ensureEditableContent(raw) {
       sub: String(content.hero?.sub || "").trim(),
       trustLine: String(content.hero?.trustLine || "").trim(),
     },
+    marqueeText: String(content.marqueeText || "").trim(),
     sections: Array.isArray(content.sections)
       ? content.sections.map((section) => ({
           kind: String(section.kind || "copy").trim(),
@@ -223,6 +223,18 @@ function openHeroModal() {
         ${createTextField("title", "Title", hero.title, 2)}
         ${createTextField("sub", "Subtitle", hero.sub, 4)}
         ${createTextField("trustLine", "Trust Line", hero.trustLine, 3)}
+      </div>
+    `,
+  });
+}
+
+function openMarqueeModal() {
+  openModal({
+    type: "marquee",
+    title: "Scrolling Banner",
+    body: `
+      <div class="field-grid">
+        ${createTextField("marqueeText", "Banner Text", editableContent.marqueeText, 3)}
       </div>
     `,
   });
@@ -352,6 +364,10 @@ function applyModalChanges() {
     editableContent.hero.trustLine = String(formData.get("trustLine") || "").trim();
   }
 
+  if (activeModal.type === "marquee") {
+    editableContent.marqueeText = String(formData.get("marqueeText") || "").trim();
+  }
+
   if (activeModal.type === "section") {
     const section = editableContent.sections[activeModal.index];
     section.label = String(formData.get("label") || "").trim();
@@ -407,6 +423,10 @@ function applyPreview() {
   updateElementText(frameDocument.querySelector(".hero-standalone h1"), String(editableContent.hero.title || "").toUpperCase());
   updateElementText(frameDocument.querySelector(".hero-sub"), editableContent.hero.sub);
   updateElementText(frameDocument.querySelector(".hero-trust"), editableContent.hero.trustLine);
+  updateElementText(
+    frameDocument.querySelector(".marquee-text"),
+    [editableContent.marqueeText, editableContent.marqueeText, editableContent.marqueeText].filter(Boolean).join(" · ")
+  );
   updateElementText(frameDocument.querySelector(".site-header a"), editableContent.cta.headerCta);
   updateElementText(frameDocument.querySelector("title"), `${editableContent.hero.title || siteConfig.topic} | ${siteConfig.topic}`);
 
@@ -460,73 +480,98 @@ function applyPreview() {
     updateElementText(ctaNode.querySelector(".cta-button"), editableContent.cta.button);
   }
 
-  renderHandles();
+  installPreviewInteractions();
 }
 
-function getHandleDescriptors() {
+function ensurePreviewTarget(node, label, onClick) {
+  if (!node) return;
+  node.classList.add("editor-click-target");
+  if (!node.dataset.editorBound) {
+    node.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      onClick();
+    });
+    node.dataset.editorBound = "true";
+  }
+  let badge = node.querySelector(":scope > .editor-hit-label");
+  if (!badge) {
+    badge = node.ownerDocument.createElement("button");
+    badge.type = "button";
+    badge.className = "editor-hit-label";
+    badge.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      onClick();
+    });
+    node.appendChild(badge);
+  }
+  badge.textContent = label;
+}
+
+function installPreviewInteractions() {
   const frameDocument = siteFrame.contentWindow?.document;
-  if (!frameDocument) return [];
-  const descriptors = [];
+  if (!frameDocument) return;
+  if (!frameDocument.getElementById("editor-preview-style")) {
+    const style = frameDocument.createElement("style");
+    style.id = "editor-preview-style";
+    style.textContent = `
+      .editor-click-target { cursor: pointer !important; }
+      .editor-click-target { position: relative; }
+      .editor-click-target::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border: 1px solid rgba(125, 226, 209, 0.34);
+        border-radius: inherit;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+        pointer-events: none;
+      }
+      .editor-click-target:hover::after { opacity: 1; }
+      .editor-hit-label {
+        position: absolute;
+        top: 14px;
+        right: 14px;
+        z-index: 20;
+        border: 0;
+        border-radius: 999px;
+        padding: 8px 12px;
+        background: rgba(7, 17, 26, 0.82);
+        color: #eef6ff;
+        font: 700 12px/1 Manrope, sans-serif;
+        letter-spacing: 0.04em;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+      }
+    `;
+    frameDocument.head.appendChild(style);
+  }
 
-  const heroNode = frameDocument.querySelector(".hero-standalone");
-  if (heroNode) descriptors.push({ type: "hero", label: "H", node: heroNode, action: openHeroModal });
+  handleLayer.innerHTML = "";
 
-  const mediaNode = frameDocument.querySelector(".media-stage, .canvas-wrap");
-  if (mediaNode) descriptors.push({ type: "media", label: "M", node: mediaNode, action: openMediaModal });
+  ensurePreviewTarget(frameDocument.querySelector(".hero-standalone"), "Edit Hero", openHeroModal);
+  ensurePreviewTarget(frameDocument.querySelector(".marquee-wrap"), "Edit Banner", openMarqueeModal);
+  ensurePreviewTarget(frameDocument.querySelector(".media-stage, .canvas-wrap"), "Edit Media", openMediaModal);
 
   const sectionNodes = Array.from(frameDocument.querySelectorAll(".scroll-section"));
   editableContent.sections.forEach((section, index) => {
     const node = sectionNodes[index];
     if (!node) return;
-    descriptors.push({
-      type: "section",
-      label: String(index + 1),
-      node,
-      action: () => openSectionModal(index),
-    });
+    const label = section.heading || section.label || `Edit Section ${index + 1}`;
+    ensurePreviewTarget(node, label, () => openSectionModal(index));
   });
 
   const ctaNode = frameDocument.querySelector("#cta");
-  if (ctaNode) descriptors.push({ type: "cta", label: "C", node: ctaNode, action: openCtaModal });
+  ensurePreviewTarget(ctaNode, editableContent.cta.heading || "Edit CTA", openCtaModal);
 
-  return descriptors;
-}
-
-function renderHandles() {
-  const frameWindow = siteFrame.contentWindow;
-  const frameDocument = frameWindow?.document;
-  if (!frameDocument) return;
-
-  const frameHeight = siteFrame.clientHeight;
-  const frameWidth = siteFrame.clientWidth;
-  handleLayer.innerHTML = "";
-
-  getHandleDescriptors().forEach((descriptor) => {
-    const rect = descriptor.node.getBoundingClientRect();
-    const top = rect.top + 10;
-    const left = rect.right - 44;
-    if (top < -30 || top > frameHeight + 30) return;
-
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "edit-handle";
-    button.textContent = descriptor.label;
-    button.title = `Edit ${descriptor.type}`;
-    button.style.top = `${Math.max(10, top)}px`;
-    button.style.left = `${Math.min(Math.max(10, left), Math.max(10, frameWidth - 44))}px`;
-    button.addEventListener("click", descriptor.action);
-    handleLayer.appendChild(button);
+  frameDocument.querySelectorAll("a").forEach((link) => {
+    if (link.dataset.editorNavBound) return;
+    link.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+    });
+    link.dataset.editorNavBound = "true";
   });
-}
-
-function startHandleSync() {
-  clearInterval(handleTimer);
-  handleTimer = setInterval(renderHandles, 350);
-}
-
-function stopHandleSync() {
-  clearInterval(handleTimer);
-  handleTimer = null;
 }
 
 async function fetchJob(jobId) {
@@ -625,11 +670,8 @@ async function loadSite() {
 
 siteFrame.addEventListener("load", () => {
   applyPreview();
-  siteFrame.contentWindow?.addEventListener("scroll", renderHandles, { passive: true });
-  startHandleSync();
 });
 
-window.addEventListener("resize", renderHandles);
 modalCloseButton.addEventListener("click", closeModal);
 modalCancelButton.addEventListener("click", closeModal);
 modalSaveButton.addEventListener("click", applyModalChanges);
@@ -646,7 +688,6 @@ publishButton.addEventListener("click", async () => {
 
 window.addEventListener("beforeunload", () => {
   clearInterval(pollTimer);
-  stopHandleSync();
 });
 
 loadSite().catch((error) => {

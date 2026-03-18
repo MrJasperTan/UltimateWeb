@@ -1554,6 +1554,7 @@ function buildEditableContent(profile) {
       sub: String(profile.heroSub || "").trim(),
       trustLine: String(profile.trustLine || "").trim(),
     },
+    marqueeText: String(profile.tagline || "").trim(),
     sections: profile.sections.map((section) => ({
       kind: section.kind,
       label: String(section.label || "").trim(),
@@ -1588,6 +1589,7 @@ function applyContentOverrides(profile, overrides) {
     heroTitle: cleanOptionalString(overrides.hero?.title) || profile.heroTitle,
     heroSub: cleanOptionalString(overrides.hero?.sub) || profile.heroSub,
     trustLine: cleanOptionalString(overrides.hero?.trustLine) || profile.trustLine,
+    tagline: cleanOptionalString(overrides.marqueeText) || profile.tagline,
     sections: profile.sections.map((section, index) => {
       const sectionOverride = overrides.sections?.[index];
       if (!sectionOverride || typeof sectionOverride !== "object") return { ...section };
