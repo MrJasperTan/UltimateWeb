@@ -569,7 +569,7 @@ function getHandleDescriptors() {
     shortLabel: "B",
     node: marqueeNode,
     anchorNode: marqueeNode,
-    placement: "marquee-fixed-right",
+    placement: "anchor-left",
     action: openMarqueeModal,
   });
 
@@ -635,9 +635,6 @@ function renderHandles() {
       left = 14;
     } else if (descriptor.placement === "anchor-right" && rect) {
       top = rect.top + Math.max(6, rect.height * 0.5) - 20;
-      left = Math.max(14, frameWidth - 164);
-    } else if (descriptor.placement === "marquee-fixed-right" && rect) {
-      top = rect.top + (rect.height * 0.5) - 20;
       left = Math.max(14, frameWidth - 164);
     }
     if (top < -40 || top > frameHeight + 40) return;
