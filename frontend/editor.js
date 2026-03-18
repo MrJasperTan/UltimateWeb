@@ -277,6 +277,21 @@ function openMarqueeModal() {
   });
 }
 
+function getSectionDisplayLabel(section, index) {
+  const label = String(section?.label || "").trim();
+  if (label) return label;
+  const heading = String(section?.heading || "").trim();
+  if (heading) return heading;
+  return `Section ${index + 1}`;
+}
+
+function getSectionShortLabel(section, index) {
+  const label = String(section?.label || "").trim();
+  const leadingNumber = label.match(/^\d+/)?.[0];
+  if (leadingNumber) return leadingNumber;
+  return String(index + 1);
+}
+
 function openSectionModal(index) {
   const section = editableContent.sections[index];
   if (!section) return;
@@ -326,7 +341,7 @@ function openSectionModal(index) {
   openModal({
     type: "section",
     index,
-    title: `Section ${index + 1}`,
+    title: getSectionDisplayLabel(section, index),
     body: `
       <div class="field-grid">
         ${createTextField("label", "Label", section.label, 2)}
@@ -562,13 +577,15 @@ function getHandleDescriptors() {
   editableContent.sections.forEach((section, index) => {
     const node = sectionNodes[index];
     if (!node) return;
+    const anchorNode = node.querySelector(".section-inner, .stats-grid") || node;
+    const placement = node.classList.contains("align-right") ? "anchor-right" : "anchor-left";
     descriptors.push({
       type: "section",
-      label: section.heading || section.label || `Section ${index + 1}`,
-      shortLabel: String(index + 1),
+      label: getSectionDisplayLabel(section, index),
+      shortLabel: getSectionShortLabel(section, index),
       node,
-      placement: "dock-left",
-      dockIndex: index,
+      anchorNode,
+      placement,
       action: () => openSectionModal(index),
     });
   });
@@ -594,7 +611,7 @@ function renderHandles() {
 
   const frameHeight = siteFrame.clientHeight;
   const frameWidth = siteFrame.clientWidth;
-  handleLayer.querySelectorAll(".edit-handle:not(.edit-handle-stack-item)").forEach((button) => button.remove());
+  handleLayer.querySelectorAll(".edit-handle").forEach((button) => button.remove());
 
   frameDocument.querySelectorAll("a").forEach((link) => {
     if (link.dataset.editorNavBound) return;
@@ -605,34 +622,8 @@ function renderHandles() {
     link.dataset.editorNavBound = "true";
   });
 
-  handleLayer.querySelectorAll(".edit-handle-stack-item").forEach((button) => button.remove());
-
   const descriptors = getHandleDescriptors();
-  const overlayDescriptors = descriptors.filter((descriptor) => descriptor.placement !== "dock-left");
-
-  {
-    const stackItems = editableContent.sections.map((section, index) => ({
-      type: "section",
-      label: section.heading || section.label || `Section ${index + 1}`,
-      shortLabel: String(index + 1),
-      action: () => openSectionModal(index),
-    }));
-    stackItems.push({ type: "cta", label: editableContent.cta.heading || "CTA", shortLabel: "C", action: openCtaModal });
-
-    stackItems.forEach((descriptor) => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "edit-handle edit-handle-stack-item";
-      button.innerHTML = `<span class="edit-handle-dot">${escapeHtml(descriptor.shortLabel || descriptor.label.slice(0, 1))}</span><span class="edit-handle-label">${escapeHtml(descriptor.label)}</span>`;
-      button.title = `Edit ${descriptor.type}`;
-      button.style.top = `${118 + handleLayer.querySelectorAll(".edit-handle-stack-item").length * 52}px`;
-      button.style.left = "14px";
-      button.addEventListener("click", descriptor.action);
-      handleLayer.appendChild(button);
-    });
-  }
-
-  overlayDescriptors.forEach((descriptor) => {
+  descriptors.forEach((descriptor) => {
     const rect = descriptor.anchorNode ? descriptor.anchorNode.getBoundingClientRect() : null;
     let top = 14;
     let left = 14;
