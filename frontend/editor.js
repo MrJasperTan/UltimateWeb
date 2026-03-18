@@ -544,7 +544,7 @@ function getHandleDescriptors() {
     shortLabel: "B",
     node: marqueeNode,
     anchorNode: marqueeMarkerNode || marqueeNode,
-    placement: "anchor-left",
+    placement: "anchor-right",
     action: openMarqueeModal,
   });
 
