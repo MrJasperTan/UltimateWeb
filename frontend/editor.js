@@ -36,6 +36,14 @@ function toPublicAssetUrl(path) {
   return path;
 }
 
+function getSitePreviewUrl(config) {
+  const explicitUrl = String(config?.siteUrl || "").trim();
+  if (explicitUrl) return toPublicAssetUrl(explicitUrl);
+  const fallbackSlug = String(config?.slug || siteSlug || "").trim();
+  if (fallbackSlug) return toPublicAssetUrl(`/generated-sites/${encodeURIComponent(fallbackSlug)}/index.html`);
+  return "";
+}
+
 async function apiFetch(path, options = {}) {
   return fetch(toApiUrl(path), {
     credentials: "include",
@@ -575,7 +583,11 @@ async function loadSite() {
   editorSubtitle.textContent = "Tap any circle in the preview to edit that part of the page.";
   setStatus("Preview ready.", "Tap a circle on the site to edit its content.");
 
-  siteFrame.src = toPublicAssetUrl(siteConfig.siteUrl);
+  const previewUrl = getSitePreviewUrl(siteConfig);
+  if (!previewUrl) {
+    throw new Error("The site preview URL is missing.");
+  }
+  siteFrame.src = previewUrl;
 }
 
 siteFrame.addEventListener("load", () => {
