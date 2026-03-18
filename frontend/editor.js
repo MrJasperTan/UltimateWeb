@@ -6,6 +6,7 @@ const publishButton = document.getElementById("publish-btn");
 const previewShell = document.getElementById("preview-shell");
 const siteFrame = document.getElementById("site-frame");
 const handleLayer = document.getElementById("handle-layer");
+const sectionHandleStack = document.getElementById("section-handle-stack");
 const modalBackdrop = document.getElementById("modal-backdrop");
 const modalTitle = document.getElementById("modal-title");
 const modalBody = document.getElementById("modal-body");
@@ -579,7 +580,7 @@ function renderHandles() {
 
   const frameHeight = siteFrame.clientHeight;
   const frameWidth = siteFrame.clientWidth;
-  handleLayer.innerHTML = "";
+  handleLayer.querySelectorAll(".edit-handle:not(.edit-handle-stack-item)").forEach((button) => button.remove());
 
   frameDocument.querySelectorAll("a").forEach((link) => {
     if (link.dataset.editorNavBound) return;
@@ -593,21 +594,15 @@ function renderHandles() {
   const descriptors = getHandleDescriptors();
   const overlayDescriptors = descriptors.filter((descriptor) => descriptor.placement !== "dock-left");
 
-  if (editableContent.sections.length || editableContent.cta?.heading) {
-    const stack = document.createElement("div");
-    stack.className = "edit-handle-stack";
+  if (sectionHandleStack) {
+    sectionHandleStack.innerHTML = "";
     const stackItems = editableContent.sections.map((section, index) => ({
       type: "section",
       label: section.heading || section.label || `Section ${index + 1}`,
       shortLabel: String(index + 1),
       action: () => openSectionModal(index),
     }));
-    stackItems.push({
-      type: "cta",
-      label: editableContent.cta.heading || "CTA",
-      shortLabel: "C",
-      action: openCtaModal,
-    });
+    stackItems.push({ type: "cta", label: editableContent.cta.heading || "CTA", shortLabel: "C", action: openCtaModal });
 
     stackItems.forEach((descriptor) => {
       const button = document.createElement("button");
@@ -616,9 +611,8 @@ function renderHandles() {
       button.innerHTML = `<span class="edit-handle-dot">${escapeHtml(descriptor.shortLabel || descriptor.label.slice(0, 1))}</span><span class="edit-handle-label">${escapeHtml(descriptor.label)}</span>`;
       button.title = `Edit ${descriptor.type}`;
       button.addEventListener("click", descriptor.action);
-      stack.appendChild(button);
+      sectionHandleStack.appendChild(button);
     });
-    handleLayer.appendChild(stack);
   }
 
   overlayDescriptors.forEach((descriptor) => {
