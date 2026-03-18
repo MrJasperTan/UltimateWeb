@@ -495,8 +495,8 @@ function getHandleDescriptors() {
     label: "Hero",
     shortLabel: "H",
     node: heroNode,
-    placement: "fixed-left",
-    top: 14,
+    anchorNode: heroNode,
+    placement: "anchor-left",
     action: openHeroModal,
   });
 
@@ -543,8 +543,8 @@ function getHandleDescriptors() {
     label: "CTA",
     shortLabel: "C",
     node: ctaNode,
-    placement: "dock-left",
-    dockIndex: editableContent.sections.length,
+    anchorNode: ctaNode.querySelector(".section-inner") || ctaNode,
+    placement: "anchor-left",
     action: openCtaModal,
   });
 
@@ -576,9 +576,6 @@ function renderHandles() {
     if (descriptor.placement === "fixed-right") {
       top = descriptor.top;
       left = frameWidth - 142;
-    } else if (descriptor.placement === "fixed-left") {
-      top = descriptor.top;
-      left = 14;
     } else if (descriptor.placement === "anchor-left" && rect) {
       top = rect.top + Math.max(6, rect.height * 0.5) - 20;
       left = 14;
