@@ -497,14 +497,15 @@ function renderHandles() {
   const frameDocument = frameWindow?.document;
   if (!frameDocument) return;
 
-  const frameRect = siteFrame.getBoundingClientRect();
+  const frameHeight = siteFrame.clientHeight;
+  const frameWidth = siteFrame.clientWidth;
   handleLayer.innerHTML = "";
 
   getHandleDescriptors().forEach((descriptor) => {
     const rect = descriptor.node.getBoundingClientRect();
-    const top = rect.top - frameRect.top + 10;
-    const left = rect.right - frameRect.left - 44;
-    if (top < -30 || top > frameRect.height + 30) return;
+    const top = rect.top + 10;
+    const left = rect.right - 44;
+    if (top < -30 || top > frameHeight + 30) return;
 
     const button = document.createElement("button");
     button.type = "button";
@@ -512,7 +513,7 @@ function renderHandles() {
     button.textContent = descriptor.label;
     button.title = `Edit ${descriptor.type}`;
     button.style.top = `${Math.max(10, top)}px`;
-    button.style.left = `${Math.max(10, left)}px`;
+    button.style.left = `${Math.min(Math.max(10, left), Math.max(10, frameWidth - 44))}px`;
     button.addEventListener("click", descriptor.action);
     handleLayer.appendChild(button);
   });
