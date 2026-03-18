@@ -44,6 +44,25 @@ function getSitePreviewUrl(config) {
   return "";
 }
 
+function getPreviewBaseHref(previewUrl) {
+  try {
+    const url = new URL(previewUrl);
+    const pathname = url.pathname.endsWith("/") ? url.pathname : url.pathname.replace(/[^/]+$/, "");
+    return `${url.origin}${pathname}`;
+  } catch {
+    return previewUrl;
+  }
+}
+
+function buildPreviewSrcdoc(html, previewUrl) {
+  const baseHref = getPreviewBaseHref(previewUrl);
+  const baseTag = `<base href="${escapeHtml(baseHref)}">`;
+  if (/<head[^>]*>/i.test(html)) {
+    return html.replace(/<head([^>]*)>/i, `<head$1>${baseTag}`);
+  }
+  return `<!doctype html><html><head>${baseTag}</head><body>${html}</body></html>`;
+}
+
 async function apiFetch(path, options = {}) {
   return fetch(toApiUrl(path), {
     credentials: "include",
@@ -53,6 +72,17 @@ async function apiFetch(path, options = {}) {
       ...(options.headers || {}),
     },
   });
+}
+
+async function fetchText(url, options = {}) {
+  const response = await fetch(url, {
+    credentials: "include",
+    ...options,
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to load preview (${response.status})`);
+  }
+  return response.text();
 }
 
 function deepClone(value) {
@@ -587,7 +617,8 @@ async function loadSite() {
   if (!previewUrl) {
     throw new Error("The site preview URL is missing.");
   }
-  siteFrame.src = previewUrl;
+  const previewHtml = await fetchText(previewUrl);
+  siteFrame.srcdoc = buildPreviewSrcdoc(previewHtml, previewUrl);
 }
 
 siteFrame.addEventListener("load", () => {
