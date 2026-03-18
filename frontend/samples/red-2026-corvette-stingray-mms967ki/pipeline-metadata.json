@@ -1,0 +1,148 @@
+{
+  "topic": "Red 2026 Corvette Stingray",
+  "brand": "Red 2026",
+  "pageMode": "conversion",
+  "models": {
+    "startModel": "fal-ai/nano-banana-2",
+    "endModel": "fal-ai/nano-banana-2/edit",
+    "videoModel": "fal-ai/kling-video/v3/pro/image-to-video"
+  },
+  "videoDurationSeconds": "5",
+  "prompts": {
+    "startPrompt": "Professional studio hero shot of Red 2026 Corvette Stingray, centered, cinematic lighting, matte black seamless background, no logos, no text, no humans, no reflections, ultra detailed product photography",
+    "endPrompt": "Same Red 2026 Corvette Stingray subject and camera angle. Show a futuristic deconstruction state with key components separated and suspended in a controlled exploded-view composition. Keep matte black seamless background, no logos, no text, no humans, no reflections, studio lighting, ultra detailed.",
+    "motionPrompt": "Cinematic product animation. Start from first frame. Move smoothly toward the final exploded-view composition. Controlled mechanical motion, no sudden warping, no camera shake, no text, no humans, black seamless background."
+  },
+  "generatedAt": "2026-03-15T21:14:40.885Z",
+  "startImageUrl": "https://v3b.fal.media/files/b/0a925020/InFi24xrC8RwNtaFw9xEj_bLsLXDsV.png",
+  "endImageUrl": "https://v3b.fal.media/files/b/0a925022/z5uWT5jU5fjeRmCcN387T_qB6Ls7s1.png",
+  "videoUrl": "https://v3b.fal.media/files/b/0a92502f/Pyt7C4d-_VNp-2Tp6tgS-_output.mp4",
+  "localVideo": "/home/thejaspertan/agents/Ultimateweb/generated-sites/red-2026-corvette-stingray-mms967ki/media/transition.mp4",
+  "videoMeta": {
+    "width": 1924,
+    "height": 1076,
+    "duration": 5.041667,
+    "fps": 24
+  },
+  "frameExtraction": {
+    "fps": 20,
+    "width": 1920
+  },
+  "frameCount": 101,
+  "frameExtension": "webp",
+  "category": "car",
+  "sectionKinds": [
+    "copy",
+    "copy",
+    "copy",
+    "stats",
+    "cards",
+    "cards",
+    "faq",
+    "cta"
+  ],
+  "trustLine": "8 live sources informed the hero, proof, and spec sections.",
+  "research": {
+    "snippets": [
+      "The 2026 Corvette Stingray features the LT2 6.2L V8 engine that produces 490 horsepower and 465 lb.-ft. of torque. With the optional performance exhaust system (part of the Z51 package), this increases to 495 horsepower and 470 lb.-ft.",
+      "Detailed specs and features for the 2026 Chevrolet Corvette Stingray including dimensions, horsepower, engine, capacity, fuel economy, transmission, engine type, cylinders, drivetrain and more.",
+      "Compare all 2026 Chevrolet Corvette features and specs side-by-side in one place. Get price, fuel economy, tech and safety features, warranty info and more for each and every 2026 Corvette trim to ...",
+      "Technology enhances the thrill of the ride in the 2026 Chevy Corvette Stingray, starting with the Enhanced Performance Data Recorder. This feature analyzes your ...",
+      "According to Edmunds’ car experts, here’s what’s new for the 2026 Chevrolet Corvette: New top-performing ZR1X debutsInterior gets a makeoverPart of the eighth Corvette generation launched for 2020 Learn more",
+      "While the standard setup is impressive, equipping your Stingray with the optional Z51 Performance Package or Performance Exhaust unlocks its full potential. Here are the key performance specs for the 2026 Corvette Stingray:",
+      "Just a few negatives dull our excitement for the 2026 Corvette. The supercar styling can hardly be described as pretty or restrained. Also, the square-ish ...",
+      "A three-pedal Stingray would arguably be one of the best driver’s cars on the planet. Want to drift? It’ll rotate predictably. Want to chase lap times? It’ll stick to the track and aid the driver in setting a new personal best. Want to hit the drag strip? It’s capable, even if our numbers didn’t match the brochure. That’s the big win here for buyers of the base Corvette.",
+      "We invite you to visit Vandergriff Chevrolet to see the 2026 Corvette Stingray in person. Our team is ready to help you explore all of its exciting features. ... Engine: 6.2L V8 DI engine, Transmission: Automatic, Exterior Color: Arctic White, Interior Color: Adrenaline Red, Mulan leather seating surfaces wit",
+      "The \"Stingray\" name is used for specific generations and models within the overall Corvette lineup; all Stingrays are Corvettes, but not all Corvettes are Stingrays. The 2026 Corvette Stingray has a top speed of 194 mph on the track and can accelerate from 0 to 60 mph in as little as 2.9"
+    ],
+    "attributes": {},
+    "sources": [
+      {
+        "url": "https://www.chevrolet.com/performance/corvette/stingray",
+        "title": "2026 Corvette Stingray: Sports Car | Chevrolet",
+        "source": "brave"
+      },
+      {
+        "url": "https://www.edmunds.com/chevrolet/corvette/2026/st-402064903/features-specs/",
+        "title": "2026 Chevrolet Corvette Stingray Specs & Features | Edmunds",
+        "source": "brave"
+      },
+      {
+        "url": "https://www.kbb.com/chevrolet/corvette/2026/specs/",
+        "title": "2026 Chevrolet Corvette Specs, Features & Options - Kelley Blue Book",
+        "source": "duckduckgo"
+      },
+      {
+        "url": "https://www.hendrickchevroletcolumbia.com/inventory/new-2026-chevrolet-corvette-stingray-3lt-rear-wheel-drive-convertible-1g1yc3d48t5101716/",
+        "title": "New 2026 Chevrolet Corvette Stingray 3LT Convertible in Columbia #T01716 | Hendrick Chevrolet",
+        "source": "brave"
+      },
+      {
+        "url": "https://www.hondruchevyetown.com/2026-chevrolet-corvette-stingray.htm",
+        "title": "2026 Chevrolet Corvette Stingray Overview | Performance & Features",
+        "source": "startpage"
+      },
+      {
+        "url": "https://www.edmunds.com/chevrolet/corvette/",
+        "title": "2026 Chevy Corvette Prices, Reviews, and Pictures - Edmunds",
+        "source": "startpage"
+      },
+      {
+        "url": "https://www.macmulkin.net/chevrolet-research/2026-corvette-stingray-overview/",
+        "title": "Pursue Excitement: The 2026 Corvette Stingray Complete Overview",
+        "source": "startpage"
+      },
+      {
+        "url": "https://www.motortrend.com/cars/chevrolet/corvette/2026",
+        "title": "2026 Chevrolet Corvette Review: Expert Insights, Pricing, and Trims",
+        "source": "startpage"
+      }
+    ],
+    "category": "car",
+    "summary": "A three-pedal Stingray would arguably be one of the best driver’s cars on the planet. Want to drift? It’ll rotate predictably. Want to chase lap times? It’ll stick to the track and aid the driver in setting a new personal best. Want to hit ...",
+    "facts": [
+      {
+        "label": "Horsepower",
+        "value": "490",
+        "type": "metric"
+      },
+      {
+        "label": "Top Speed",
+        "value": "194",
+        "type": "metric"
+      }
+    ],
+    "proofPoints": [
+      "Horsepower: 490",
+      "Top Speed: 194",
+      "The 2026 Corvette Stingray features the LT2 6.2L V8 engine that produces 490 horsepower and 465 lb.-ft. of torque. With the optional perf...",
+      "Detailed specs and features for the 2026 Chevrolet Corvette Stingray including dimensions, horsepower, engine, capacity, fuel economy, tr..."
+    ],
+    "faqCandidates": [
+      {
+        "question": "What should visitors know about Red 2026 Corvette Stingray horsepower?",
+        "answer": "Red 2026 Corvette Stingray horsepower is surfaced through 490, turning raw information into a usable decision signal."
+      },
+      {
+        "question": "What should visitors know about Red 2026 Corvette Stingray top speed?",
+        "answer": "Red 2026 Corvette Stingray top speed is surfaced through 194, turning raw information into a usable decision signal."
+      },
+      {
+        "question": "Why choose Red 2026 Corvette Stingray?",
+        "answer": "Red 2026 Corvette Stingray is positioned as a balance of emotional design, measurable performance, and premium ownership appeal."
+      }
+    ],
+    "researchedFields": [
+      "Horsepower",
+      "Top Speed"
+    ],
+    "inferredFallbackUsed": false,
+    "confidence": "medium",
+    "coverage": {
+      "snippetCount": 10,
+      "attributeCount": 0,
+      "sourceCount": 8,
+      "factCount": 2
+    }
+  }
+}
