@@ -590,7 +590,26 @@ function renderHandles() {
     link.dataset.editorNavBound = "true";
   });
 
-  getHandleDescriptors().forEach((descriptor) => {
+  const descriptors = getHandleDescriptors();
+  const sectionDescriptors = descriptors.filter((descriptor) => descriptor.placement === "dock-left");
+  const overlayDescriptors = descriptors.filter((descriptor) => descriptor.placement !== "dock-left");
+
+  if (sectionDescriptors.length) {
+    const stack = document.createElement("div");
+    stack.className = "edit-handle-stack";
+    sectionDescriptors.forEach((descriptor) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "edit-handle edit-handle-stack-item";
+      button.innerHTML = `<span class="edit-handle-dot">${escapeHtml(descriptor.shortLabel || descriptor.label.slice(0, 1))}</span><span class="edit-handle-label">${escapeHtml(descriptor.label)}</span>`;
+      button.title = `Edit ${descriptor.type}`;
+      button.addEventListener("click", descriptor.action);
+      stack.appendChild(button);
+    });
+    handleLayer.appendChild(stack);
+  }
+
+  overlayDescriptors.forEach((descriptor) => {
     const rect = descriptor.anchorNode ? descriptor.anchorNode.getBoundingClientRect() : null;
     let top = 14;
     let left = 14;
@@ -606,10 +625,6 @@ function renderHandles() {
     } else if (descriptor.placement === "marquee-fixed-right" && rect) {
       top = rect.top + (rect.height * 0.5) - 20;
       left = Math.max(14, frameWidth - 164);
-    } else if (descriptor.placement === "dock-left") {
-      top = 118 + (descriptor.dockIndex || 0) * 52;
-      left = 14;
-    }
     if (top < -40 || top > frameHeight + 40) return;
 
     const button = document.createElement("button");

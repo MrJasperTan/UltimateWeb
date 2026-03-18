@@ -159,6 +159,15 @@ button,
   pointer-events: none;
 }
 
+.edit-handle-stack {
+  position: absolute;
+  top: 118px;
+  left: 14px;
+  display: grid;
+  gap: 12px;
+  pointer-events: auto;
+}
+
 .edit-handle {
   position: absolute;
   display: inline-flex;
@@ -168,6 +177,10 @@ button,
   background: transparent;
   pointer-events: auto;
   padding: 0;
+}
+
+.edit-handle-stack-item {
+  position: static;
 }
 
 .edit-handle-dot {
