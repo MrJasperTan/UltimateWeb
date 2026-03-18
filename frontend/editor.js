@@ -490,29 +490,42 @@ function getHandleDescriptors() {
   const descriptors = [];
 
   const heroNode = frameDocument.querySelector(".hero-standalone");
-  if (heroNode) descriptors.push({ type: "hero", label: "Hero", shortLabel: "H", node: heroNode, action: openHeroModal });
+  if (heroNode) descriptors.push({ type: "hero", label: "Hero", shortLabel: "H", node: heroNode, anchorNode: heroNode, side: "left", action: openHeroModal });
 
   const mediaNode = frameDocument.querySelector(".media-stage, .canvas-wrap");
-  if (mediaNode) descriptors.push({ type: "media", label: "Media", shortLabel: "M", node: mediaNode, action: openMediaModal });
+  if (mediaNode) descriptors.push({ type: "media", label: "Media", shortLabel: "M", node: mediaNode, fixed: true, top: 14, right: 14, action: openMediaModal });
 
   const marqueeNode = frameDocument.querySelector(".marquee-wrap");
-  if (marqueeNode) descriptors.push({ type: "marquee", label: "Banner", shortLabel: "B", node: marqueeNode, action: openMarqueeModal });
+  if (marqueeNode) descriptors.push({ type: "marquee", label: "Banner", shortLabel: "B", node: marqueeNode, anchorNode: marqueeNode, side: "left", action: openMarqueeModal });
 
   const sectionNodes = Array.from(frameDocument.querySelectorAll(".scroll-section"));
   editableContent.sections.forEach((section, index) => {
     const node = sectionNodes[index];
     if (!node) return;
+    const anchorNode =
+      node.querySelector(".section-inner, .section-inner-wide, .stats-grid, .cards-grid, .faq-grid")
+      || node;
     descriptors.push({
       type: "section",
       label: section.heading || section.label || `Section ${index + 1}`,
       shortLabel: String(index + 1),
       node,
+      anchorNode,
+      side: node.classList.contains("align-right") ? "right" : "left",
       action: () => openSectionModal(index),
     });
   });
 
   const ctaNode = frameDocument.querySelector("#cta");
-  if (ctaNode) descriptors.push({ type: "cta", label: "CTA", shortLabel: "C", node: ctaNode, action: openCtaModal });
+  if (ctaNode) descriptors.push({
+    type: "cta",
+    label: "CTA",
+    shortLabel: "C",
+    node: ctaNode,
+    anchorNode: ctaNode.querySelector(".section-inner") || ctaNode,
+    side: "left",
+    action: openCtaModal,
+  });
 
   return descriptors;
 }
@@ -523,6 +536,7 @@ function renderHandles() {
   if (!frameDocument) return;
 
   const frameHeight = siteFrame.clientHeight;
+  const frameWidth = siteFrame.clientWidth;
   handleLayer.innerHTML = "";
 
   frameDocument.querySelectorAll("a").forEach((link) => {
@@ -535,9 +549,15 @@ function renderHandles() {
   });
 
   getHandleDescriptors().forEach((descriptor) => {
-    const rect = descriptor.node.getBoundingClientRect();
-    const top = rect.top + Math.min(20, Math.max(8, rect.height * 0.2));
-    const left = 14;
+    const rect = (descriptor.anchorNode || descriptor.node).getBoundingClientRect();
+    const top = descriptor.fixed
+      ? descriptor.top
+      : rect.top + Math.min(20, Math.max(8, rect.height * 0.2));
+    const left = descriptor.fixed
+      ? frameWidth - 142
+      : descriptor.side === "right"
+        ? Math.max(14, frameWidth - 164)
+        : 14;
     if (top < -40 || top > frameHeight + 40) return;
 
     const button = document.createElement("button");
