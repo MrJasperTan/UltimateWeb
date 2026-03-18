@@ -38,7 +38,8 @@ function toPublicAssetUrl(path) {
 
 function getSitePreviewUrl(config) {
   const explicitUrl = String(config?.siteUrl || "").trim();
-  if (explicitUrl) return toPublicAssetUrl(explicitUrl);
+  const normalizedExplicitUrl = /^(undefined|null)$/i.test(explicitUrl) ? "" : explicitUrl;
+  if (normalizedExplicitUrl) return toPublicAssetUrl(normalizedExplicitUrl);
   const fallbackSlug = String(config?.slug || siteSlug || "").trim();
   if (fallbackSlug) return toPublicAssetUrl(`/generated-sites/${encodeURIComponent(fallbackSlug)}/index.html`);
   return "";
