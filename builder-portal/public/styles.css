@@ -120,6 +120,81 @@ h2 {
   max-width: 75ch;
 }
 
+.sample-showcase {
+  position: relative;
+  z-index: 1;
+  margin-top: 1.2rem;
+  padding: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 1rem;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02)),
+    radial-gradient(circle at top left, rgba(0, 200, 255, 0.18), transparent 45%);
+}
+
+.sample-showcase-head {
+  display: grid;
+  gap: 0.3rem;
+  margin-bottom: 0.9rem;
+}
+
+.sample-kicker {
+  margin: 0;
+  color: #8fdcff;
+  font-size: 0.74rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.sample-showcase-head h2 {
+  max-width: 24ch;
+}
+
+.sample-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.sample-card {
+  display: grid;
+  gap: 0.58rem;
+  padding: 0.58rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0.9rem;
+  color: inherit;
+  text-decoration: none;
+  background: rgba(5, 8, 12, 0.7);
+  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.sample-card img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 0.72rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sample-card strong {
+  font-size: 0.92rem;
+  line-height: 1.3;
+}
+
+.sample-meta {
+  color: var(--accent-cool);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.sample-card:hover,
+.sample-card:focus-visible {
+  transform: translateY(-2px);
+  border-color: rgba(0, 200, 255, 0.34);
+  box-shadow: 0 16px 28px rgba(0, 0, 0, 0.26);
+}
+
 .auth-card {
   position: relative;
   z-index: 1;
@@ -641,6 +716,10 @@ body.is-building .ring-b {
     grid-template-columns: 1fr;
   }
 
+  .sample-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .portal-shell {
     width: min(98vw, 620px);
     margin-top: 1rem;
@@ -737,6 +816,10 @@ body.is-building .ring-b {
 
   .subhead {
     font-size: 0.92rem;
+  }
+
+  .sample-grid {
+    grid-template-columns: 1fr;
   }
 
   .build-form label {

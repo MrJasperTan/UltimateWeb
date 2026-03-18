@@ -28,6 +28,14 @@ import {
 
 const BACKEND_LOG_PATH = "/tmp/ultimateweb-backend.log";
 const PAGE_MODES = new Set(["conversion", "editorial", "hybrid"]);
+const PUBLIC_SAMPLE_SLUGS = new Set([
+  "red-2026-corvette-stingray-mms967ki",
+  "2026-lamborghini-aventador-reborn-mmvev4j6",
+  "elon-musk-mms9ohn0",
+  "space-x-rockets-mmu5bg8j",
+  "eiffel-tower-paris-france-mmveca8i",
+  "michael-jordan-mmr6r4o0",
+]);
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
@@ -1138,24 +1146,28 @@ export function startBuilderServer({ appDir, publicDir }) {
     }
 
     if (pathname.startsWith("/generated-sites/")) {
-      const session = await requireAuthenticatedSession(request, response);
-      if (!session) return;
-
       const relativePath = pathname.replace(/^\/generated-sites\//, "");
       const [slug] = relativePath.split("/");
       if (!slug) {
         sendText(response, 404, "Not found");
         return;
       }
-      try {
-        const siteRecord = await findGeneratedSiteRecord(session.user.id, slug);
-        if (!siteRecord) {
-          sendText(response, 404, "Not found");
+      const isPublicSample = PUBLIC_SAMPLE_SLUGS.has(slug);
+
+      if (!isPublicSample) {
+        const session = await requireAuthenticatedSession(request, response);
+        if (!session) return;
+
+        try {
+          const siteRecord = await findGeneratedSiteRecord(session.user.id, slug);
+          if (!siteRecord) {
+            sendText(response, 404, "Not found");
+            return;
+          }
+        } catch (error) {
+          sendText(response, 500, error.message);
           return;
         }
-      } catch (error) {
-        sendText(response, 500, error.message);
-        return;
       }
       const resolvedFile = safeResolve(generatedDir, relativePath);
       if (!resolvedFile) {
