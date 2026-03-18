@@ -104,6 +104,7 @@ function ensureEditableContent(raw) {
       sub: String(content.hero?.sub || "").trim(),
       trustLine: String(content.hero?.trustLine || "").trim(),
     },
+    marqueeText: String(content.marqueeText || "").trim(),
     sections: Array.isArray(content.sections)
       ? content.sections.map((section) => ({
           kind: String(section.kind || "copy").trim(),
@@ -223,6 +224,18 @@ function openHeroModal() {
         ${createTextField("title", "Title", hero.title, 2)}
         ${createTextField("sub", "Subtitle", hero.sub, 4)}
         ${createTextField("trustLine", "Trust Line", hero.trustLine, 3)}
+      </div>
+    `,
+  });
+}
+
+function openMarqueeModal() {
+  openModal({
+    type: "marquee",
+    title: "Scrolling Banner",
+    body: `
+      <div class="field-grid">
+        ${createTextField("marqueeText", "Banner Text", editableContent.marqueeText, 3)}
       </div>
     `,
   });
@@ -352,6 +365,10 @@ function applyModalChanges() {
     editableContent.hero.trustLine = String(formData.get("trustLine") || "").trim();
   }
 
+  if (activeModal.type === "marquee") {
+    editableContent.marqueeText = String(formData.get("marqueeText") || "").trim();
+  }
+
   if (activeModal.type === "section") {
     const section = editableContent.sections[activeModal.index];
     section.label = String(formData.get("label") || "").trim();
@@ -407,6 +424,10 @@ function applyPreview() {
   updateElementText(frameDocument.querySelector(".hero-standalone h1"), String(editableContent.hero.title || "").toUpperCase());
   updateElementText(frameDocument.querySelector(".hero-sub"), editableContent.hero.sub);
   updateElementText(frameDocument.querySelector(".hero-trust"), editableContent.hero.trustLine);
+  updateElementText(
+    frameDocument.querySelector(".marquee-text"),
+    [editableContent.marqueeText, editableContent.marqueeText, editableContent.marqueeText].filter(Boolean).join(" · ")
+  );
   updateElementText(frameDocument.querySelector(".site-header a"), editableContent.cta.headerCta);
   updateElementText(frameDocument.querySelector("title"), `${editableContent.hero.title || siteConfig.topic} | ${siteConfig.topic}`);
 
@@ -469,10 +490,13 @@ function getHandleDescriptors() {
   const descriptors = [];
 
   const heroNode = frameDocument.querySelector(".hero-standalone");
-  if (heroNode) descriptors.push({ type: "hero", label: "H", node: heroNode, action: openHeroModal });
+  if (heroNode) descriptors.push({ type: "hero", label: "Hero", shortLabel: "H", node: heroNode, action: openHeroModal });
 
   const mediaNode = frameDocument.querySelector(".media-stage, .canvas-wrap");
-  if (mediaNode) descriptors.push({ type: "media", label: "M", node: mediaNode, action: openMediaModal });
+  if (mediaNode) descriptors.push({ type: "media", label: "Media", shortLabel: "M", node: mediaNode, action: openMediaModal });
+
+  const marqueeNode = frameDocument.querySelector(".marquee-wrap");
+  if (marqueeNode) descriptors.push({ type: "marquee", label: "Banner", shortLabel: "B", node: marqueeNode, action: openMarqueeModal });
 
   const sectionNodes = Array.from(frameDocument.querySelectorAll(".scroll-section"));
   editableContent.sections.forEach((section, index) => {
@@ -480,14 +504,15 @@ function getHandleDescriptors() {
     if (!node) return;
     descriptors.push({
       type: "section",
-      label: String(index + 1),
+      label: section.heading || section.label || `Section ${index + 1}`,
+      shortLabel: String(index + 1),
       node,
       action: () => openSectionModal(index),
     });
   });
 
   const ctaNode = frameDocument.querySelector("#cta");
-  if (ctaNode) descriptors.push({ type: "cta", label: "C", node: ctaNode, action: openCtaModal });
+  if (ctaNode) descriptors.push({ type: "cta", label: "CTA", shortLabel: "C", node: ctaNode, action: openCtaModal });
 
   return descriptors;
 }
@@ -498,22 +523,30 @@ function renderHandles() {
   if (!frameDocument) return;
 
   const frameHeight = siteFrame.clientHeight;
-  const frameWidth = siteFrame.clientWidth;
   handleLayer.innerHTML = "";
+
+  frameDocument.querySelectorAll("a").forEach((link) => {
+    if (link.dataset.editorNavBound) return;
+    link.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+    });
+    link.dataset.editorNavBound = "true";
+  });
 
   getHandleDescriptors().forEach((descriptor) => {
     const rect = descriptor.node.getBoundingClientRect();
-    const top = rect.top + 10;
-    const left = rect.right - 44;
-    if (top < -30 || top > frameHeight + 30) return;
+    const top = rect.top + Math.min(20, Math.max(8, rect.height * 0.2));
+    const left = 14;
+    if (top < -40 || top > frameHeight + 40) return;
 
     const button = document.createElement("button");
     button.type = "button";
     button.className = "edit-handle";
-    button.textContent = descriptor.label;
+    button.innerHTML = `<span class="edit-handle-dot">${escapeHtml(descriptor.shortLabel || descriptor.label.slice(0, 1))}</span><span class="edit-handle-label">${escapeHtml(descriptor.label)}</span>`;
     button.title = `Edit ${descriptor.type}`;
     button.style.top = `${Math.max(10, top)}px`;
-    button.style.left = `${Math.min(Math.max(10, left), Math.max(10, frameWidth - 44))}px`;
+    button.style.left = `${left}px`;
     button.addEventListener("click", descriptor.action);
     handleLayer.appendChild(button);
   });

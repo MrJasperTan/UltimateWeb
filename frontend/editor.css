@@ -161,20 +161,43 @@ button,
 
 .edit-handle {
   position: absolute;
-  width: 34px;
-  height: 34px;
-  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   border: 0;
-  background: radial-gradient(circle at 30% 30%, #fff, var(--accent) 40%, #0b5f5f 100%);
-  color: #031116;
-  font-weight: 800;
-  font-size: 0.72rem;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+  background: transparent;
   pointer-events: auto;
+  padding: 0;
+}
+
+.edit-handle-dot {
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 30% 30%, #fff, var(--accent-strong) 25%, var(--accent) 62%, #0b5f5f 100%);
+  color: #031116;
+  font-weight: 900;
+  font-size: 0.78rem;
+  border: 2px solid rgba(255, 255, 255, 0.72);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+}
+
+.edit-handle-label {
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(6, 16, 24, 0.92);
+  color: var(--text);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
 }
 
 .edit-handle:hover {
-  transform: scale(1.06);
+  transform: translateX(2px);
 }
 
 .modal-backdrop {
