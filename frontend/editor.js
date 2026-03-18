@@ -591,13 +591,25 @@ function renderHandles() {
   });
 
   const descriptors = getHandleDescriptors();
-  const sectionDescriptors = descriptors.filter((descriptor) => descriptor.placement === "dock-left");
   const overlayDescriptors = descriptors.filter((descriptor) => descriptor.placement !== "dock-left");
 
-  if (sectionDescriptors.length) {
+  if (editableContent.sections.length || editableContent.cta?.heading) {
     const stack = document.createElement("div");
     stack.className = "edit-handle-stack";
-    sectionDescriptors.forEach((descriptor) => {
+    const stackItems = editableContent.sections.map((section, index) => ({
+      type: "section",
+      label: section.heading || section.label || `Section ${index + 1}`,
+      shortLabel: String(index + 1),
+      action: () => openSectionModal(index),
+    }));
+    stackItems.push({
+      type: "cta",
+      label: editableContent.cta.heading || "CTA",
+      shortLabel: "C",
+      action: openCtaModal,
+    });
+
+    stackItems.forEach((descriptor) => {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "edit-handle edit-handle-stack-item";
