@@ -1,0 +1,94 @@
+{
+  "topic": "eiffel tower, paris france",
+  "brand": "eiffel tower, paris france",
+  "businessProfile": {
+    "topic": "eiffel tower, paris france",
+    "brand": "eiffel tower, paris france",
+    "category": "place",
+    "sourceContext": {
+      "url": null,
+      "title": null,
+      "description": null,
+      "pageText": null,
+      "palette": [],
+      "imageUrls": [],
+      "logoUrl": null
+    },
+    "research": null,
+    "logoUrl": null,
+    "referenceMedia": [],
+    "palette": [],
+    "locationSignal": null
+  },
+  "sourceUrl": null,
+  "pageMode": "conversion",
+  "models": {
+    "startModel": "fal-ai/nano-banana-2",
+    "endModel": "fal-ai/nano-banana-2/edit",
+    "videoModel": "fal-ai/kling-video/v3/pro/image-to-video"
+  },
+  "paletteOverride": [],
+  "changeRequest": null,
+  "editSourceSlug": null,
+  "videoDurationSeconds": "5",
+  "prompts": {
+    "startPrompt": "Cinematic wide establishing shot of eiffel tower, paris france, real cityscape or destination geography, golden hour lighting, dramatic atmosphere, architectural detail, landscape photography, authentic location cues, no character illustration, no text, no logos, ultra detailed 8k",
+    "endPrompt": "Same eiffel tower, paris france location, different dramatic perspective. Aerial or intimate detail view revealing hidden character of the place, atmospheric lighting, moody sky, no people, no character illustration, no text, no logos, landscape photography, ultra detailed.",
+    "motionPrompt": "Cinematic location reveal. Start from first frame. Smooth drone-like camera movement exploring the space. Atmospheric particles, shifting light, no sudden warping, no text, no people, cinematic landscape."
+  },
+  "generatedAt": "2026-03-18T02:02:45.960Z",
+  "startImageUrl": "https://v3b.fal.media/files/b/0a929a60/VqHCH76IuAYkHp9fzIyG4_vf11ELTc.png",
+  "endImageUrl": "https://v3b.fal.media/files/b/0a929a63/otFyXu1IA5Yf2eL3rEilG_JgXpLb9c.png",
+  "videoUrl": "https://v3b.fal.media/files/b/0a929a72/Y3e8Xj0oaeJh6q3bTO4o8_output.mp4",
+  "localVideo": "/home/thejaspertan/agents/Ultimateweb/generated-sites/eiffel-tower-paris-france-mmveca8i/media/transition.mp4",
+  "videoMeta": {
+    "width": 1924,
+    "height": 1076,
+    "duration": 5.041667,
+    "fps": 24
+  },
+  "frameExtraction": {
+    "fps": 20,
+    "width": 1920
+  },
+  "frameCount": 101,
+  "frameExtension": "webp",
+  "category": "place",
+  "sectionKinds": [
+    "copy",
+    "copy",
+    "copy",
+    "stats",
+    "cards",
+    "cards",
+    "faq",
+    "cta"
+  ],
+  "trustLine": "Built with best-effort category research and premium design defaults.",
+  "sourceContext": {
+    "url": null,
+    "title": null,
+    "description": null,
+    "pageText": null,
+    "palette": [],
+    "imageUrls": [],
+    "logoUrl": null
+  },
+  "research": {
+    "category": "place",
+    "summary": null,
+    "facts": [],
+    "proofPoints": [],
+    "faqCandidates": [],
+    "sources": [],
+    "coverage": {
+      "snippetCount": 0,
+      "attributeCount": 0,
+      "sourceCount": 0,
+      "factCount": 0
+    },
+    "confidence": "low",
+    "inferredFallbackUsed": true,
+    "researchedFields": []
+  }
+}
