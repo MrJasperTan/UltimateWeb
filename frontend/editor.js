@@ -518,7 +518,6 @@ function getHandleDescriptors() {
     node: heroNode,
     anchorNode: heroNode,
     placement: "anchor-left",
-    buttonHost: heroNode,
     action: openHeroModal,
   });
 
@@ -530,7 +529,6 @@ function getHandleDescriptors() {
     node: mediaNode,
     placement: "fixed-right",
     top: 14,
-    buttonHost: mediaNode,
     action: openMediaModal,
   });
 
@@ -542,7 +540,6 @@ function getHandleDescriptors() {
     node: marqueeNode,
     anchorNode: marqueeNode,
     placement: "marquee-fixed-right",
-    buttonHost: marqueeNode,
     action: openMarqueeModal,
   });
 
@@ -557,7 +554,6 @@ function getHandleDescriptors() {
       node,
       placement: "dock-left",
       dockIndex: index,
-      buttonHost: node.querySelector(".section-inner, .section-inner-wide") || node,
       action: () => openSectionModal(index),
     });
   });
@@ -570,7 +566,6 @@ function getHandleDescriptors() {
     node: ctaNode,
     anchorNode: ctaNode.querySelector(".section-inner") || ctaNode,
     placement: "anchor-left",
-    buttonHost: ctaNode.querySelector(".section-inner") || ctaNode,
     action: openCtaModal,
   });
 
@@ -582,6 +577,8 @@ function renderHandles() {
   const frameDocument = frameWindow?.document;
   if (!frameDocument) return;
 
+  const frameHeight = siteFrame.clientHeight;
+  const frameWidth = siteFrame.clientWidth;
   handleLayer.innerHTML = "";
 
   frameDocument.querySelectorAll("a").forEach((link) => {
@@ -593,63 +590,37 @@ function renderHandles() {
     link.dataset.editorNavBound = "true";
   });
 
-  if (!frameDocument.getElementById("editor-inline-handle-style")) {
-    const style = frameDocument.createElement("style");
-    style.id = "editor-inline-handle-style";
-    style.textContent = `
-      .editor-button-host { position: relative !important; }
-      .editor-inline-handle {
-        position: absolute;
-        top: 14px;
-        right: 14px;
-        z-index: 30;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        border: 0;
-        background: transparent;
-        padding: 0;
-        cursor: pointer;
-      }
-      .editor-inline-handle-dot {
-        width: 38px;
-        height: 38px;
-        border-radius: 999px;
-        display: grid;
-        place-items: center;
-        background: radial-gradient(circle at 30% 30%, #fff, #f2b35d 25%, #7de2d1 62%, #0b5f5f 100%);
-        color: #031116;
-        font: 900 12px/1 Manrope, sans-serif;
-        border: 2px solid rgba(255,255,255,0.72);
-        box-shadow: 0 12px 30px rgba(0,0,0,0.45);
-      }
-      .editor-inline-handle-label {
-        padding: 8px 12px;
-        border-radius: 999px;
-        background: rgba(6,16,24,0.92);
-        color: #eef6ff;
-        border: 1px solid rgba(255,255,255,0.12);
-        font: 800 12px/1 Manrope, sans-serif;
-        white-space: nowrap;
-      }
-    `;
-    frameDocument.head.appendChild(style);
-  }
-
-  frameDocument.querySelectorAll(".editor-inline-handle").forEach((button) => button.remove());
-  frameDocument.querySelectorAll(".editor-button-host").forEach((node) => node.classList.remove("editor-button-host"));
-
   getHandleDescriptors().forEach((descriptor) => {
-    const host = descriptor.buttonHost || descriptor.node;
-    if (!host) return;
-    host.classList.add("editor-button-host");
-    const button = frameDocument.createElement("button");
+    const rect = descriptor.anchorNode ? descriptor.anchorNode.getBoundingClientRect() : null;
+    let top = 14;
+    let left = 14;
+    if (descriptor.placement === "fixed-right") {
+      top = descriptor.top;
+      left = frameWidth - 142;
+    } else if (descriptor.placement === "anchor-left" && rect) {
+      top = rect.top + Math.max(6, rect.height * 0.5) - 20;
+      left = 14;
+    } else if (descriptor.placement === "anchor-right" && rect) {
+      top = rect.top + Math.max(6, rect.height * 0.5) - 20;
+      left = Math.max(14, frameWidth - 164);
+    } else if (descriptor.placement === "marquee-fixed-right" && rect) {
+      top = rect.top + (rect.height * 0.5) - 20;
+      left = Math.max(14, frameWidth - 164);
+    } else if (descriptor.placement === "dock-left") {
+      top = 118 + (descriptor.dockIndex || 0) * 52;
+      left = 14;
+    }
+    if (top < -40 || top > frameHeight + 40) return;
+
+    const button = document.createElement("button");
     button.type = "button";
-    button.className = "editor-inline-handle";
-    button.innerHTML = `<span class="editor-inline-handle-dot">${escapeHtml(descriptor.shortLabel || descriptor.label.slice(0, 1))}</span><span class="editor-inline-handle-label">${escapeHtml(descriptor.label)}</span>`;
+    button.className = "edit-handle";
+    button.innerHTML = `<span class="edit-handle-dot">${escapeHtml(descriptor.shortLabel || descriptor.label.slice(0, 1))}</span><span class="edit-handle-label">${escapeHtml(descriptor.label)}</span>`;
     button.title = `Edit ${descriptor.type}`;
+    button.style.top = `${Math.max(10, top)}px`;
+    button.style.left = `${left}px`;
     button.addEventListener("click", descriptor.action);
-    host.appendChild(button);
+    handleLayer.appendChild(button);
   });
 }
 
