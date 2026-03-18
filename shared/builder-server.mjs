@@ -528,7 +528,6 @@ function parseEditableContentFromSite(siteRoot, metadata = null) {
   const ctaSection = sections[sections.length - 1] || null;
   return {
     hero,
-    marqueeText: getMatch(/<p class="marquee-text">([\s\S]*?)<\/p>/i).split("·")[0]?.trim() || "",
     sections: ctaSection ? sections.slice(0, -1) : sections,
     cta: ctaSection
       ? {
