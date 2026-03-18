@@ -1683,6 +1683,7 @@ function writeScaffoldFiles({ siteDir, topic, brand, pageMode, frameCount, frame
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=DM+Serif+Display:ital@0;1&family=Manrope:wght@400;500;700;800&family=Oswald:wght@500;700&family=Syne:wght@500;700;800&display=swap" rel="stylesheet" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
@@ -2113,7 +2114,7 @@ function drawImageToCanvas(img) {
   const ch = canvas.height;
   const iw = img.naturalWidth;
   const ih = img.naturalHeight;
-  const scale = Math.min(cw / iw, ch / ih);
+  const scale = Math.max(cw / iw, ch / ih) * 0.86;
   const dw = iw * scale;
   const dh = ih * scale;
   const dx = (cw - dw) / 2;

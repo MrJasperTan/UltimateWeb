@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="uw-favicon-bg" x1="8" y1="6" x2="56" y2="58" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#46f0c5"/>
+      <stop offset="0.55" stop-color="#1ea7ff"/>
+      <stop offset="1" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="uw-favicon-glow" x1="18" y1="16" x2="46" y2="48" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f8fffe" stop-opacity="0.96"/>
+      <stop offset="1" stop-color="#d4f7ff" stop-opacity="0.72"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="#07111f"/>
+  <rect x="4" y="4" width="56" height="56" rx="14" fill="url(#uw-favicon-bg)"/>
+  <path d="M16 19h8l8 24 8-24h8l-12 30h-8L16 19Z" fill="url(#uw-favicon-glow)"/>
+  <path d="M20 19h8v18c0 3.866 1.79 5.8 4 5.8s4-1.934 4-5.8V19h8v18.4C44 47.187 38.857 51 32 51s-12-3.813-12-13.6V19Z" fill="#04101e" fill-opacity="0.32"/>
+</svg>

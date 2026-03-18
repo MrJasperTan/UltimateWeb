@@ -244,6 +244,18 @@ function serveFile(response, filePath) {
   }
 }
 
+function serveFavicon(response, publicDir) {
+  const svgPath = join(publicDir, "favicon.svg");
+  if (!existsSync(svgPath) || !statSync(svgPath).isFile()) {
+    sendText(response, 404, "Not found");
+    return;
+  }
+
+  const buffer = readFileSync(svgPath);
+  response.writeHead(200, { "Content-Type": "image/svg+xml" });
+  response.end(buffer);
+}
+
 function parseJsonBody(request) {
   return new Promise((resolveBody, rejectBody) => {
     let raw = "";
@@ -1132,13 +1144,11 @@ export function startBuilderServer({ appDir, publicDir }) {
           return;
         }
         const deleted = slug ? deleteGeneratedSite(slug) : false;
-        if (!deleted) {
-          sendJson(response, 404, { error: "Generated site files not found." });
-          return;
-        }
         await markGeneratedSiteDeleted(session.user.id, slug);
-        logBackend(`Deleted generated site user=${session.user.id} slug=${slug}`);
-        sendJson(response, 200, { ok: true, slug });
+        logBackend(
+          `Deleted generated site user=${session.user.id} slug=${slug} filesRemoved=${deleted ? "yes" : "no"}`
+        );
+        sendJson(response, 200, { ok: true, slug, filesRemoved: deleted });
       } catch (error) {
         sendJson(response, 400, { error: error.message });
       }
@@ -1175,6 +1185,11 @@ export function startBuilderServer({ appDir, publicDir }) {
         return;
       }
       serveFile(response, resolvedFile);
+      return;
+    }
+
+    if (pathname === "/favicon.ico") {
+      serveFavicon(response, publicDir);
       return;
     }
 
