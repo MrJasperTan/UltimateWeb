@@ -55,13 +55,24 @@ function getPreviewBaseHref(previewUrl) {
   }
 }
 
+function rewritePreviewAssetUrls(html, previewUrl) {
+  const baseHref = getPreviewBaseHref(previewUrl);
+  return String(html || "")
+    .replace(/(<link[^>]+href=["'])(?![a-z]+:|\/|#)([^"']+)(["'][^>]*>)/gi, `$1${baseHref}$2$3`)
+    .replace(/(<script[^>]+src=["'])(?![a-z]+:|\/|#)([^"']+)(["'][^>]*>)/gi, `$1${baseHref}$2$3`)
+    .replace(/(<img[^>]+src=["'])(?![a-z]+:|\/|#)([^"']+)(["'][^>]*>)/gi, `$1${baseHref}$2$3`)
+    .replace(/(<source[^>]+src=["'])(?![a-z]+:|\/|#)([^"']+)(["'][^>]*>)/gi, `$1${baseHref}$2$3`)
+    .replace(/(<video[^>]+src=["'])(?![a-z]+:|\/|#)([^"']+)(["'][^>]*>)/gi, `$1${baseHref}$2$3`);
+}
+
 function buildPreviewSrcdoc(html, previewUrl) {
   const baseHref = getPreviewBaseHref(previewUrl);
+  const rewrittenHtml = rewritePreviewAssetUrls(html, previewUrl);
   const baseTag = `<base href="${escapeHtml(baseHref)}">`;
-  if (/<head[^>]*>/i.test(html)) {
-    return html.replace(/<head([^>]*)>/i, `<head$1>${baseTag}`);
+  if (/<head[^>]*>/i.test(rewrittenHtml)) {
+    return rewrittenHtml.replace(/<head([^>]*)>/i, `<head$1>${baseTag}`);
   }
-  return `<!doctype html><html><head>${baseTag}</head><body>${html}</body></html>`;
+  return `<!doctype html><html><head>${baseTag}</head><body>${rewrittenHtml}</body></html>`;
 }
 
 async function apiFetch(path, options = {}) {
