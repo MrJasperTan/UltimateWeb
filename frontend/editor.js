@@ -36,6 +36,16 @@ function toPublicAssetUrl(path) {
   return path;
 }
 
+function resolveAbsoluteUrl(path) {
+  const value = String(path || "").trim();
+  if (!value) return "";
+  try {
+    return new URL(value, configuredApiBase || window.location.origin).toString();
+  } catch {
+    return value;
+  }
+}
+
 function getSitePreviewUrl(config) {
   const explicitUrl = String(config?.siteUrl || "").trim();
   const normalizedExplicitUrl = /^(undefined|null)$/i.test(explicitUrl) ? "" : explicitUrl;
@@ -47,11 +57,11 @@ function getSitePreviewUrl(config) {
 
 function getPreviewBaseHref(previewUrl) {
   try {
-    const url = new URL(previewUrl);
+    const url = new URL(resolveAbsoluteUrl(previewUrl));
     const pathname = url.pathname.endsWith("/") ? url.pathname : url.pathname.replace(/[^/]+$/, "");
     return `${url.origin}${pathname}`;
   } catch {
-    return previewUrl;
+    return resolveAbsoluteUrl(previewUrl);
   }
 }
 
