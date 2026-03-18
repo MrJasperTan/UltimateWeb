@@ -6,7 +6,6 @@ const publishButton = document.getElementById("publish-btn");
 const previewShell = document.getElementById("preview-shell");
 const siteFrame = document.getElementById("site-frame");
 const handleLayer = document.getElementById("handle-layer");
-const sectionHandleStack = document.getElementById("section-handle-stack");
 const modalBackdrop = document.getElementById("modal-backdrop");
 const modalTitle = document.getElementById("modal-title");
 const modalBody = document.getElementById("modal-body");
@@ -175,6 +174,21 @@ function resetMediaDraft() {
     endImageFile: null,
     videoFile: null,
   };
+}
+
+function extractSectionsFromPreview(frameDocument) {
+  return Array.from(frameDocument.querySelectorAll(".scroll-section"))
+    .filter((node) => node.id !== "cta")
+    .map((node) => ({
+      kind: String(node.dataset.editorKind || "copy").trim(),
+      label: String(node.querySelector(".section-label")?.textContent || "").trim(),
+      heading: String(node.querySelector(".section-heading")?.textContent || "").trim(),
+      body: String(node.querySelector(".section-body")?.textContent || "").trim(),
+      button: String(node.querySelector(".cta-button")?.textContent || "").trim(),
+      stats: [],
+      cards: [],
+      items: [],
+    }));
 }
 
 function openModal(config) {
@@ -591,11 +605,12 @@ function renderHandles() {
     link.dataset.editorNavBound = "true";
   });
 
+  handleLayer.querySelectorAll(".edit-handle-stack-item").forEach((button) => button.remove());
+
   const descriptors = getHandleDescriptors();
   const overlayDescriptors = descriptors.filter((descriptor) => descriptor.placement !== "dock-left");
 
-  if (sectionHandleStack) {
-    sectionHandleStack.innerHTML = "";
+  {
     const stackItems = editableContent.sections.map((section, index) => ({
       type: "section",
       label: section.heading || section.label || `Section ${index + 1}`,
@@ -610,8 +625,10 @@ function renderHandles() {
       button.className = "edit-handle edit-handle-stack-item";
       button.innerHTML = `<span class="edit-handle-dot">${escapeHtml(descriptor.shortLabel || descriptor.label.slice(0, 1))}</span><span class="edit-handle-label">${escapeHtml(descriptor.label)}</span>`;
       button.title = `Edit ${descriptor.type}`;
+      button.style.top = `${118 + handleLayer.querySelectorAll(".edit-handle-stack-item").length * 52}px`;
+      button.style.left = "14px";
       button.addEventListener("click", descriptor.action);
-      sectionHandleStack.appendChild(button);
+      handleLayer.appendChild(button);
     });
   }
 
@@ -751,6 +768,10 @@ async function loadSite() {
 }
 
 siteFrame.addEventListener("load", () => {
+  const frameDocument = siteFrame.contentWindow?.document;
+  if (frameDocument && !editableContent.sections.length) {
+    editableContent.sections = extractSectionsFromPreview(frameDocument);
+  }
   applyPreview();
   siteFrame.contentWindow?.addEventListener("scroll", renderHandles, { passive: true });
   startHandleSync();
