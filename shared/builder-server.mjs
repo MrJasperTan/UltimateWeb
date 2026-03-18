@@ -237,7 +237,11 @@ function serveFile(response, filePath) {
     const ext = extname(target).toLowerCase();
     const contentType = MIME_TYPES[ext] || "application/octet-stream";
     const buffer = readFileSync(target);
-    response.writeHead(200, { "Content-Type": contentType });
+    const headers = { "Content-Type": contentType };
+    if (ext === ".html" || ext === ".js" || ext === ".css") {
+      headers["Cache-Control"] = "no-store, max-age=0";
+    }
+    response.writeHead(200, headers);
     response.end(buffer);
   } catch (error) {
     sendText(response, 500, `Failed to serve file: ${error.message}`);
