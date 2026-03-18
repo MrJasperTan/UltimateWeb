@@ -59,7 +59,7 @@ function toPublicAssetUrl(path) {
 }
 
 function openInlineEditor(slug) {
-  const editorVersion = "20260318l";
+  const editorVersion = "20260318m";
   const editorPath = `/editor.html?v=${editorVersion}&slug=${encodeURIComponent(slug)}`;
   window.location.href = toPublicAssetUrl(editorPath);
 }

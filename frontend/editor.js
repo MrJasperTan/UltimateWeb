@@ -512,14 +512,13 @@ function getHandleDescriptors() {
   });
 
   const marqueeNode = frameDocument.querySelector(".marquee-wrap");
-  const marqueeTextNode = frameDocument.querySelector(".marquee-text");
   if (marqueeNode) descriptors.push({
     type: "marquee",
     label: "Banner",
     shortLabel: "B",
     node: marqueeNode,
-    anchorNode: marqueeTextNode || marqueeNode,
-    placement: "anchor-text-right",
+    anchorNode: marqueeNode,
+    placement: "marquee-band-right",
     action: openMarqueeModal,
   });
 
@@ -589,6 +588,9 @@ function renderHandles() {
         Math.max(14, rect.right - 120),
         Math.max(14, frameWidth - 164)
       );
+    } else if (descriptor.placement === "marquee-band-right" && rect) {
+      top = rect.top + (rect.height / 2) - 20;
+      left = Math.max(14, frameWidth - 164);
     } else if (descriptor.placement === "dock-left") {
       top = 118 + (descriptor.dockIndex || 0) * 52;
       left = 14;
