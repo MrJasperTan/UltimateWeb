@@ -512,13 +512,14 @@ function getHandleDescriptors() {
   });
 
   const marqueeNode = frameDocument.querySelector(".marquee-wrap");
+  const marqueeTextNode = frameDocument.querySelector(".marquee-text");
   if (marqueeNode) descriptors.push({
     type: "marquee",
     label: "Banner",
     shortLabel: "B",
     node: marqueeNode,
-    anchorNode: marqueeNode,
-    placement: "anchor-right",
+    anchorNode: marqueeTextNode || marqueeNode,
+    placement: "anchor-text-right",
     action: openMarqueeModal,
   });
 
@@ -582,6 +583,12 @@ function renderHandles() {
     } else if (descriptor.placement === "anchor-right" && rect) {
       top = rect.top + Math.max(6, rect.height * 0.5) - 20;
       left = Math.max(14, frameWidth - 164);
+    } else if (descriptor.placement === "anchor-text-right" && rect) {
+      top = rect.top + Math.max(6, rect.height * 0.5) - 20;
+      left = Math.min(
+        Math.max(14, rect.right - 120),
+        Math.max(14, frameWidth - 164)
+      );
     } else if (descriptor.placement === "dock-left") {
       top = 118 + (descriptor.dockIndex || 0) * 52;
       left = 14;
