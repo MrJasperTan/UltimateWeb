@@ -79,10 +79,14 @@ function buildPreviewSrcdoc(html, previewUrl) {
   const baseHref = getPreviewBaseHref(previewUrl);
   const rewrittenHtml = rewritePreviewAssetUrls(html, previewUrl);
   const baseTag = `<base href="${escapeHtml(baseHref)}">`;
-  if (/<head[^>]*>/i.test(rewrittenHtml)) {
-    return rewrittenHtml.replace(/<head([^>]*)>/i, `<head$1>${baseTag}`);
+  let nextHtml = rewrittenHtml.replace(
+    /<div class="marquee-wrap"([^>]*)>/i,
+    `<div class="marquee-wrap"$1><button type="button" class="editor-marquee-marker" aria-label="Edit banner"></button>`
+  );
+  if (/<head[^>]*>/i.test(nextHtml)) {
+    return nextHtml.replace(/<head([^>]*)>/i, `<head$1>${baseTag}`);
   }
-  return `<!doctype html><html><head>${baseTag}</head><body>${rewrittenHtml}</body></html>`;
+  return `<!doctype html><html><head>${baseTag}</head><body>${nextHtml}</body></html>`;
 }
 
 async function apiFetch(path, options = {}) {
@@ -533,12 +537,13 @@ function getHandleDescriptors() {
   });
 
   const marqueeNode = frameDocument.querySelector(".marquee-wrap");
+  const marqueeMarkerNode = frameDocument.querySelector(".editor-marquee-marker");
   if (marqueeNode) descriptors.push({
     type: "marquee",
     label: "Banner",
     shortLabel: "B",
     node: marqueeNode,
-    anchorNode: marqueeNode,
+    anchorNode: marqueeMarkerNode || marqueeNode,
     placement: "anchor-left",
     action: openMarqueeModal,
   });
@@ -589,6 +594,19 @@ function renderHandles() {
     });
     link.dataset.editorNavBound = "true";
   });
+
+  const marqueeMarker = frameDocument.querySelector(".editor-marquee-marker");
+  if (marqueeMarker && !marqueeMarker.dataset.editorBound) {
+    marqueeMarker.style.position = "absolute";
+    marqueeMarker.style.top = "50%";
+    marqueeMarker.style.right = "18px";
+    marqueeMarker.style.transform = "translateY(-50%)";
+    marqueeMarker.style.width = "1px";
+    marqueeMarker.style.height = "1px";
+    marqueeMarker.style.opacity = "0";
+    marqueeMarker.style.pointerEvents = "none";
+    marqueeMarker.dataset.editorBound = "true";
+  }
 
   getHandleDescriptors().forEach((descriptor) => {
     const rect = descriptor.anchorNode ? descriptor.anchorNode.getBoundingClientRect() : null;
