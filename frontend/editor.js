@@ -625,6 +625,7 @@ function renderHandles() {
     } else if (descriptor.placement === "marquee-fixed-right" && rect) {
       top = rect.top + (rect.height * 0.5) - 20;
       left = Math.max(14, frameWidth - 164);
+    }
     if (top < -40 || top > frameHeight + 40) return;
 
     const button = document.createElement("button");
