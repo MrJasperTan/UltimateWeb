@@ -63,6 +63,7 @@ Optional:
   --start-prompt     Override first-frame prompt
   --end-prompt       Override last-frame prompt
   --motion-prompt    Override video motion prompt
+  --content-overrides JSON string with exact editable copy overrides
   --start-model      Override start image model
   --end-model        Override end image model
   --video-model      Override video model
@@ -1512,6 +1513,7 @@ function buildContentProfile(businessProfile, pageMode) {
     category,
     pageMode,
     theme,
+    heroTitle: topic,
     heroKicker,
     heroSub,
     tagline: dramatic.tagline,
@@ -1526,6 +1528,106 @@ function buildContentProfile(businessProfile, pageMode) {
         ? `${research.sources.length} live sources${sourceContext?.url ? " plus the source site" : ""} informed the hero, proof, and spec sections.`
         : "Built with best-effort category research and premium design defaults.",
   };
+}
+
+function normalizeEditableCardEntry(card = {}) {
+  return {
+    title: String(card.title || "").trim(),
+    body: String(card.body || "").trim(),
+  };
+}
+
+function normalizeEditableStatEntry(stat = {}, fallback = {}) {
+  return {
+    value: String(stat.value ?? fallback.value ?? "").trim(),
+    decimals: String(stat.decimals ?? fallback.decimals ?? "0").trim() || "0",
+    suffix: String(stat.suffix ?? fallback.suffix ?? "").trim(),
+    label: String(stat.label ?? fallback.label ?? "").trim(),
+  };
+}
+
+function buildEditableContent(profile) {
+  return {
+    hero: {
+      kicker: String(profile.heroKicker || "").trim(),
+      title: String(profile.heroTitle || "").trim(),
+      sub: String(profile.heroSub || "").trim(),
+      trustLine: String(profile.trustLine || "").trim(),
+    },
+    sections: profile.sections.map((section) => ({
+      kind: section.kind,
+      label: String(section.label || "").trim(),
+      heading: String(section.heading || "").trim(),
+      body: String(section.body || "").trim(),
+      button: String(section.button || "").trim(),
+      stats: Array.isArray(section.stats) ? section.stats.map((stat) => normalizeEditableStatEntry(stat)) : [],
+      cards: Array.isArray(section.cards) ? section.cards.map((card) => normalizeEditableCardEntry(card)) : [],
+      items: Array.isArray(section.items)
+        ? section.items.map((item) => ({
+            question: String(item.question || "").trim(),
+            answer: String(item.answer || "").trim(),
+          }))
+        : [],
+    })),
+    cta: {
+      label: String(profile.cta?.label || "").trim(),
+      heading: String(profile.cta?.heading || "").trim(),
+      body: String(profile.cta?.body || "").trim(),
+      button: String(profile.cta?.button || "").trim(),
+      headerCta: String(profile.cta?.headerCta || "").trim(),
+    },
+  };
+}
+
+function applyContentOverrides(profile, overrides) {
+  if (!overrides || typeof overrides !== "object") return profile;
+
+  const next = {
+    ...profile,
+    heroKicker: cleanOptionalString(overrides.hero?.kicker) || profile.heroKicker,
+    heroTitle: cleanOptionalString(overrides.hero?.title) || profile.heroTitle,
+    heroSub: cleanOptionalString(overrides.hero?.sub) || profile.heroSub,
+    trustLine: cleanOptionalString(overrides.hero?.trustLine) || profile.trustLine,
+    sections: profile.sections.map((section, index) => {
+      const sectionOverride = overrides.sections?.[index];
+      if (!sectionOverride || typeof sectionOverride !== "object") return { ...section };
+      const merged = {
+        ...section,
+        label: cleanOptionalString(sectionOverride.label) || section.label,
+        heading: cleanOptionalString(sectionOverride.heading) || section.heading,
+        body: cleanOptionalString(sectionOverride.body) || section.body,
+        button: cleanOptionalString(sectionOverride.button) || section.button,
+      };
+      if (Array.isArray(section.stats) && Array.isArray(sectionOverride.stats)) {
+        merged.stats = section.stats.map((stat, statIndex) =>
+          normalizeEditableStatEntry(sectionOverride.stats[statIndex], stat)
+        );
+      }
+      if (Array.isArray(section.cards) && Array.isArray(sectionOverride.cards)) {
+        merged.cards = section.cards.map((card, cardIndex) => ({
+          title: cleanOptionalString(sectionOverride.cards[cardIndex]?.title) || card.title,
+          body: cleanOptionalString(sectionOverride.cards[cardIndex]?.body) || card.body,
+        }));
+      }
+      if (Array.isArray(section.items) && Array.isArray(sectionOverride.items)) {
+        merged.items = section.items.map((item, itemIndex) => ({
+          question: cleanOptionalString(sectionOverride.items[itemIndex]?.question) || item.question,
+          answer: cleanOptionalString(sectionOverride.items[itemIndex]?.answer) || item.answer,
+        }));
+      }
+      return merged;
+    }),
+    cta: {
+      ...profile.cta,
+      label: cleanOptionalString(overrides.cta?.label) || profile.cta.label,
+      heading: cleanOptionalString(overrides.cta?.heading) || profile.cta.heading,
+      body: cleanOptionalString(overrides.cta?.body) || profile.cta.body,
+      button: cleanOptionalString(overrides.cta?.button) || profile.cta.button,
+      headerCta: cleanOptionalString(overrides.cta?.headerCta) || profile.cta.headerCta,
+    },
+  };
+
+  return next;
 }
 
 function estimateSectionWeight(section) {
@@ -1579,7 +1681,7 @@ function renderCardMarkup(cards) {
 
 function renderSectionMarkup(section, timing, index, totalSections) {
   const alignClass = `align-${section.alignment || "left"}`;
-  const commonAttrs = `class="scroll-section section-${escapeHtml(section.kind)} ${alignClass}" data-enter="${timing.enter}" data-leave="${timing.leave}" data-animation="${escapeHtml(section.animation || "fade-up")}"`;
+  const commonAttrs = `class="scroll-section section-${escapeHtml(section.kind)} ${alignClass}" data-enter="${timing.enter}" data-leave="${timing.leave}" data-animation="${escapeHtml(section.animation || "fade-up")}" data-editor-section="${index}" data-editor-kind="${escapeHtml(section.kind)}"`;
 
   if (section.kind === "stats") {
     return `
@@ -1646,10 +1748,11 @@ ${renderCardMarkup(
     </section>`;
 }
 
-function writeScaffoldFiles({ siteDir, topic, brand, pageMode, frameCount, frameExtension, research, sourceContext }) {
+function writeScaffoldFiles({ siteDir, topic, brand, pageMode, frameCount, frameExtension, research, sourceContext, contentOverrides = null }) {
   const businessProfile = buildBusinessProfile(topic, brand, sourceContext, research);
-  const profile = buildContentProfile(businessProfile, pageMode);
-  const headline = escapeHtml(topic.toUpperCase());
+  const profile = applyContentOverrides(buildContentProfile(businessProfile, pageMode), contentOverrides);
+  const editableContent = buildEditableContent(profile);
+  const headline = escapeHtml(String(profile.heroTitle || topic).toUpperCase());
   const safeTopic = escapeHtml(topic);
   const safeBrand = escapeHtml(brand);
   const logoMarkup = sourceContext?.logoUrl
@@ -1698,7 +1801,7 @@ function writeScaffoldFiles({ siteDir, topic, brand, pageMode, frameCount, frame
     <a href="#cta">${escapeHtml(profile.cta.headerCta)}</a>
   </header>
 
-  <section class="hero-standalone">
+  <section class="hero-standalone" data-editor-hero="true">
     <p class="hero-kicker">${escapeHtml(profile.heroKicker)}</p>
     <h1>${headline}</h1>
     <p class="hero-sub">${escapeHtml(profile.heroSub)}</p>
@@ -2387,6 +2490,7 @@ setupHeroTransition();
     pageMode: profile.pageMode,
     sectionKinds: renderedSections.map((section) => section.kind),
     trustLine: profile.trustLine,
+    editableContent,
   };
 }
 
@@ -2636,6 +2740,9 @@ async function main() {
   const businessProfile = buildBusinessProfile(topic, brand, sourceContext, research);
   const defaults = createPrompts(businessProfile);
   const changeRequest = cleanOptionalString(options["change-request"]);
+  const contentOverrides = cleanOptionalString(options["content-overrides"])
+    ? JSON.parse(String(options["content-overrides"]))
+    : null;
   const startPrompt = applyChangeRequest(String(options["start-prompt"] || defaults.startPrompt), changeRequest);
   const endPrompt = applyChangeRequest(String(options["end-prompt"] || defaults.endPrompt), changeRequest);
   const motionPrompt = applyChangeRequest(String(options["motion-prompt"] || defaults.motionPrompt), changeRequest);
@@ -2650,6 +2757,7 @@ async function main() {
     paletteOverride,
     changeRequest,
     editSourceSlug: cleanOptionalString(options["edit-source-slug"]),
+    contentOverrides,
     videoDurationSeconds: normalizedDuration,
     prompts: { startPrompt, endPrompt, motionPrompt },
     generatedAt: new Date().toISOString(),
@@ -2824,6 +2932,7 @@ async function main() {
     frameExtension: extraction.frameExtension,
     research,
     sourceContext,
+    contentOverrides,
   });
 
   metadata.startImageUrl = startImageUrl;
@@ -2837,6 +2946,7 @@ async function main() {
   metadata.category = scaffold.category;
   metadata.sectionKinds = scaffold.sectionKinds;
   metadata.trustLine = scaffold.trustLine;
+  metadata.editableContent = scaffold.editableContent;
   metadata.sourceContext = sourceContext;
   metadata.research = research || {
     category: scaffold.category,

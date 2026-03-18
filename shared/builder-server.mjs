@@ -436,6 +436,113 @@ function parseColorList(rawColors) {
   ).slice(0, 6);
 }
 
+function stripHtml(value) {
+  return String(value || "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&quot;/gi, "\"")
+    .replace(/&#39;/gi, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function parseEditableContentFromSite(siteRoot, metadata = null) {
+  const htmlPath = join(siteRoot, "index.html");
+  if (!existsSync(htmlPath)) return null;
+  const html = readFileSync(htmlPath, "utf-8");
+
+  const getMatch = (pattern) => {
+    const match = html.match(pattern);
+    return match?.[1] ? stripHtml(match[1]) : "";
+  };
+
+  const hero = {
+    kicker: getMatch(/<p class="hero-kicker">([\s\S]*?)<\/p>/i),
+    title: getMatch(/<section class="hero-standalone"[^>]*>[\s\S]*?<h1>([\s\S]*?)<\/h1>/i),
+    sub: getMatch(/<p class="hero-sub">([\s\S]*?)<\/p>/i),
+    trustLine: getMatch(/<p class="hero-trust">([\s\S]*?)<\/p>/i),
+  };
+
+  const sectionBlocks = Array.from(html.matchAll(/<section[^>]+class="scroll-section[\s\S]*?<\/section>/gi), (match) => match[0]);
+  const sections = sectionBlocks.map((block) => {
+    const kind = stripHtml(block.match(/data-editor-kind="([^"]+)"/i)?.[1] || "")
+      || (block.includes("section-stats") ? "stats" : "")
+      || (block.includes("cards-grid faq-grid") ? "faq" : "")
+      || (block.includes("cards-grid") ? "cards" : "")
+      || (block.includes("cta-button") ? "cta" : "copy");
+    const section = {
+      kind,
+      label: stripHtml(block.match(/<p class="section-label">([\s\S]*?)<\/p>/i)?.[1] || ""),
+      heading: stripHtml(block.match(/<h2 class="section-heading">([\s\S]*?)<\/h2>/i)?.[1] || ""),
+      body: stripHtml(block.match(/<p class="section-body">([\s\S]*?)<\/p>/i)?.[1] || ""),
+      button: stripHtml(block.match(/<a class="cta-button"[^>]*>([\s\S]*?)<\/a>/i)?.[1] || ""),
+      stats: [],
+      cards: [],
+      items: [],
+    };
+
+    if (kind === "stats") {
+      section.stats = Array.from(
+        block.matchAll(/<div class="stat">\s*<span class="stat-number" data-value="([^"]*)" data-decimals="([^"]*)">[\s\S]*?<\/span>\s*<span class="stat-suffix">([\s\S]*?)<\/span>\s*<span class="stat-label">([\s\S]*?)<\/span>\s*<\/div>/gi),
+        (statMatch) => ({
+          value: stripHtml(statMatch[1] || ""),
+          decimals: stripHtml(statMatch[2] || "0"),
+          suffix: stripHtml(statMatch[3] || ""),
+          label: stripHtml(statMatch[4] || ""),
+        })
+      );
+    }
+
+    if (kind === "cards") {
+      section.cards = Array.from(
+        block.matchAll(/<article class="stat info-card">\s*<span class="stat-label">([\s\S]*?)<\/span>\s*<p class="card-body">([\s\S]*?)<\/p>\s*<\/article>/gi),
+        (cardMatch) => ({
+          title: stripHtml(cardMatch[1] || ""),
+          body: stripHtml(cardMatch[2] || ""),
+        })
+      );
+    }
+
+    if (kind === "faq") {
+      section.items = Array.from(
+        block.matchAll(/<article class="stat info-card">\s*<span class="stat-label">([\s\S]*?)<\/span>\s*<p class="card-body">([\s\S]*?)<\/p>\s*<\/article>/gi),
+        (itemMatch) => ({
+          question: stripHtml(itemMatch[1] || ""),
+          answer: stripHtml(itemMatch[2] || ""),
+        })
+      );
+    }
+
+    return section;
+  });
+
+  if (!sections.length && Array.isArray(metadata?.editableContent?.sections)) {
+    return metadata.editableContent;
+  }
+
+  const ctaSection = sections[sections.length - 1] || null;
+  return {
+    hero,
+    sections: ctaSection ? sections.slice(0, -1) : sections,
+    cta: ctaSection
+      ? {
+          label: ctaSection.label,
+          heading: ctaSection.heading,
+          body: ctaSection.body,
+          button: ctaSection.button,
+          headerCta: getMatch(/<header class="site-header">[\s\S]*?<a href="#cta">([\s\S]*?)<\/a>/i),
+        }
+      : {
+          label: "",
+          heading: "",
+          body: "",
+          button: "",
+          headerCta: "",
+        },
+  };
+}
+
 function parseAllowedOrigins() {
   const raw = cleanOptionalString(process.env.ULTIMATEWEB_ALLOWED_ORIGINS);
   if (!raw) return [];
@@ -526,10 +633,11 @@ export function startBuilderServer({ appDir, publicDir }) {
       : Array.isArray(metadata.sourceContext?.palette)
         ? metadata.sourceContext.palette
         : [];
+    const editableContent = metadata.editableContent || parseEditableContentFromSite(siteRoot, metadata);
 
     return {
       slug,
-      title: String(metadata.topic || slug.replace(/-/g, " ")).trim(),
+      title: String(editableContent?.hero?.title || metadata.topic || slug.replace(/-/g, " ")).trim(),
       topic: String(metadata.topic || "").trim(),
       pageMode: normalizePageMode(metadata.pageMode),
       existingWebsite: cleanOptionalString(metadata.sourceUrl || metadata.sourceContext?.url),
@@ -538,6 +646,8 @@ export function startBuilderServer({ appDir, publicDir }) {
       endPrompt: cleanOptionalString(metadata.prompts?.endPrompt),
       videoPrompt: cleanOptionalString(metadata.prompts?.motionPrompt),
       editSourceSlug: cleanOptionalString(metadata.editSourceSlug),
+      siteUrl: `/generated-sites/${slug}/index.html`,
+      editableContent,
       media: {
         startImage: currentMedia?.startImage
           ? {
@@ -696,6 +806,7 @@ export function startBuilderServer({ appDir, publicDir }) {
       ["--motion-prompt", options.videoPrompt],
       ["--change-request", options.changeRequest],
       ["--edit-source-slug", options.editSourceSlug],
+      ["--content-overrides", options.contentOverrides ? JSON.stringify(options.contentOverrides) : null],
     ];
 
     for (const [flag, value] of optionalArgs) {
@@ -982,6 +1093,9 @@ export function startBuilderServer({ appDir, publicDir }) {
         const videoPrompt = cleanOptionalString(body.fields.videoPrompt);
         const changeRequest = cleanOptionalString(body.fields.changeRequest);
         const editSourceSlug = cleanOptionalString(body.fields.editSourceSlug);
+        const contentOverrides = cleanOptionalString(body.fields.contentOverrides)
+          ? JSON.parse(String(body.fields.contentOverrides))
+          : null;
         const colors = parseColorList(body.fields.colors);
         const hasUploadedMedia = Boolean(uploadedStartImage || uploadedEndImage || uploadedVideo);
 
@@ -1037,6 +1151,7 @@ export function startBuilderServer({ appDir, publicDir }) {
           videoPrompt,
           changeRequest,
           editSourceSlug,
+          contentOverrides,
         });
         sendJson(response, 202, {
           id: job.id,

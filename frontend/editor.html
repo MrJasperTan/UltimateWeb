@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ultimateweb Editor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Syne:wght@500;700;800&display=swap" rel="stylesheet" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="stylesheet" href="/editor.css" />
+</head>
+<body>
+  <div class="editor-shell">
+    <header class="editor-topbar">
+      <div>
+        <p class="eyebrow">Inline Editor</p>
+        <h1 id="editor-title">Loading site...</h1>
+        <p id="editor-subtitle" class="subtitle">Open the site and tap a circle to edit that part.</p>
+      </div>
+      <div class="topbar-actions">
+        <a class="ghost-button" href="/">Back</a>
+        <button id="publish-btn" type="button">Create Edited Version</button>
+      </div>
+    </header>
+
+    <section class="editor-status">
+      <p id="status-text">Loading editable site...</p>
+      <p id="job-text" class="job-text"></p>
+    </section>
+
+    <main class="editor-main">
+      <aside class="editor-sidebar">
+        <section class="sidebar-card">
+          <h2>What you can edit</h2>
+          <ul>
+            <li>Hero title, subtitle, trust line</li>
+            <li>Each section’s label, heading, and content</li>
+            <li>Stats, cards, FAQ items, and CTA copy</li>
+            <li>Start image, end image, video, and media prompts</li>
+          </ul>
+        </section>
+        <section class="sidebar-card">
+          <h2>How it works</h2>
+          <p>Changes update the live preview immediately. Publishing creates a new version from this site’s current media and edited fields.</p>
+        </section>
+      </aside>
+
+      <section class="preview-panel">
+        <div id="preview-shell" class="preview-shell">
+          <iframe id="site-frame" title="Generated site preview"></iframe>
+          <div id="handle-layer" class="handle-layer" aria-hidden="true"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="modal-backdrop" class="modal-backdrop hidden">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div class="modal-header">
+        <div>
+          <p class="eyebrow">Edit Block</p>
+          <h2 id="modal-title">Edit</h2>
+        </div>
+        <button id="modal-close-btn" class="icon-button" type="button" aria-label="Close">X</button>
+      </div>
+      <div id="modal-body" class="modal-body"></div>
+      <div class="modal-actions">
+        <button id="modal-cancel-btn" class="ghost-button" type="button">Cancel</button>
+        <button id="modal-save-btn" type="button">Apply Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/api/config.js"></script>
+  <script src="/editor.js"></script>
+</body>
+</html>

@@ -58,6 +58,11 @@ function toPublicAssetUrl(path) {
   return path;
 }
 
+function openInlineEditor(slug) {
+  const editorPath = `/editor.html?slug=${encodeURIComponent(slug)}`;
+  window.location.href = toPublicAssetUrl(editorPath);
+}
+
 async function apiFetch(path, options = {}) {
   const response = await fetch(toApiUrl(path), {
     credentials: "include",
@@ -521,11 +526,7 @@ galleryGrid.addEventListener("click", async (event) => {
 
   const editButton = event.target.closest("[data-edit-slug]");
   if (!editButton) return;
-  try {
-    await beginEdit(editButton.getAttribute("data-edit-slug"));
-  } catch (error) {
-    setStatus(`Could not load edit config: ${error.message}`);
-  }
+  openInlineEditor(editButton.getAttribute("data-edit-slug"));
 });
 
 startImageInput.addEventListener("change", refreshMediaStates);
