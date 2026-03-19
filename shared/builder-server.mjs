@@ -1060,10 +1060,17 @@ export function startBuilderServer({ appDir, publicDir }) {
     applyCinematic();
   }
 
-  window.addEventListener("load", () => {
+  const scheduleApplyDraft = () => {
     applyDraft();
     requestAnimationFrame(applyDraft);
-  });
+  };
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", scheduleApplyDraft, { once: true });
+  } else {
+    scheduleApplyDraft();
+  }
+  window.addEventListener("load", scheduleApplyDraft, { once: true });
 })();
 </script>`;
   }

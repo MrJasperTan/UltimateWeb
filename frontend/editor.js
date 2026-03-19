@@ -491,10 +491,17 @@ function buildStandalonePreviewRuntimeScript(previewData) {
     applyCinematic();
   }
 
-  window.addEventListener("load", () => {
+  const scheduleApplyDraft = () => {
     applyDraft();
     requestAnimationFrame(applyDraft);
-  });
+  };
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", scheduleApplyDraft, { once: true });
+  } else {
+    scheduleApplyDraft();
+  }
+  window.addEventListener("load", scheduleApplyDraft, { once: true });
 })();
 </script>`;
 }
@@ -1271,6 +1278,13 @@ function applyPreview() {
   const frameDocument = frameWindow?.document;
   if (!frameDocument) return;
 
+  updateElementText(frameDocument.querySelector(".hero-kicker"), editableContent.hero.kicker);
+  updateElementText(frameDocument.querySelector(".hero-standalone h1"), editableContent.hero.title);
+  updateElementText(frameDocument.querySelector(".hero-sub"), editableContent.hero.sub);
+  updateElementText(frameDocument.querySelector(".hero-trust"), editableContent.hero.trustLine);
+  updateElementText(frameDocument.querySelector(".marquee-text"), editableContent.marqueeText);
+  updateElementText(frameDocument.querySelector(".site-header a[href=\"#cta\"]"), editableContent.cta.headerCta);
+
   const sectionNodes = Array.from(frameDocument.querySelectorAll(".scroll-section"));
   editableContent.sections.forEach((section, index) => {
     const node = sectionNodes[index];
@@ -1312,6 +1326,14 @@ function applyPreview() {
       });
     }
   });
+
+  const ctaNode = frameDocument.querySelector("#cta");
+  if (ctaNode) {
+    updateElementText(ctaNode.querySelector(".section-label"), editableContent.cta.label);
+    updateElementText(ctaNode.querySelector(".section-heading"), editableContent.cta.heading);
+    updateElementText(ctaNode.querySelector(".section-body"), editableContent.cta.body);
+    updateElementText(ctaNode.querySelector(".cta-button"), editableContent.cta.button);
+  }
 
   applyCinematicPreview(frameDocument);
 
