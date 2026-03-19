@@ -560,6 +560,10 @@ function applyModalChanges() {
       if (field.files?.[0]) formData.append(field.name, field.files[0]);
       return;
     }
+    if (field.type === "checkbox") {
+      if (field.checked) formData.append(field.name, "on");
+      return;
+    }
     formData.append(field.name, field.value);
   });
 

@@ -384,7 +384,7 @@ function parseMultipartBody(request) {
           }
         }
 
-        resolveBody({ fields, files });
+        resolveBody({ fields, files, uploadDir });
       } catch (error) {
         rejectBody(new Error(`Invalid multipart body: ${error.message}`));
       }
@@ -426,6 +426,15 @@ function normalizePageMode(rawMode) {
 function cleanOptionalString(value) {
   const text = String(value || "").trim();
   return text ? text : null;
+}
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 function parseColorList(rawColors) {
@@ -661,6 +670,399 @@ export function startBuilderServer({ appDir, publicDir }) {
     return preview;
   }
 
+  async function resolvePreviewCinematicLayers(userId, rawLayers, files = {}, previewId) {
+    if (!rawLayers || typeof rawLayers !== "object") return null;
+
+    const mapLayer = async (layer, fallbackLabel) => {
+      if (!layer || typeof layer !== "object") {
+        return {
+          enabled: false,
+          label: fallbackLabel,
+          layout: "card",
+          loopMode: "loop",
+          speed: 1,
+          url: "",
+        };
+      }
+
+      const uploadField = cleanOptionalString(layer.uploadField);
+      const uploadedFile = uploadField ? files?.[uploadField] : null;
+      if (uploadedFile?.path) {
+        return {
+          enabled: Boolean(layer.enabled),
+          label: cleanOptionalString(layer.label) || fallbackLabel,
+          layout: String(layer.layout || "card"),
+          loopMode: String(layer.loopMode || "loop"),
+          speed: Number(layer.speed || 1),
+          url: `/draft-previews/${previewId}/assets/${encodeURIComponent(basename(uploadedFile.path))}`,
+        };
+      }
+
+      const sourceUrl = cleanOptionalString(layer.sourceUrl || layer.sourceInput || layer.url);
+      if (!sourceUrl) {
+        return {
+          enabled: false,
+          label: cleanOptionalString(layer.label) || fallbackLabel,
+          layout: String(layer.layout || "card"),
+          loopMode: String(layer.loopMode || "loop"),
+          speed: Number(layer.speed || 1),
+          url: "",
+        };
+      }
+
+      await resolveGeneratedSiteAssetInput(userId, sourceUrl);
+      return {
+        enabled: Boolean(layer.enabled),
+        label: cleanOptionalString(layer.label) || fallbackLabel,
+        layout: String(layer.layout || "card"),
+        loopMode: String(layer.loopMode || "loop"),
+        speed: Number(layer.speed || 1),
+        url: sourceUrl,
+      };
+    };
+
+    return {
+      hero: await mapLayer(rawLayers.hero, "Hero"),
+      sections: await Promise.all(
+        (Array.isArray(rawLayers.sections) ? rawLayers.sections : []).map((layer, index) =>
+          mapLayer(layer, `Section ${index + 1}`)
+        )
+      ),
+    };
+  }
+
+  function buildDraftPreviewRuntimeScript(previewData) {
+    const serializedData = JSON.stringify(previewData).replace(/</g, "\\u003c");
+    return `
+<script>
+(() => {
+  const draft = ${serializedData};
+
+  function updateText(selector, value, root = document) {
+    const node = root.querySelector(selector);
+    if (node) node.textContent = value || "";
+  }
+
+  function upsertMeta(attribute, key, content) {
+    let selector = "";
+    if (attribute === "name") selector = 'meta[name="' + key + '"]';
+    if (attribute === "property") selector = 'meta[property="' + key + '"]';
+    let meta = selector ? document.head.querySelector(selector) : null;
+    if (!content) {
+      if (meta) meta.remove();
+      return;
+    }
+    if (!meta) {
+      meta = document.createElement("meta");
+      meta.setAttribute(attribute, key);
+      document.head.appendChild(meta);
+    }
+    meta.setAttribute("content", content);
+  }
+
+  function upsertCanonical(url) {
+    let link = document.head.querySelector('link[rel="canonical"]');
+    if (!url) {
+      if (link) link.remove();
+      return;
+    }
+    if (!link) {
+      link = document.createElement("link");
+      link.setAttribute("rel", "canonical");
+      document.head.appendChild(link);
+    }
+    link.setAttribute("href", url);
+  }
+
+  function applySeo() {
+    const canonicalUrl = String(draft.publicSiteUrl || "").trim();
+    const title = String(draft.title || "").trim();
+    if (title) document.title = title;
+    upsertCanonical(canonicalUrl);
+    upsertMeta("property", "og:url", canonicalUrl || "");
+    upsertMeta("name", "robots", canonicalUrl ? "index, follow" : "noindex, nofollow");
+  }
+
+  function ensureCinematicStyles() {
+    if (document.getElementById("uw-draft-preview-style")) return;
+    const style = document.createElement("style");
+    style.id = "uw-draft-preview-style";
+    style.textContent = \`
+      .hero-standalone { position: relative; }
+      .hero-standalone > *:not(.hero-cinematic) { position: relative; z-index: 2; }
+      .hero-cinematic,
+      .section-cinematic {
+        position: absolute;
+        overflow: hidden;
+        border-radius: 1.6rem;
+        border: 1px solid rgba(255,255,255,0.1);
+        background:
+          linear-gradient(160deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03)),
+          rgba(5,8,10,0.34);
+        box-shadow: 0 28px 70px rgba(0,0,0,0.34);
+        z-index: 0;
+      }
+      .hero-cinematic::after,
+      .section-cinematic::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background:
+          linear-gradient(180deg, rgba(8,10,15,0.04), rgba(8,10,15,0.28)),
+          radial-gradient(circle at 20% 20%, rgba(255,255,255,0.14), transparent 28%);
+      }
+      .hero-cinematic-full {
+        inset: 0;
+        border-radius: 0;
+        border: 0;
+        box-shadow: none;
+        background: rgba(0,0,0,0.12);
+      }
+      .hero-cinematic-full::after {
+        background:
+          linear-gradient(90deg, rgba(7,8,12,0.82) 0%, rgba(7,8,12,0.46) 38%, rgba(7,8,12,0.28) 62%, rgba(7,8,12,0.62) 100%),
+          radial-gradient(circle at 20% 20%, rgba(255,255,255,0.1), transparent 26%);
+      }
+      .hero-cinematic-card { inset: 8vh 5vw 12vh 49vw; }
+      .section-cinematic { top: 50%; transform: translateY(-50%); }
+      .section-cinematic-card { width: min(34vw, 32rem); aspect-ratio: 16 / 10; }
+      .section-cinematic-right { right: 5vw; }
+      .section-cinematic-left { left: 5vw; }
+      .section-cinematic-center { left: 50%; transform: translate(-50%, -50%); width: min(72vw, 56rem); aspect-ratio: 16 / 7; }
+      .section-cinematic-full { inset: clamp(1rem, 3vw, 2rem) 4vw; top: 0; transform: none; border-radius: 2rem; }
+      .section-cinematic-full::after {
+        background:
+          linear-gradient(180deg, rgba(7,9,13,0.68), rgba(7,9,13,0.38)),
+          radial-gradient(circle at 50% 12%, rgba(255,255,255,0.14), transparent 24%);
+      }
+      .cinematic-video {
+        width: 100%;
+        height: 100%;
+        display: block;
+        object-fit: cover;
+        pointer-events: none;
+      }
+      .scroll-section { isolation: isolate; }
+      .section-inner { position: relative; z-index: 2; }
+      @media (max-width: 900px) {
+        .hero-cinematic-card,
+        .section-cinematic-card,
+        .section-cinematic-center,
+        .section-cinematic-full {
+          position: relative;
+          inset: auto;
+          left: auto;
+          right: auto;
+          top: auto;
+          transform: none;
+          width: 100%;
+          aspect-ratio: 16 / 9;
+          margin: 0 auto 1rem;
+        }
+      }
+    \`;
+    document.head.appendChild(style);
+  }
+
+  function setupVideo(video) {
+    if (!video || video.dataset.previewBound === "true") return;
+    video.dataset.previewBound = "true";
+    const loopMode = String(video.dataset.loopMode || "loop");
+    const speed = Math.min(2.5, Math.max(0.25, Number(video.dataset.playbackSpeed || 1) || 1));
+    let reversing = false;
+    let frameId = 0;
+    let lastTick = 0;
+
+    const stopReverse = () => {
+      if (frameId) cancelAnimationFrame(frameId);
+      frameId = 0;
+      reversing = false;
+      lastTick = 0;
+    };
+
+    const reverseStep = (timestamp) => {
+      if (!reversing) return;
+      if (!lastTick) lastTick = timestamp;
+      const delta = (timestamp - lastTick) / 1000;
+      lastTick = timestamp;
+      const nextTime = Math.max(0, video.currentTime - delta * speed);
+      video.currentTime = nextTime;
+      if (nextTime <= 0.02) {
+        stopReverse();
+        video.currentTime = 0;
+        video.playbackRate = speed;
+        video.play().catch(() => {});
+        return;
+      }
+      frameId = requestAnimationFrame(reverseStep);
+    };
+
+    const startReverse = () => {
+      if (loopMode !== "boomerang" || reversing) return;
+      reversing = true;
+      video.pause();
+      frameId = requestAnimationFrame(reverseStep);
+    };
+
+    video.muted = true;
+    video.defaultMuted = true;
+    video.playsInline = true;
+    video.autoplay = true;
+    video.loop = loopMode !== "boomerang";
+    video.playbackRate = speed;
+    video.addEventListener("canplay", () => {
+      video.playbackRate = speed;
+      video.play().catch(() => {});
+    });
+    if (loopMode === "boomerang") {
+      video.addEventListener("ended", startReverse);
+      video.addEventListener("timeupdate", () => {
+        if (!reversing && video.duration && video.currentTime >= video.duration - 0.04) {
+          startReverse();
+        }
+      });
+      video.addEventListener("play", () => {
+        if (reversing) stopReverse();
+      });
+    }
+  }
+
+  function getSectionPlacementClass(sectionNode, layer) {
+    if (layer.layout === "full-background") return "section-cinematic section-cinematic-full";
+    if (sectionNode.classList.contains("align-right")) return "section-cinematic section-cinematic-card section-cinematic-left";
+    if (sectionNode.classList.contains("align-center")) return "section-cinematic section-cinematic-card section-cinematic-center";
+    return "section-cinematic section-cinematic-card section-cinematic-right";
+  }
+
+  function renderLayer(layer, options = {}) {
+    if (!layer || !layer.enabled || !layer.url) return null;
+    const wrapper = document.createElement("div");
+    wrapper.className = options.type === "hero"
+      ? "hero-cinematic " + (layer.layout === "full-background" ? "hero-cinematic-full" : "hero-cinematic-card")
+      : getSectionPlacementClass(options.sectionNode, layer);
+    const video = document.createElement("video");
+    video.className = "cinematic-video";
+    video.dataset.loopMode = layer.loopMode || "loop";
+    video.dataset.playbackSpeed = String(layer.speed || 1);
+    video.autoplay = true;
+    video.muted = true;
+    video.playsInline = true;
+    video.preload = "metadata";
+    video.src = layer.url;
+    wrapper.appendChild(video);
+    setupVideo(video);
+    return wrapper;
+  }
+
+  function applyContent() {
+    const content = draft.editableContent || {};
+    updateText(".hero-kicker", content.hero && content.hero.kicker);
+    updateText(".hero-standalone h1", content.hero && content.hero.title);
+    updateText(".hero-sub", content.hero && content.hero.sub);
+    updateText(".hero-trust", content.hero && content.hero.trustLine);
+    updateText(".marquee-text", content.marqueeText);
+    updateText(".site-header a[href=\"#cta\"]", content.cta && content.cta.headerCta);
+
+    const sectionNodes = Array.from(document.querySelectorAll(".scroll-section")).filter((node) => node.id !== "cta");
+    (content.sections || []).forEach((section, index) => {
+      const node = sectionNodes[index];
+      if (!node) return;
+      updateText(".section-label", section.label, node);
+      updateText(".section-heading", section.heading, node);
+      updateText(".section-body", section.body, node);
+      updateText(".cta-button", section.button, node);
+
+      if (section.kind === "stats") {
+        Array.from(node.querySelectorAll(".stat")).forEach((statNode, statIndex) => {
+          const stat = section.stats && section.stats[statIndex];
+          if (!stat) return;
+          const statNumber = statNode.querySelector(".stat-number");
+          if (statNumber) {
+            statNumber.textContent = stat.value || "";
+            statNumber.setAttribute("data-value", stat.value || "");
+          }
+          updateText(".stat-suffix", stat.suffix, statNode);
+          updateText(".stat-label", stat.label, statNode);
+        });
+      }
+
+      if (section.kind === "cards") {
+        Array.from(node.querySelectorAll(".info-card")).forEach((cardNode, cardIndex) => {
+          const card = section.cards && section.cards[cardIndex];
+          if (!card) return;
+          updateText(".stat-label", card.title, cardNode);
+          updateText(".card-body", card.body, cardNode);
+        });
+      }
+
+      if (section.kind === "faq") {
+        Array.from(node.querySelectorAll(".info-card")).forEach((itemNode, itemIndex) => {
+          const item = section.items && section.items[itemIndex];
+          if (!item) return;
+          updateText(".stat-label", item.question, itemNode);
+          updateText(".card-body", item.answer, itemNode);
+        });
+      }
+    });
+
+    const ctaNode = document.querySelector("#cta");
+    if (ctaNode && content.cta) {
+      updateText(".section-label", content.cta.label, ctaNode);
+      updateText(".section-heading", content.cta.heading, ctaNode);
+      updateText(".section-body", content.cta.body, ctaNode);
+      updateText(".cta-button", content.cta.button, ctaNode);
+    }
+  }
+
+  function applyCinematic() {
+    ensureCinematicStyles();
+    const layers = draft.cinematicLayers || {};
+
+    const heroNode = document.querySelector(".hero-standalone");
+    if (heroNode) {
+      heroNode.querySelectorAll(".hero-cinematic").forEach((node) => node.remove());
+      const heroLayer = renderLayer(layers.hero, { type: "hero" });
+      if (heroLayer) heroNode.insertBefore(heroLayer, heroNode.firstChild);
+    }
+
+    const sectionNodes = Array.from(document.querySelectorAll(".scroll-section")).filter((node) => node.id !== "cta");
+    sectionNodes.forEach((sectionNode, index) => {
+      sectionNode.querySelectorAll(".section-cinematic").forEach((node) => node.remove());
+      const layer = layers.sections && layers.sections[index];
+      const cinematicNode = renderLayer(layer, { sectionNode });
+      if (cinematicNode) sectionNode.insertBefore(cinematicNode, sectionNode.firstChild);
+    });
+  }
+
+  function applyDraft() {
+    applySeo();
+    applyContent();
+    applyCinematic();
+  }
+
+  window.addEventListener("load", () => {
+    applyDraft();
+    requestAnimationFrame(applyDraft);
+  });
+})();
+</script>`;
+  }
+
+  function renderDraftPreviewHtml(sourceSlug, previewData) {
+    const indexPath = join(generatedDir, sourceSlug, "index.html");
+    if (!existsSync(indexPath) || !statSync(indexPath).isFile()) {
+      throw new Error("Generated site files not found.");
+    }
+
+    const rawHtml = readFileSync(indexPath, "utf-8");
+    const baseTag = `<base href="${escapeHtml(`/generated-sites/${sourceSlug}/`)}" />`;
+    const withBase = /<head([^>]*)>/i.test(rawHtml)
+      ? rawHtml.replace(/<head([^>]*)>/i, `<head$1>${baseTag}`)
+      : `<!doctype html><html><head>${baseTag}</head><body>${rawHtml}</body></html>`;
+    return withBase.replace(/<\/body>/i, `${buildDraftPreviewRuntimeScript(previewData)}</body>`);
+  }
+
   function getSiteConfig(slug) {
     const siteRoot = join(generatedDir, slug);
     if (!existsSync(siteRoot) || !statSync(siteRoot).isDirectory()) return null;
@@ -829,86 +1231,6 @@ export function startBuilderServer({ appDir, publicDir }) {
           hydrateLayer(layer, `Section ${index + 1}`)
         )
       ),
-    };
-  }
-
-  async function buildDraftPreviewSite(topic, pageMode = "conversion", options = {}) {
-    const previewRoot = mkdtempSync(join(tmpdir(), "ultimateweb-preview-"));
-    const previewSlug = "site";
-    const previewSiteDir = join(previewRoot, previewSlug);
-    const args = [
-      pipelineScript,
-      "--topic",
-      topic,
-      "--slug",
-      previewSlug,
-      "--out-dir",
-      previewRoot,
-      "--page-mode",
-      pageMode,
-      "--start-model",
-      "fal-ai/nano-banana-2",
-      "--end-model",
-      "fal-ai/nano-banana-2/edit",
-      "--video-model",
-      "fal-ai/kling-video/v3/pro/image-to-video",
-      "--no-research",
-    ];
-
-    const optionalArgs = [
-      ["--source-url", options.existingWebsite],
-      ["--site-url", options.publicSiteUrl],
-      ["--start-image", options.startImage],
-      ["--end-image", options.endImage],
-      ["--video-path", options.videoPath],
-      ["--video-url", options.videoUrl],
-      ["--start-prompt", options.startPrompt],
-      ["--end-prompt", options.endPrompt],
-      ["--motion-prompt", options.videoPrompt],
-      ["--change-request", options.changeRequest],
-      ["--edit-source-slug", options.editSourceSlug],
-      ["--content-overrides", options.contentOverrides ? JSON.stringify(options.contentOverrides) : null],
-      ["--cinematic-layers", options.cinematicLayers ? JSON.stringify(options.cinematicLayers) : null],
-    ];
-
-    for (const [flag, value] of optionalArgs) {
-      if (!value) continue;
-      args.push(flag, value);
-    }
-
-    for (const color of options.colors || []) {
-      args.push("--color", color);
-    }
-
-    await new Promise((resolveBuild, rejectBuild) => {
-      const logs = [];
-      const child = spawn("node", args, {
-        cwd: rootDir,
-        env: { ...process.env, FAL_KEY: process.env.FAL_KEY || "" },
-      });
-
-      child.stdout.on("data", (chunk) => {
-        const lines = String(chunk).split(/\r?\n/).filter(Boolean);
-        logs.push(...lines);
-      });
-      child.stderr.on("data", (chunk) => {
-        const lines = String(chunk).split(/\r?\n/).filter(Boolean);
-        logs.push(...lines);
-      });
-      child.on("error", (error) => rejectBuild(error));
-      child.on("close", (code) => {
-        if (code === 0 && existsSync(join(previewSiteDir, "index.html"))) {
-          resolveBuild();
-          return;
-        }
-        rmSync(previewRoot, { recursive: true, force: true });
-        rejectBuild(new Error(logs[logs.length - 1] || "Preview generation failed."));
-      });
-    });
-
-    return {
-      rootDir: previewRoot,
-      siteDir: previewSiteDir,
     };
   }
 
@@ -1414,61 +1736,31 @@ export function startBuilderServer({ appDir, publicDir }) {
           return;
         }
 
-        const topic = String(body.fields.topic || siteConfig.topic || siteConfig.title || "").trim();
-        const pageMode = normalizePageMode(body.fields.pageMode || siteConfig.pageMode);
-        const existingWebsite = cleanOptionalString(body.fields.existingWebsite ?? siteConfig.existingWebsite);
         const publicSiteUrl = cleanOptionalString(body.fields.siteUrl ?? siteConfig.publicSiteUrl);
-        const uploadedStartImage = pickUploadedFile(body.files, "startImage", isUploadedImage) || cleanOptionalString(body.fields.startImage);
-        const uploadedEndImage = pickUploadedFile(body.files, "endImage", isUploadedImage) || cleanOptionalString(body.fields.endImage);
-        const uploadedVideo = pickUploadedFile(body.files, "video", isUploadedVideo) || cleanOptionalString(body.fields.video);
-        const startPrompt = cleanOptionalString(body.fields.startPrompt ?? siteConfig.startPrompt);
-        const endPrompt = cleanOptionalString(body.fields.endPrompt ?? siteConfig.endPrompt);
-        const videoPrompt = cleanOptionalString(body.fields.videoPrompt ?? siteConfig.videoPrompt);
-        const editSourceSlug = cleanOptionalString(body.fields.editSourceSlug || slug);
         const contentOverrides = cleanOptionalString(body.fields.contentOverrides)
           ? JSON.parse(String(body.fields.contentOverrides))
           : siteConfig.editableContent;
         const rawCinematicLayers = cleanOptionalString(body.fields.cinematicLayers)
           ? JSON.parse(String(body.fields.cinematicLayers))
           : siteConfig.cinematicLayers;
-        const colors = parseColorList(body.fields.colors || siteConfig.colors);
-        const existingMedia = editSourceSlug
-          ? resolveEditSourceMedia(editSourceSlug)
-          : null;
-        const cinematicLayers = await hydrateCinematicLayersForBuild(session.user.id, rawCinematicLayers, body.files);
-        const startImage = uploadedStartImage || existingMedia?.startImage || null;
-        const endImage = uploadedEndImage || existingMedia?.endImage || null;
-        const video = uploadedVideo || existingMedia?.videoPath || null;
-
-        if (!topic) {
-          sendJson(response, 400, { error: "Topic is required." });
-          return;
-        }
-
-        if (!video && !process.env.FAL_KEY) {
-          sendJson(response, 500, {
-            error: "Preview requires an existing or uploaded video when FAL_KEY is not configured.",
-          });
-          return;
-        }
-
-        const isVideoUrl = Boolean(video && /^https?:\/\//i.test(video));
-        const preview = await buildDraftPreviewSite(topic, pageMode, {
-          existingWebsite,
+        const previewId = randomUUID();
+        const cinematicLayers = await resolvePreviewCinematicLayers(session.user.id, rawCinematicLayers, body.files, previewId);
+        const previewHtml = renderDraftPreviewHtml(slug, {
+          title: String(contentOverrides?.hero?.title || siteConfig.title || "").trim(),
           publicSiteUrl,
-          colors,
-          startImage,
-          endImage,
-          videoPath: video && !isVideoUrl ? video : null,
-          videoUrl: isVideoUrl ? video : null,
-          startPrompt,
-          endPrompt,
-          videoPrompt,
-          editSourceSlug,
-          contentOverrides,
+          editableContent: contentOverrides,
           cinematicLayers,
         });
-        const previewId = registerDraftPreview(session.user.id, preview.rootDir, preview.siteDir);
+        const previewRoot = body.uploadDir || mkdtempSync(join(tmpdir(), "ultimateweb-preview-"));
+        draftPreviews.set(previewId, {
+          userId: session.user.id,
+          rootDir: previewRoot,
+          siteDir: join(generatedDir, slug),
+          html: previewHtml,
+          files: body.files || {},
+          expiresAt: Date.now() + DRAFT_PREVIEW_TTL_MS,
+        });
+        cleanupExpiredDraftPreviews();
         sendJson(response, 200, {
           previewId,
           previewUrl: `/draft-previews/${previewId}/index.html`,
@@ -1635,6 +1927,20 @@ export function startBuilderServer({ appDir, publicDir }) {
       }
 
       const requestedPath = rest.length ? rest.join("/") : "index.html";
+      if (requestedPath === "index.html" || !requestedPath) {
+        sendHtml(response, 200, preview.html || "");
+        return;
+      }
+      if (requestedPath.startsWith("assets/")) {
+        const assetName = decodeURIComponent(requestedPath.replace(/^assets\//, ""));
+        const matchingFile = Object.values(preview.files || {}).find((file) => basename(file?.path || "") === assetName);
+        if (!matchingFile?.path) {
+          sendText(response, 404, "Not found");
+          return;
+        }
+        serveFile(response, matchingFile.path);
+        return;
+      }
       const resolvedFile = safeResolve(preview.siteDir, requestedPath);
       if (!resolvedFile) {
         sendText(response, 403, "Forbidden");
