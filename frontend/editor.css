@@ -80,6 +80,7 @@ label small,
 .topbar-actions,
 .modal-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   align-items: center;
 }

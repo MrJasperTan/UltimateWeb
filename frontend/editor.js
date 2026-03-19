@@ -5,6 +5,7 @@ const jobText = document.getElementById("job-text");
 const publishButton = document.getElementById("publish-btn");
 const cinematicLayersButton = document.getElementById("cinematic-layers-btn");
 const seoSettingsButton = document.getElementById("seo-settings-btn");
+const fullPreviewButton = document.getElementById("full-preview-btn");
 const previewShell = document.getElementById("preview-shell");
 const siteFrame = document.getElementById("site-frame");
 const handleLayer = document.getElementById("handle-layer");
@@ -1098,11 +1099,7 @@ function buildCinematicLayersPayload() {
   };
 }
 
-async function publishEdits() {
-  if (!siteConfig) return;
-  publishButton.disabled = true;
-  setStatus("Submitting edited version...", "Reusing current media unless you replaced it.");
-
+function buildDraftPayload() {
   const payload = new FormData();
   payload.append("topic", siteConfig.topic || editableContent.hero.title || siteConfig.title);
   payload.append("pageMode", siteConfig.pageMode || "conversion");
@@ -1122,6 +1119,23 @@ async function publishEdits() {
   cinematicDraft.sections.forEach((layer, index) => {
     if (layer.file) payload.append(`cinematic-section-${index}-video`, layer.file);
   });
+  return payload;
+}
+
+function openDraftPreviewWindow() {
+  const previewWindow = window.open("", "_blank");
+  if (!previewWindow) return null;
+  previewWindow.document.write(`<!doctype html><html lang="en"><head><meta charset="utf-8" /><title>Preparing preview...</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#08111d;color:#eef6ff;font:16px/1.5 Manrope,Segoe UI,sans-serif}main{width:min(32rem,calc(100vw - 2rem));padding:1.5rem;border:1px solid rgba(255,255,255,0.12);border-radius:1rem;background:rgba(10,20,30,0.88)}p{margin:0}p + p{margin-top:.7rem;color:#9ab3c8}</style></head><body><main><p>Preparing full preview...</p><p>Your current draft is being rendered in a temporary standalone page.</p></main></body></html>`);
+  previewWindow.document.close();
+  return previewWindow;
+}
+
+async function publishEdits() {
+  if (!siteConfig) return;
+  publishButton.disabled = true;
+  setStatus("Submitting edited version...", "Reusing current media unless you replaced it.");
+
+  const payload = buildDraftPayload();
 
   const response = await apiFetch("/api/build", {
     method: "POST",
@@ -1136,10 +1150,39 @@ async function publishEdits() {
   startPolling(data.id);
 }
 
+async function openFullPreview() {
+  if (!siteConfig) return;
+  const previewWindow = openDraftPreviewWindow();
+  fullPreviewButton.disabled = true;
+  setStatus("Preparing full preview...", "Generating a temporary standalone preview with your unsaved draft.");
+
+  const payload = buildDraftPayload();
+  const response = await apiFetch(`/api/sites/${encodeURIComponent(siteConfig.slug)}/preview`, {
+    method: "POST",
+    body: payload,
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    if (previewWindow) {
+      previewWindow.document.body.innerHTML = `<main><p>Preview failed.</p><p>${escapeHtml(data.error || "Could not prepare the temporary preview.")}</p></main>`;
+    }
+    throw new Error(data.error || "Failed to generate full preview");
+  }
+
+  const previewUrl = resolveAbsoluteUrl(data.previewUrl);
+  if (previewWindow) {
+    previewWindow.location.replace(previewUrl);
+  } else {
+    window.open(previewUrl, "_blank");
+  }
+  setStatus("Full preview ready.", "Opened a temporary standalone preview in a new tab.");
+}
+
 async function loadSite() {
   if (!siteSlug) {
     setStatus("Missing site slug.", "Open this page from a gallery Edit action.");
     publishButton.disabled = true;
+    fullPreviewButton.disabled = true;
     return;
   }
 
@@ -1158,6 +1201,7 @@ async function loadSite() {
   editorTitle.textContent = editableContent.hero.title || siteConfig.title;
   editorSubtitle.textContent = "Tap any circle in the preview to edit that part of the page.";
   setStatus("Preview ready.", "Tap a circle on the site to edit its content.");
+  fullPreviewButton.disabled = false;
 
   const previewUrl = getSitePreviewUrl(siteConfig);
   if (!previewUrl) {
@@ -1193,13 +1237,24 @@ publishButton.addEventListener("click", async () => {
 });
 cinematicLayersButton.addEventListener("click", openCinematicModal);
 seoSettingsButton.addEventListener("click", openSeoModal);
+fullPreviewButton.addEventListener("click", async () => {
+  try {
+    await openFullPreview();
+  } catch (error) {
+    setStatus(`Could not open full preview: ${error.message}`);
+  } finally {
+    fullPreviewButton.disabled = false;
+  }
+});
 
 window.addEventListener("beforeunload", () => {
   clearInterval(pollTimer);
   stopHandleSync();
 });
 
+fullPreviewButton.disabled = true;
 loadSite().catch((error) => {
   publishButton.disabled = true;
+  fullPreviewButton.disabled = true;
   setStatus(`Could not load editor: ${error.message}`);
 });

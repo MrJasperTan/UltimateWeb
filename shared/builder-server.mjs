@@ -28,6 +28,7 @@ import {
 
 const BACKEND_LOG_PATH = "/tmp/ultimateweb-backend.log";
 const PAGE_MODES = new Set(["conversion", "editorial", "hybrid"]);
+const DRAFT_PREVIEW_TTL_MS = 1000 * 60 * 60;
 const PUBLIC_SAMPLE_SLUGS = new Set([
   "red-2026-corvette-stingray-mms967ki",
   "2026-lamborghini-aventador-reborn-mmvev4j6",
@@ -622,8 +623,43 @@ export function startBuilderServer({ appDir, publicDir }) {
   const port = Number(process.env.PORT || 8787);
   const host = process.env.HOST || "127.0.0.1";
   const jobs = new Map();
+  const draftPreviews = new Map();
 
   mkdirSync(generatedDir, { recursive: true });
+
+  function cleanupExpiredDraftPreviews() {
+    const now = Date.now();
+    for (const [previewId, preview] of draftPreviews.entries()) {
+      if (preview.expiresAt > now) continue;
+      rmSync(preview.rootDir, { recursive: true, force: true });
+      draftPreviews.delete(previewId);
+    }
+  }
+
+  function registerDraftPreview(userId, rootDir, siteDir) {
+    cleanupExpiredDraftPreviews();
+    const previewId = randomUUID();
+    draftPreviews.set(previewId, {
+      userId,
+      rootDir,
+      siteDir,
+      expiresAt: Date.now() + DRAFT_PREVIEW_TTL_MS,
+    });
+    return previewId;
+  }
+
+  function resolveDraftPreview(previewId) {
+    cleanupExpiredDraftPreviews();
+    const preview = draftPreviews.get(previewId) || null;
+    if (!preview) return null;
+    if (preview.expiresAt <= Date.now()) {
+      rmSync(preview.rootDir, { recursive: true, force: true });
+      draftPreviews.delete(previewId);
+      return null;
+    }
+    preview.expiresAt = Date.now() + DRAFT_PREVIEW_TTL_MS;
+    return preview;
+  }
 
   function getSiteConfig(slug) {
     const siteRoot = join(generatedDir, slug);
@@ -793,6 +829,86 @@ export function startBuilderServer({ appDir, publicDir }) {
           hydrateLayer(layer, `Section ${index + 1}`)
         )
       ),
+    };
+  }
+
+  async function buildDraftPreviewSite(topic, pageMode = "conversion", options = {}) {
+    const previewRoot = mkdtempSync(join(tmpdir(), "ultimateweb-preview-"));
+    const previewSlug = "site";
+    const previewSiteDir = join(previewRoot, previewSlug);
+    const args = [
+      pipelineScript,
+      "--topic",
+      topic,
+      "--slug",
+      previewSlug,
+      "--out-dir",
+      previewRoot,
+      "--page-mode",
+      pageMode,
+      "--start-model",
+      "fal-ai/nano-banana-2",
+      "--end-model",
+      "fal-ai/nano-banana-2/edit",
+      "--video-model",
+      "fal-ai/kling-video/v3/pro/image-to-video",
+      "--no-research",
+    ];
+
+    const optionalArgs = [
+      ["--source-url", options.existingWebsite],
+      ["--site-url", options.publicSiteUrl],
+      ["--start-image", options.startImage],
+      ["--end-image", options.endImage],
+      ["--video-path", options.videoPath],
+      ["--video-url", options.videoUrl],
+      ["--start-prompt", options.startPrompt],
+      ["--end-prompt", options.endPrompt],
+      ["--motion-prompt", options.videoPrompt],
+      ["--change-request", options.changeRequest],
+      ["--edit-source-slug", options.editSourceSlug],
+      ["--content-overrides", options.contentOverrides ? JSON.stringify(options.contentOverrides) : null],
+      ["--cinematic-layers", options.cinematicLayers ? JSON.stringify(options.cinematicLayers) : null],
+    ];
+
+    for (const [flag, value] of optionalArgs) {
+      if (!value) continue;
+      args.push(flag, value);
+    }
+
+    for (const color of options.colors || []) {
+      args.push("--color", color);
+    }
+
+    await new Promise((resolveBuild, rejectBuild) => {
+      const logs = [];
+      const child = spawn("node", args, {
+        cwd: rootDir,
+        env: { ...process.env, FAL_KEY: process.env.FAL_KEY || "" },
+      });
+
+      child.stdout.on("data", (chunk) => {
+        const lines = String(chunk).split(/\r?\n/).filter(Boolean);
+        logs.push(...lines);
+      });
+      child.stderr.on("data", (chunk) => {
+        const lines = String(chunk).split(/\r?\n/).filter(Boolean);
+        logs.push(...lines);
+      });
+      child.on("error", (error) => rejectBuild(error));
+      child.on("close", (code) => {
+        if (code === 0 && existsSync(join(previewSiteDir, "index.html"))) {
+          resolveBuild();
+          return;
+        }
+        rmSync(previewRoot, { recursive: true, force: true });
+        rejectBuild(new Error(logs[logs.length - 1] || "Preview generation failed."));
+      });
+    });
+
+    return {
+      rootDir: previewRoot,
+      siteDir: previewSiteDir,
     };
   }
 
@@ -1198,8 +1314,6 @@ export function startBuilderServer({ appDir, publicDir }) {
           ? JSON.parse(String(body.fields.cinematicLayers))
           : null;
         const colors = parseColorList(body.fields.colors);
-        const hasUploadedMedia = Boolean(uploadedStartImage || uploadedEndImage || uploadedVideo);
-
         if (editSourceSlug) {
           const editableSite = await findGeneratedSiteRecord(session.user.id, editSourceSlug);
           if (!editableSite) {
@@ -1208,7 +1322,7 @@ export function startBuilderServer({ appDir, publicDir }) {
           }
         }
 
-        const existingMedia = !hasUploadedMedia && editSourceSlug
+        const existingMedia = editSourceSlug
           ? resolveEditSourceMedia(editSourceSlug)
           : null;
         const cinematicLayers = await hydrateCinematicLayersForBuild(session.user.id, rawCinematicLayers, body.files);
@@ -1262,6 +1376,102 @@ export function startBuilderServer({ appDir, publicDir }) {
           slug: job.slug,
           status: job.status,
           pageMode: job.pageMode,
+        });
+      } catch (error) {
+        sendJson(response, 400, { error: error.message });
+      }
+      return;
+    }
+
+    if (
+      request.method === "POST" &&
+      pathname.startsWith("/api/sites/") &&
+      pathname.endsWith("/preview")
+    ) {
+      const session = await requireAuthenticatedSession(request, response);
+      if (!session) return;
+
+      const slug = pathname.split("/").slice(-2, -1)[0];
+      if (!slug) {
+        sendJson(response, 404, { error: "Site config not found." });
+        return;
+      }
+
+      try {
+        const siteRecord = await findGeneratedSiteRecord(session.user.id, slug);
+        if (!siteRecord) {
+          sendJson(response, 404, { error: "Site config not found." });
+          return;
+        }
+
+        const contentType = String(request.headers["content-type"] || "");
+        const body = contentType.includes("multipart/form-data")
+          ? await parseMultipartBody(request)
+          : { fields: await parseJsonBody(request), files: {} };
+        const siteConfig = getSiteConfig(slug);
+        if (!siteConfig) {
+          sendJson(response, 404, { error: "Generated site files not found." });
+          return;
+        }
+
+        const topic = String(body.fields.topic || siteConfig.topic || siteConfig.title || "").trim();
+        const pageMode = normalizePageMode(body.fields.pageMode || siteConfig.pageMode);
+        const existingWebsite = cleanOptionalString(body.fields.existingWebsite ?? siteConfig.existingWebsite);
+        const publicSiteUrl = cleanOptionalString(body.fields.siteUrl ?? siteConfig.publicSiteUrl);
+        const uploadedStartImage = pickUploadedFile(body.files, "startImage", isUploadedImage) || cleanOptionalString(body.fields.startImage);
+        const uploadedEndImage = pickUploadedFile(body.files, "endImage", isUploadedImage) || cleanOptionalString(body.fields.endImage);
+        const uploadedVideo = pickUploadedFile(body.files, "video", isUploadedVideo) || cleanOptionalString(body.fields.video);
+        const startPrompt = cleanOptionalString(body.fields.startPrompt ?? siteConfig.startPrompt);
+        const endPrompt = cleanOptionalString(body.fields.endPrompt ?? siteConfig.endPrompt);
+        const videoPrompt = cleanOptionalString(body.fields.videoPrompt ?? siteConfig.videoPrompt);
+        const editSourceSlug = cleanOptionalString(body.fields.editSourceSlug || slug);
+        const contentOverrides = cleanOptionalString(body.fields.contentOverrides)
+          ? JSON.parse(String(body.fields.contentOverrides))
+          : siteConfig.editableContent;
+        const rawCinematicLayers = cleanOptionalString(body.fields.cinematicLayers)
+          ? JSON.parse(String(body.fields.cinematicLayers))
+          : siteConfig.cinematicLayers;
+        const colors = parseColorList(body.fields.colors || siteConfig.colors);
+        const existingMedia = editSourceSlug
+          ? resolveEditSourceMedia(editSourceSlug)
+          : null;
+        const cinematicLayers = await hydrateCinematicLayersForBuild(session.user.id, rawCinematicLayers, body.files);
+        const startImage = uploadedStartImage || existingMedia?.startImage || null;
+        const endImage = uploadedEndImage || existingMedia?.endImage || null;
+        const video = uploadedVideo || existingMedia?.videoPath || null;
+
+        if (!topic) {
+          sendJson(response, 400, { error: "Topic is required." });
+          return;
+        }
+
+        if (!video && !process.env.FAL_KEY) {
+          sendJson(response, 500, {
+            error: "Preview requires an existing or uploaded video when FAL_KEY is not configured.",
+          });
+          return;
+        }
+
+        const isVideoUrl = Boolean(video && /^https?:\/\//i.test(video));
+        const preview = await buildDraftPreviewSite(topic, pageMode, {
+          existingWebsite,
+          publicSiteUrl,
+          colors,
+          startImage,
+          endImage,
+          videoPath: video && !isVideoUrl ? video : null,
+          videoUrl: isVideoUrl ? video : null,
+          startPrompt,
+          endPrompt,
+          videoPrompt,
+          editSourceSlug,
+          contentOverrides,
+          cinematicLayers,
+        });
+        const previewId = registerDraftPreview(session.user.id, preview.rootDir, preview.siteDir);
+        sendJson(response, 200, {
+          previewId,
+          previewUrl: `/draft-previews/${previewId}/index.html`,
         });
       } catch (error) {
         sendJson(response, 400, { error: error.message });
@@ -1399,6 +1609,33 @@ export function startBuilderServer({ appDir, publicDir }) {
         }
       }
       const resolvedFile = safeResolve(generatedDir, relativePath);
+      if (!resolvedFile) {
+        sendText(response, 403, "Forbidden");
+        return;
+      }
+      serveFile(response, resolvedFile);
+      return;
+    }
+
+    if (pathname.startsWith("/draft-previews/")) {
+      const session = await requireAuthenticatedSession(request, response);
+      if (!session) return;
+
+      const relativePath = pathname.replace(/^\/draft-previews\//, "");
+      const [previewId, ...rest] = relativePath.split("/");
+      if (!previewId) {
+        sendText(response, 404, "Not found");
+        return;
+      }
+
+      const preview = resolveDraftPreview(previewId);
+      if (!preview || preview.userId !== session.user.id) {
+        sendText(response, 404, "Not found");
+        return;
+      }
+
+      const requestedPath = rest.length ? rest.join("/") : "index.html";
+      const resolvedFile = safeResolve(preview.siteDir, requestedPath);
       if (!resolvedFile) {
         sendText(response, 403, "Forbidden");
         return;
