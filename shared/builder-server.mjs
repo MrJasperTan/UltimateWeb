@@ -646,12 +646,14 @@ export function startBuilderServer({ appDir, publicDir }) {
       topic: String(metadata.topic || "").trim(),
       pageMode: normalizePageMode(metadata.pageMode),
       existingWebsite: cleanOptionalString(metadata.sourceUrl || metadata.sourceContext?.url),
+      publicSiteUrl: cleanOptionalString(metadata.siteUrl || metadata.seo?.canonicalUrl),
       colors: palette.join(", "),
       startPrompt: cleanOptionalString(metadata.prompts?.startPrompt),
       endPrompt: cleanOptionalString(metadata.prompts?.endPrompt),
       videoPrompt: cleanOptionalString(metadata.prompts?.motionPrompt),
       editSourceSlug: cleanOptionalString(metadata.editSourceSlug),
       siteUrl: `/generated-sites/${slug}/index.html`,
+      seo: metadata.seo || null,
       editableContent,
       media: {
         startImage: currentMedia?.startImage
@@ -802,6 +804,7 @@ export function startBuilderServer({ appDir, publicDir }) {
 
     const optionalArgs = [
       ["--source-url", options.existingWebsite],
+      ["--site-url", options.publicSiteUrl],
       ["--start-image", options.startImage],
       ["--end-image", options.endImage],
       ["--video-path", options.videoPath],
@@ -1090,6 +1093,7 @@ export function startBuilderServer({ appDir, publicDir }) {
         const topic = String(body.fields.topic || "").trim();
         const pageMode = normalizePageMode(body.fields.pageMode);
         const existingWebsite = cleanOptionalString(body.fields.existingWebsite);
+        const publicSiteUrl = cleanOptionalString(body.fields.siteUrl);
         const uploadedStartImage = pickUploadedFile(body.files, "startImage", isUploadedImage) || cleanOptionalString(body.fields.startImage);
         const uploadedEndImage = pickUploadedFile(body.files, "endImage", isUploadedImage) || cleanOptionalString(body.fields.endImage);
         const uploadedVideo = pickUploadedFile(body.files, "video", isUploadedVideo) || cleanOptionalString(body.fields.video);
@@ -1146,6 +1150,7 @@ export function startBuilderServer({ appDir, publicDir }) {
         const job = startBuildJob(topic, pageMode, {
           userId: session.user.id,
           existingWebsite,
+          publicSiteUrl,
           colors,
           startImage,
           endImage,

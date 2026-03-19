@@ -1,6 +1,7 @@
 const form = document.getElementById("build-form");
 const topicInput = document.getElementById("topic");
 const existingWebsiteInput = document.getElementById("existing-website");
+const publicSiteUrlInput = document.getElementById("public-site-url");
 const colorsInput = document.getElementById("colors");
 const startImageInput = document.getElementById("start-image");
 const endImageInput = document.getElementById("end-image");
@@ -421,6 +422,7 @@ async function beginEdit(slug) {
   const siteConfig = await fetchSiteConfig(slug);
   topicInput.value = siteConfig.topic || "";
   existingWebsiteInput.value = siteConfig.existingWebsite || "";
+  publicSiteUrlInput.value = siteConfig.publicSiteUrl || "";
   colorsInput.value = siteConfig.colors || "";
   changeRequestInput.value = "";
   startPromptInput.value = siteConfig.startPrompt || "";
@@ -445,6 +447,7 @@ form.addEventListener("submit", async (event) => {
 
   const topic = topicInput.value.trim();
   const existingWebsite = existingWebsiteInput.value.trim();
+  const publicSiteUrl = publicSiteUrlInput.value.trim();
   const colors = colorsInput.value.trim();
   const startImageFile = startImageInput.files?.[0] || null;
   const endImageFile = endImageInput.files?.[0] || null;
@@ -475,6 +478,7 @@ form.addEventListener("submit", async (event) => {
     payload.append("topic", topic);
     payload.append("pageMode", selectedPageMode);
     payload.append("existingWebsite", existingWebsite);
+    payload.append("siteUrl", publicSiteUrl);
     payload.append("colors", colors);
     payload.append("changeRequest", changeRequest);
     payload.append("startPrompt", startPrompt);

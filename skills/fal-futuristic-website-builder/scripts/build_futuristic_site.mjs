@@ -52,6 +52,7 @@ Optional:
   --out-dir          Parent output directory (default: generated-sites)
   --slug             Output folder slug (default: derived from topic)
   --brand            Brand label used in the page copy
+  --site-url         Public canonical URL for the generated page
   --source-url       Existing website URL used for reference context
   --color            Palette override color; repeat flag for multiple values
   --start-image      Existing start image URL or local path
@@ -819,6 +820,197 @@ function clipText(value, maxLen) {
   const clean = normalizeWhitespace(value);
   if (clean.length <= maxLen) return clean;
   return clean.slice(0, maxLen - 3).trimEnd() + "...";
+}
+
+function escapeJsonForHtml(value) {
+  return JSON.stringify(value, null, 2).replace(/</g, "\\u003c");
+}
+
+function normalizePublicSiteUrl(value) {
+  if (!isValidHttpUrl(value)) return null;
+  try {
+    const url = new URL(value);
+    url.hash = "";
+    url.search = "";
+    if (url.pathname.endsWith("/index.html")) {
+      url.pathname = url.pathname.slice(0, -"/index.html".length) || "/";
+    }
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+function buildSeoTitle(topic, brand) {
+  const cleanTopic = normalizeWhitespace(topic);
+  const cleanBrand = normalizeWhitespace(brand);
+  if (!cleanBrand) return cleanTopic;
+  if (cleanTopic.toLowerCase() === cleanBrand.toLowerCase()) return cleanTopic;
+  return `${cleanTopic} | ${cleanBrand}`;
+}
+
+function buildSeoDescription({ topic, profile, sourceContext, research }) {
+  const candidates = [
+    profile?.heroSub,
+    research?.summary,
+    sourceContext?.description,
+    `${topic} is presented as a research-informed, premium digital experience designed for modern search and conversion.`,
+  ];
+
+  for (const candidate of candidates) {
+    const clipped = clipText(candidate, 158);
+    if (clipped) return clipped;
+  }
+
+  return clipText(`${topic} is presented as a premium digital experience.`, 158);
+}
+
+function buildSeoKeywords({ topic, brand, category, pageMode, research }) {
+  const terms = [
+    topic,
+    brand,
+    category,
+    pageMode,
+    ...(research?.facts || []).slice(0, 4).map((fact) => fact.label),
+  ];
+  return Array.from(new Set(terms.map((value) => normalizeWhitespace(value)).filter(Boolean))).slice(0, 10);
+}
+
+function buildCanonicalAssetUrl(siteUrl, relativePath) {
+  if (!siteUrl || !relativePath) return null;
+  try {
+    return new URL(relativePath, siteUrl).toString();
+  } catch {
+    return null;
+  }
+}
+
+function buildRobotsDirectives(siteUrl) {
+  if (!siteUrl) return "noindex, nofollow";
+  return "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1";
+}
+
+function buildFaviconSvg({ brand, accentColor, backgroundColor }) {
+  const letter = escapeHtml((normalizeWhitespace(brand).charAt(0) || "U").toUpperCase());
+  const bg = escapeHtml(backgroundColor || "#05070a");
+  const accent = escapeHtml(accentColor || "#f4b14d");
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="${escapeHtml(brand)} favicon">
+  <rect width="96" height="96" rx="24" fill="${bg}" />
+  <circle cx="48" cy="48" r="30" fill="${accent}" opacity="0.18" />
+  <text x="48" y="58" text-anchor="middle" font-family="Arial, sans-serif" font-size="40" font-weight="700" fill="#ffffff">${letter}</text>
+</svg>
+`;
+}
+
+function inferSchemaType(category, topic) {
+  if (category === "car") return "Product";
+  if (category === "person") return "Person";
+  if (category === "place") return "Place";
+  if (category === "venue") {
+    if (/\b(bar|pub|brewery|brewpub|tavern|cocktail|lounge)\b/i.test(topic)) return "BarOrPub";
+    if (/\b(cafe|café|coffee|bistro|restaurant|grill|steakhouse|kitchen|eatery)\b/i.test(topic)) return "Restaurant";
+    return "LocalBusiness";
+  }
+  return "Organization";
+}
+
+function buildStructuredData({ topic, brand, category, siteUrl, seoTitle, seoDescription, heroImageUrl, sourceContext, research }) {
+  const graph = [];
+  const siteName = normalizeWhitespace(brand || topic);
+  const sourceLinks = dedupeSources(research?.sources || [], 8).map((entry) => entry.url);
+  const pageId = siteUrl ? `${siteUrl}#webpage` : `#webpage-${slugify(topic)}`;
+  const entityId = siteUrl ? `${siteUrl}#primaryentity` : `#primaryentity-${slugify(topic)}`;
+  const websiteId = siteUrl ? `${siteUrl}#website` : `#website-${slugify(topic)}`;
+  const schemaType = inferSchemaType(category, topic);
+
+  graph.push({
+    "@type": "WebPage",
+    "@id": pageId,
+    url: siteUrl || undefined,
+    name: seoTitle,
+    description: seoDescription,
+    isPartOf: { "@id": websiteId },
+    primaryImageOfPage: heroImageUrl || undefined,
+    about: { "@id": entityId },
+  });
+
+  graph.push({
+    "@type": "WebSite",
+    "@id": websiteId,
+    url: siteUrl || undefined,
+    name: siteName,
+    description: seoDescription,
+  });
+
+  const entity = {
+    "@type": schemaType,
+    "@id": entityId,
+    name: normalizeWhitespace(topic),
+    description: seoDescription,
+    image: heroImageUrl || undefined,
+    url: siteUrl || sourceContext?.url || undefined,
+    sameAs: sourceLinks.length ? sourceLinks : undefined,
+  };
+
+  if (schemaType === "Product") {
+    entity.brand = {
+      "@type": "Brand",
+      name: siteName,
+    };
+  }
+
+  if (schemaType === "Person" && sourceContext?.url) {
+    entity.mainEntityOfPage = sourceContext.url;
+  }
+
+  if ((schemaType === "Restaurant" || schemaType === "BarOrPub" || schemaType === "LocalBusiness") && sourceContext?.url) {
+    entity.sameAs = Array.from(new Set([sourceContext.url, ...sourceLinks])).slice(0, 8);
+  }
+
+  graph.push(entity);
+
+  return {
+    "@context": "https://schema.org",
+    "@graph": graph,
+  };
+}
+
+function writeProductionArtifacts({ siteDir, siteUrl }) {
+  const hasPublicUrl = Boolean(siteUrl);
+  const sitemapUrl = hasPublicUrl ? new URL("sitemap.xml", siteUrl).toString() : null;
+  const pageUrl = hasPublicUrl ? siteUrl : null;
+
+  const robotsLines = hasPublicUrl
+    ? [
+        "User-agent: *",
+        "Allow: /",
+        `Sitemap: ${sitemapUrl}`,
+      ]
+    : [
+        "User-agent: *",
+        "Disallow: /",
+      ];
+  writeFileSync(join(siteDir, "robots.txt"), robotsLines.join("\n") + "\n");
+
+  if (hasPublicUrl && pageUrl) {
+    const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>${pageUrl}</loc>
+  </url>
+</urlset>
+`;
+    writeFileSync(join(siteDir, "sitemap.xml"), sitemap);
+  }
+
+  return {
+    hasPublicUrl,
+    pageUrl,
+    sitemapUrl,
+    robotsPath: "robots.txt",
+    sitemapPath: hasPublicUrl ? "sitemap.xml" : null,
+  };
 }
 
 function dedupeLines(items, normalizeForCompare = true) {
@@ -1750,13 +1942,57 @@ ${renderCardMarkup(
     </section>`;
 }
 
-function writeScaffoldFiles({ siteDir, topic, brand, pageMode, frameCount, frameExtension, research, sourceContext, contentOverrides = null }) {
+function writeScaffoldFiles({
+  siteDir,
+  topic,
+  brand,
+  pageMode,
+  frameCount,
+  frameExtension,
+  research,
+  sourceContext,
+  contentOverrides = null,
+  siteUrl = null,
+}) {
   const businessProfile = buildBusinessProfile(topic, brand, sourceContext, research);
   const profile = applyContentOverrides(buildContentProfile(businessProfile, pageMode), contentOverrides);
   const editableContent = buildEditableContent(profile);
   const headline = escapeHtml(String(profile.heroTitle || topic).toUpperCase());
   const safeTopic = escapeHtml(topic);
   const safeBrand = escapeHtml(brand);
+  const normalizedSiteUrl = normalizePublicSiteUrl(siteUrl);
+  const seoTitle = buildSeoTitle(topic, brand);
+  const seoDescription = buildSeoDescription({ topic, profile, sourceContext, research });
+  const seoKeywords = buildSeoKeywords({
+    topic,
+    brand,
+    category: businessProfile.category,
+    pageMode,
+    research,
+  });
+  const canonicalImageUrl = buildCanonicalAssetUrl(normalizedSiteUrl, "media/start-frame.webp");
+  const robotsDirectives = buildRobotsDirectives(normalizedSiteUrl);
+  const structuredData = buildStructuredData({
+    topic,
+    brand,
+    category: businessProfile.category,
+    siteUrl: normalizedSiteUrl,
+    seoTitle,
+    seoDescription,
+    heroImageUrl: canonicalImageUrl,
+    sourceContext,
+    research,
+  });
+  const productionArtifacts = writeProductionArtifacts({
+    siteDir,
+    siteUrl: normalizedSiteUrl,
+  });
+  const themeColor = businessProfile.palette?.[0] || profile.theme.accent;
+  const faviconSvg = buildFaviconSvg({
+    brand,
+    accentColor: themeColor,
+    backgroundColor: profile.theme.bg,
+  });
   const logoMarkup = sourceContext?.logoUrl
     ? `<div class="brand-lockup"><img class="brand-logo" src="${escapeHtml(sourceContext.logoUrl)}" alt="${safeBrand} logo" /><span class="brand-text">${safeBrand}</span></div>`
     : `<span class="brand-text">${safeBrand}</span>`;
@@ -1784,12 +2020,30 @@ function writeScaffoldFiles({ siteDir, topic, brand, pageMode, frameCount, frame
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>${safeTopic} | ${safeBrand}</title>
+  <title>${escapeHtml(seoTitle)}</title>
+  <meta name="description" content="${escapeHtml(seoDescription)}" />
+  <meta name="robots" content="${escapeHtml(robotsDirectives)}" />
+  <meta name="theme-color" content="${escapeHtml(themeColor)}" />
+  <meta name="keywords" content="${escapeHtml(seoKeywords.join(", "))}" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="${escapeHtml(seoTitle)}" />
+  <meta property="og:description" content="${escapeHtml(seoDescription)}" />
+  <meta property="og:site_name" content="${safeBrand}" />
+  <meta property="og:locale" content="en_US" />
+  ${normalizedSiteUrl ? `<meta property="og:url" content="${escapeHtml(normalizedSiteUrl)}" />` : ""}
+  ${canonicalImageUrl ? `<meta property="og:image" content="${escapeHtml(canonicalImageUrl)}" />
+  <meta property="og:image:alt" content="${escapeHtml(seoTitle)}" />` : ""}
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="${escapeHtml(seoTitle)}" />
+  <meta name="twitter:description" content="${escapeHtml(seoDescription)}" />
+  ${canonicalImageUrl ? `<meta name="twitter:image" content="${escapeHtml(canonicalImageUrl)}" />` : ""}
+  ${normalizedSiteUrl ? `<link rel="canonical" href="${escapeHtml(normalizedSiteUrl)}" />` : ""}
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=DM+Serif+Display:ital@0;1&family=Manrope:wght@400;500;700;800&family=Oswald:wght@500;700&family=Syne:wght@500;700;800&display=swap" rel="stylesheet" />
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <link rel="stylesheet" href="css/style.css" />
+  <script type="application/ld+json">${escapeJsonForHtml(structuredData)}</script>
 </head>
 <body>
   <div id="loader">
@@ -2485,6 +2739,7 @@ setupHeroTransition();
 `;
 
   writeFileSync(join(siteDir, "index.html"), html);
+  writeFileSync(join(siteDir, "favicon.svg"), faviconSvg);
   writeFileSync(join(siteDir, "css/style.css"), css);
   writeFileSync(join(siteDir, "js/app.js"), js);
   return {
@@ -2493,6 +2748,16 @@ setupHeroTransition();
     sectionKinds: renderedSections.map((section) => section.kind),
     trustLine: profile.trustLine,
     editableContent,
+    seo: {
+      title: seoTitle,
+      description: seoDescription,
+      keywords: seoKeywords,
+      canonicalUrl: normalizedSiteUrl,
+      ogImageUrl: canonicalImageUrl,
+      robotsDirectives,
+      structuredData,
+      ...productionArtifacts,
+    },
   };
 }
 
@@ -2704,6 +2969,10 @@ async function main() {
   mkdirSync(jsDir, { recursive: true });
 
   const sourceUrl = cleanOptionalString(options["source-url"]) || parsedTopic.sourceUrl;
+  const siteUrl = normalizePublicSiteUrl(options["site-url"]);
+  if (options["site-url"] && !siteUrl) {
+    throw new Error(`Invalid --site-url: ${options["site-url"]}`);
+  }
   const sourceContext = (await fetchSourceContext(sourceUrl)) || {
     url: sourceUrl,
     title: null,
@@ -2754,6 +3023,7 @@ async function main() {
     brand,
     businessProfile,
     sourceUrl,
+    siteUrl,
     pageMode,
     models: { startModel, endModel, videoModel },
     paletteOverride,
@@ -2935,6 +3205,7 @@ async function main() {
     research,
     sourceContext,
     contentOverrides,
+    siteUrl,
   });
 
   metadata.startImageUrl = startImageUrl;
@@ -2949,6 +3220,7 @@ async function main() {
   metadata.sectionKinds = scaffold.sectionKinds;
   metadata.trustLine = scaffold.trustLine;
   metadata.editableContent = scaffold.editableContent;
+  metadata.seo = scaffold.seo;
   metadata.sourceContext = sourceContext;
   metadata.research = research || {
     category: scaffold.category,

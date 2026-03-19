@@ -3,6 +3,7 @@ const editorSubtitle = document.getElementById("editor-subtitle");
 const statusText = document.getElementById("status-text");
 const jobText = document.getElementById("job-text");
 const publishButton = document.getElementById("publish-btn");
+const seoSettingsButton = document.getElementById("seo-settings-btn");
 const previewShell = document.getElementById("preview-shell");
 const siteFrame = document.getElementById("site-frame");
 const handleLayer = document.getElementById("handle-layer");
@@ -20,6 +21,7 @@ const siteSlug = String(urlParams.get("slug") || "").trim();
 let siteConfig = null;
 let editableContent = null;
 let mediaDraft = null;
+let seoDraft = null;
 let activeModal = null;
 let pollTimer = null;
 let handleTimer = null;
@@ -173,6 +175,12 @@ function resetMediaDraft() {
     startImageFile: null,
     endImageFile: null,
     videoFile: null,
+  };
+}
+
+function resetSeoDraft() {
+  seoDraft = {
+    publicSiteUrl: siteConfig?.publicSiteUrl || "",
   };
 }
 
@@ -397,6 +405,22 @@ function openMediaModal() {
   });
 }
 
+function openSeoModal() {
+  openModal({
+    type: "seo",
+    title: "SEO Settings",
+    body: `
+      <div class="field-grid">
+        <label>
+          <span>Public Site URL</span>
+          <input type="url" name="publicSiteUrl" inputmode="url" placeholder="https://yourdomain.com/page/" value="${escapeHtml(seoDraft?.publicSiteUrl || "")}" />
+          <small>Set this when the page has a real public URL. Every publish automatically refreshes canonical, robots, sitemap, and structured data.</small>
+        </label>
+      </div>
+    `,
+  });
+}
+
 function applyModalChanges() {
   if (!activeModal) return;
   const formData = new FormData();
@@ -456,6 +480,10 @@ function applyModalChanges() {
     mediaDraft.startImageFile = formData.get("startImage") instanceof File ? formData.get("startImage") : null;
     mediaDraft.endImageFile = formData.get("endImage") instanceof File ? formData.get("endImage") : null;
     mediaDraft.videoFile = formData.get("video") instanceof File ? formData.get("video") : null;
+  }
+
+  if (activeModal.type === "seo") {
+    seoDraft.publicSiteUrl = String(formData.get("publicSiteUrl") || "").trim();
   }
 
   applyPreview();
@@ -700,6 +728,7 @@ async function publishEdits() {
   payload.append("topic", siteConfig.topic || editableContent.hero.title || siteConfig.title);
   payload.append("pageMode", siteConfig.pageMode || "conversion");
   payload.append("existingWebsite", siteConfig.existingWebsite || "");
+  payload.append("siteUrl", seoDraft.publicSiteUrl || "");
   payload.append("colors", siteConfig.colors || "");
   payload.append("startPrompt", mediaDraft.startPrompt || "");
   payload.append("endPrompt", mediaDraft.endPrompt || "");
@@ -739,6 +768,7 @@ async function loadSite() {
   siteConfig = await response.json();
   editableContent = ensureEditableContent(siteConfig.editableContent);
   resetMediaDraft();
+  resetSeoDraft();
 
   editorTitle.textContent = editableContent.hero.title || siteConfig.title;
   editorSubtitle.textContent = "Tap any circle in the preview to edit that part of the page.";
@@ -776,6 +806,7 @@ publishButton.addEventListener("click", async () => {
     setStatus(`Could not publish changes: ${error.message}`);
   }
 });
+seoSettingsButton.addEventListener("click", openSeoModal);
 
 window.addEventListener("beforeunload", () => {
   clearInterval(pollTimer);
