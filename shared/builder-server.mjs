@@ -900,6 +900,9 @@ export function startBuilderServer({ appDir, publicDir }) {
 
     const startReverse = () => {
       if (loopMode !== "boomerang" || reversing) return;
+      if (video.duration && video.currentTime >= video.duration - 0.02) {
+        video.currentTime = Math.max(0, video.duration - 0.02);
+      }
       reversing = true;
       video.pause();
       frameId = requestAnimationFrame(reverseStep);
@@ -914,6 +917,12 @@ export function startBuilderServer({ appDir, publicDir }) {
     video.addEventListener("canplay", () => {
       video.playbackRate = speed;
       video.play().catch(() => {});
+    });
+    video.addEventListener("loadeddata", () => {
+      video.playbackRate = speed;
+      if (loopMode === "boomerang" && video.currentTime <= 0) {
+        video.currentTime = 0.001;
+      }
     });
     if (loopMode === "boomerang") {
       video.addEventListener("ended", startReverse);

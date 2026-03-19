@@ -113,6 +113,37 @@ async function fetchText(url, options = {}) {
   return response.text();
 }
 
+function upsertMetaTag(doc, attribute, key, content) {
+  let selector = "";
+  if (attribute === "name") selector = `meta[name="${key}"]`;
+  if (attribute === "property") selector = `meta[property="${key}"]`;
+  let node = selector ? doc.head.querySelector(selector) : null;
+  if (!content) {
+    node?.remove();
+    return;
+  }
+  if (!node) {
+    node = doc.createElement("meta");
+    node.setAttribute(attribute, key);
+    doc.head.appendChild(node);
+  }
+  node.setAttribute("content", content);
+}
+
+function upsertLinkTag(doc, rel, href) {
+  let node = doc.head.querySelector(`link[rel="${rel}"]`);
+  if (!href) {
+    node?.remove();
+    return;
+  }
+  if (!node) {
+    node = doc.createElement("link");
+    node.setAttribute("rel", rel);
+    doc.head.appendChild(node);
+  }
+  node.setAttribute("href", href);
+}
+
 function deepClone(value) {
   return JSON.parse(JSON.stringify(value));
 }
@@ -770,6 +801,9 @@ function setupPreviewCinematicVideo(video) {
 
   const startReverse = () => {
     if (loopMode !== "boomerang" || reversing) return;
+    if (video.duration && video.currentTime >= video.duration - 0.02) {
+      video.currentTime = Math.max(0, video.duration - 0.02);
+    }
     reversing = true;
     video.pause();
     reverseFrame = requestAnimationFrame(reverseStep);
@@ -787,6 +821,9 @@ function setupPreviewCinematicVideo(video) {
   });
   video.addEventListener("loadeddata", () => {
     video.playbackRate = speed;
+    if (loopMode === "boomerang" && video.currentTime <= 0) {
+      video.currentTime = 0.001;
+    }
   });
   if (loopMode === "boomerang") {
     video.addEventListener("ended", startReverse);
@@ -1134,6 +1171,42 @@ function openDraftPreviewWindow() {
   return previewWindow;
 }
 
+function buildLocalFullPreviewHtml() {
+  const frameDocument = siteFrame.contentWindow?.document;
+  if (!frameDocument?.documentElement) {
+    throw new Error("The inline preview is not ready yet.");
+  }
+
+  const html = frameDocument.documentElement.outerHTML;
+  const parser = new DOMParser();
+  const previewDoc = parser.parseFromString(`<!doctype html>${html}`, "text/html");
+  const title = String(editableContent?.hero?.title || siteConfig?.title || "").trim();
+  const canonicalUrl = String(seoDraft?.publicSiteUrl || "").trim();
+
+  if (title) {
+    previewDoc.title = title;
+  }
+  upsertLinkTag(previewDoc, "canonical", canonicalUrl);
+  upsertMetaTag(previewDoc, "property", "og:url", canonicalUrl || "");
+  upsertMetaTag(previewDoc, "name", "robots", canonicalUrl ? "index, follow" : "noindex, nofollow");
+
+  return `<!doctype html>\n${previewDoc.documentElement.outerHTML}`;
+}
+
+function openLocalFullPreview(previewWindow) {
+  const previewHtml = buildLocalFullPreviewHtml();
+  const blob = new Blob([previewHtml], { type: "text/html" });
+  const previewUrl = URL.createObjectURL(blob);
+  const targetWindow = previewWindow || window.open("", "_blank");
+  if (!targetWindow) {
+    URL.revokeObjectURL(previewUrl);
+    throw new Error("The preview tab was blocked.");
+  }
+  targetWindow.location.replace(previewUrl);
+  setTimeout(() => URL.revokeObjectURL(previewUrl), 60_000);
+  setStatus("Full preview ready.", "Opened a standalone local preview from the current unsaved draft.");
+}
+
 async function publishEdits() {
   if (!siteConfig) return;
   publishButton.disabled = true;
@@ -1167,10 +1240,8 @@ async function openFullPreview() {
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    if (previewWindow) {
-      previewWindow.document.body.innerHTML = `<main><p>Preview failed.</p><p>${escapeHtml(data.error || "Could not prepare the temporary preview.")}</p></main>`;
-    }
-    throw new Error(data.error || "Failed to generate full preview");
+    openLocalFullPreview(previewWindow);
+    return;
   }
 
   const previewUrl = resolveAbsoluteUrl(data.previewUrl);

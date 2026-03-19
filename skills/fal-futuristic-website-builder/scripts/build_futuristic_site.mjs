@@ -2872,6 +2872,9 @@ function setupLoopingVideo(video, loopMode = "loop", rate = 1) {
 
   const startReverse = () => {
     if (loopMode !== "boomerang" || reversing) return;
+    if (video.duration && video.currentTime >= video.duration - 0.02) {
+      video.currentTime = Math.max(0, video.duration - 0.02);
+    }
     reversing = true;
     video.pause();
     reverseFrame = requestAnimationFrame(reverseStep);
@@ -2889,6 +2892,9 @@ function setupLoopingVideo(video, loopMode = "loop", rate = 1) {
   });
   video.addEventListener("loadeddata", () => {
     video.playbackRate = speed;
+    if (loopMode === "boomerang" && video.currentTime <= 0) {
+      video.currentTime = 0.001;
+    }
   });
 
   if (loopMode === "boomerang") {
