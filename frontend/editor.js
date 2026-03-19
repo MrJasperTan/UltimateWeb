@@ -28,6 +28,8 @@ let seoDraft = null;
 let activeModal = null;
 let pollTimer = null;
 let handleTimer = null;
+let siteSourceHtml = "";
+let siteSourcePreviewUrl = "";
 const previewObjectUrls = new Set();
 
 function toApiUrl(path) {
@@ -142,6 +144,367 @@ function upsertLinkTag(doc, rel, href) {
     doc.head.appendChild(node);
   }
   node.setAttribute("href", href);
+}
+
+function buildStandalonePreviewCinematicLayers() {
+  const serializeLayer = (layer) => ({
+    enabled: Boolean(layer?.enabled),
+    label: String(layer?.label || "").trim(),
+    layout: String(layer?.layout || "card") === "full-background" ? "full-background" : "card",
+    loopMode: String(layer?.loopMode || "loop") === "boomerang" ? "boomerang" : "loop",
+    speed: Math.min(2.5, Math.max(0.25, Number(layer?.speed || 1) || 1)),
+    url: buildPreviewVideoUrl(layer) || "",
+  });
+
+  return {
+    hero: serializeLayer(cinematicDraft?.hero),
+    sections: Array.isArray(cinematicDraft?.sections) ? cinematicDraft.sections.map((layer) => serializeLayer(layer)) : [],
+  };
+}
+
+function buildStandalonePreviewRuntimeScript(previewData) {
+  const serializedData = JSON.stringify(previewData).replace(/</g, "\\u003c");
+  return `
+<script>
+(() => {
+  const draft = ${serializedData};
+
+  function updateText(selector, value, root = document) {
+    const node = root.querySelector(selector);
+    if (node) node.textContent = value || "";
+  }
+
+  function upsertMeta(attribute, key, content) {
+    let selector = "";
+    if (attribute === "name") selector = 'meta[name="' + key + '"]';
+    if (attribute === "property") selector = 'meta[property="' + key + '"]';
+    let meta = selector ? document.head.querySelector(selector) : null;
+    if (!content) {
+      if (meta) meta.remove();
+      return;
+    }
+    if (!meta) {
+      meta = document.createElement("meta");
+      meta.setAttribute(attribute, key);
+      document.head.appendChild(meta);
+    }
+    meta.setAttribute("content", content);
+  }
+
+  function upsertCanonical(url) {
+    let link = document.head.querySelector('link[rel="canonical"]');
+    if (!url) {
+      if (link) link.remove();
+      return;
+    }
+    if (!link) {
+      link = document.createElement("link");
+      link.setAttribute("rel", "canonical");
+      document.head.appendChild(link);
+    }
+    link.setAttribute("href", url);
+  }
+
+  function applySeo() {
+    const canonicalUrl = String(draft.publicSiteUrl || "").trim();
+    const title = String(draft.title || "").trim();
+    if (title) document.title = title;
+    upsertCanonical(canonicalUrl);
+    upsertMeta("property", "og:url", canonicalUrl || "");
+    upsertMeta("name", "robots", canonicalUrl ? "index, follow" : "noindex, nofollow");
+  }
+
+  function ensureCinematicStyles() {
+    if (document.getElementById("uw-draft-preview-style")) return;
+    const style = document.createElement("style");
+    style.id = "uw-draft-preview-style";
+    style.textContent = \`
+      .hero-standalone { position: relative; }
+      .hero-standalone > *:not(.hero-cinematic) { position: relative; z-index: 2; }
+      .hero-cinematic,
+      .section-cinematic {
+        position: absolute;
+        overflow: hidden;
+        border-radius: 1.6rem;
+        border: 1px solid rgba(255,255,255,0.1);
+        background:
+          linear-gradient(160deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03)),
+          rgba(5,8,10,0.34);
+        box-shadow: 0 28px 70px rgba(0,0,0,0.34);
+        z-index: 0;
+      }
+      .hero-cinematic::after,
+      .section-cinematic::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background:
+          linear-gradient(180deg, rgba(8,10,15,0.04), rgba(8,10,15,0.28)),
+          radial-gradient(circle at 20% 20%, rgba(255,255,255,0.14), transparent 28%);
+      }
+      .hero-cinematic-full {
+        inset: 0;
+        border-radius: 0;
+        border: 0;
+        box-shadow: none;
+        background: rgba(0,0,0,0.12);
+      }
+      .hero-cinematic-full::after {
+        background:
+          linear-gradient(90deg, rgba(7,8,12,0.82) 0%, rgba(7,8,12,0.46) 38%, rgba(7,8,12,0.28) 62%, rgba(7,8,12,0.62) 100%),
+          radial-gradient(circle at 20% 20%, rgba(255,255,255,0.1), transparent 26%);
+      }
+      .hero-cinematic-card { inset: 8vh 5vw 12vh 49vw; }
+      .section-cinematic { top: 50%; transform: translateY(-50%); }
+      .section-cinematic-card { width: min(34vw, 32rem); aspect-ratio: 16 / 10; }
+      .section-cinematic-right { right: 5vw; }
+      .section-cinematic-left { left: 5vw; }
+      .section-cinematic-center { left: 50%; transform: translate(-50%, -50%); width: min(72vw, 56rem); aspect-ratio: 16 / 7; }
+      .section-cinematic-full { inset: clamp(1rem, 3vw, 2rem) 4vw; top: 0; transform: none; border-radius: 2rem; }
+      .section-cinematic-full::after {
+        background:
+          linear-gradient(180deg, rgba(7,9,13,0.68), rgba(7,9,13,0.38)),
+          radial-gradient(circle at 50% 12%, rgba(255,255,255,0.14), transparent 24%);
+      }
+      .cinematic-video {
+        width: 100%;
+        height: 100%;
+        display: block;
+        object-fit: cover;
+        pointer-events: none;
+      }
+      .scroll-section { isolation: isolate; }
+      .section-inner { position: relative; z-index: 2; }
+      @media (max-width: 900px) {
+        .hero-cinematic-card,
+        .section-cinematic-card,
+        .section-cinematic-center,
+        .section-cinematic-full {
+          position: relative;
+          inset: auto;
+          left: auto;
+          right: auto;
+          top: auto;
+          transform: none;
+          width: 100%;
+          aspect-ratio: 16 / 9;
+          margin: 0 auto 1rem;
+        }
+      }
+    \`;
+    document.head.appendChild(style);
+  }
+
+  function setupVideo(video) {
+    if (!video || video.dataset.previewBound === "true") return;
+    video.dataset.previewBound = "true";
+    const loopMode = String(video.dataset.loopMode || "loop");
+    const speed = Math.min(2.5, Math.max(0.25, Number(video.dataset.playbackSpeed || 1) || 1));
+    let reversing = false;
+    let frameId = 0;
+    let lastTick = 0;
+
+    const stopReverse = () => {
+      if (frameId) cancelAnimationFrame(frameId);
+      frameId = 0;
+      reversing = false;
+      lastTick = 0;
+    };
+
+    const restartForward = () => {
+      stopReverse();
+      video.currentTime = video.duration && video.duration > 0.001 ? 0.001 : 0;
+      video.playbackRate = speed;
+      video.play().catch(() => {});
+    };
+
+    const reverseStep = (timestamp) => {
+      if (!reversing) return;
+      if (!lastTick) lastTick = timestamp;
+      const delta = (timestamp - lastTick) / 1000;
+      lastTick = timestamp;
+      const nextTime = Math.max(0, video.currentTime - delta * speed);
+      video.currentTime = nextTime;
+      if (nextTime <= 0.02) {
+        restartForward();
+        return;
+      }
+      frameId = requestAnimationFrame(reverseStep);
+    };
+
+    const startReverse = () => {
+      if (loopMode !== "boomerang" || reversing) return;
+      if (video.duration && video.currentTime >= video.duration - 0.02) {
+        video.currentTime = Math.max(0, video.duration - 0.02);
+      }
+      reversing = true;
+      video.pause();
+      frameId = requestAnimationFrame(reverseStep);
+    };
+
+    video.muted = true;
+    video.defaultMuted = true;
+    video.playsInline = true;
+    video.autoplay = true;
+    video.preload = "auto";
+    video.loop = loopMode !== "boomerang";
+    video.playbackRate = speed;
+    video.addEventListener("canplay", () => {
+      video.playbackRate = speed;
+      video.play().catch(() => {});
+    });
+    video.addEventListener("loadeddata", () => {
+      video.playbackRate = speed;
+      if (loopMode === "boomerang" && video.currentTime <= 0) {
+        video.currentTime = 0.001;
+      }
+    });
+    if (loopMode === "boomerang") {
+      video.addEventListener("ended", startReverse);
+      video.addEventListener("timeupdate", () => {
+        if (!reversing && video.duration && video.currentTime >= video.duration - 0.04) {
+          startReverse();
+        }
+      });
+      video.addEventListener("seeked", () => {
+        if (reversing && video.currentTime <= 0.02) {
+          restartForward();
+        }
+      });
+      video.addEventListener("play", () => {
+        if (reversing) stopReverse();
+      });
+    }
+  }
+
+  function getSectionPlacementClass(sectionNode, layer) {
+    if (layer.layout === "full-background") return "section-cinematic section-cinematic-full";
+    if (sectionNode.classList.contains("align-right")) return "section-cinematic section-cinematic-card section-cinematic-left";
+    if (sectionNode.classList.contains("align-center")) return "section-cinematic section-cinematic-card section-cinematic-center";
+    return "section-cinematic section-cinematic-card section-cinematic-right";
+  }
+
+  function renderLayer(layer, options = {}) {
+    if (!layer || !layer.enabled || !layer.url) return null;
+    const wrapper = document.createElement("div");
+    wrapper.className = options.type === "hero"
+      ? "hero-cinematic " + (layer.layout === "full-background" ? "hero-cinematic-full" : "hero-cinematic-card")
+      : getSectionPlacementClass(options.sectionNode, layer);
+    const video = document.createElement("video");
+    video.className = "cinematic-video";
+    video.dataset.loopMode = layer.loopMode || "loop";
+    video.dataset.playbackSpeed = String(layer.speed || 1);
+    video.autoplay = true;
+    video.muted = true;
+    video.playsInline = true;
+    video.preload = "auto";
+    video.src = layer.url;
+    wrapper.appendChild(video);
+    setupVideo(video);
+    return wrapper;
+  }
+
+  function applyContent() {
+    const content = draft.editableContent || {};
+    updateText(".hero-kicker", content.hero && content.hero.kicker);
+    updateText(".hero-standalone h1", content.hero && content.hero.title);
+    updateText(".hero-sub", content.hero && content.hero.sub);
+    updateText(".hero-trust", content.hero && content.hero.trustLine);
+    updateText(".marquee-text", content.marqueeText);
+    updateText(".site-header a[href="#cta"]", content.cta && content.cta.headerCta);
+
+    const sectionNodes = Array.from(document.querySelectorAll(".scroll-section")).filter((node) => node.id !== "cta");
+    (content.sections || []).forEach((section, index) => {
+      const node = sectionNodes[index];
+      if (!node) return;
+      updateText(".section-label", section.label, node);
+      updateText(".section-heading", section.heading, node);
+      updateText(".section-body", section.body, node);
+      updateText(".cta-button", section.button, node);
+
+      if (section.kind === "stats") {
+        Array.from(node.querySelectorAll(".stat")).forEach((statNode, statIndex) => {
+          const stat = section.stats && section.stats[statIndex];
+          if (!stat) return;
+          const statNumber = statNode.querySelector(".stat-number");
+          if (statNumber) {
+            statNumber.textContent = stat.value || "";
+            statNumber.setAttribute("data-value", stat.value || "");
+          }
+          updateText(".stat-suffix", stat.suffix, statNode);
+          updateText(".stat-label", stat.label, statNode);
+        });
+      }
+
+      if (section.kind === "cards") {
+        Array.from(node.querySelectorAll(".info-card")).forEach((cardNode, cardIndex) => {
+          const card = section.cards && section.cards[cardIndex];
+          if (!card) return;
+          updateText(".stat-label", card.title, cardNode);
+          updateText(".card-body", card.body, cardNode);
+        });
+      }
+
+      if (section.kind === "faq") {
+        Array.from(node.querySelectorAll(".info-card")).forEach((itemNode, itemIndex) => {
+          const item = section.items && section.items[itemIndex];
+          if (!item) return;
+          updateText(".stat-label", item.question, itemNode);
+          updateText(".card-body", item.answer, itemNode);
+        });
+      }
+    });
+
+    const ctaNode = document.querySelector("#cta");
+    if (ctaNode && content.cta) {
+      updateText(".section-label", content.cta.label, ctaNode);
+      updateText(".section-heading", content.cta.heading, ctaNode);
+      updateText(".section-body", content.cta.body, ctaNode);
+      updateText(".cta-button", content.cta.button, ctaNode);
+    }
+  }
+
+  function applyCinematic() {
+    ensureCinematicStyles();
+    const layers = draft.cinematicLayers || {};
+
+    const heroNode = document.querySelector(".hero-standalone");
+    if (heroNode) {
+      heroNode.querySelectorAll(".hero-cinematic").forEach((node) => node.remove());
+      const heroLayer = renderLayer(layers.hero, { type: "hero" });
+      if (heroLayer) heroNode.insertBefore(heroLayer, heroNode.firstChild);
+    }
+
+    const sectionNodes = Array.from(document.querySelectorAll(".scroll-section")).filter((node) => node.id !== "cta");
+    sectionNodes.forEach((sectionNode, index) => {
+      sectionNode.querySelectorAll(".section-cinematic").forEach((node) => node.remove());
+      const layer = layers.sections && layers.sections[index];
+      const cinematicNode = renderLayer(layer, { sectionNode });
+      if (cinematicNode) sectionNode.insertBefore(cinematicNode, sectionNode.firstChild);
+    });
+  }
+
+  function applyDraft() {
+    applySeo();
+    applyContent();
+    applyCinematic();
+  }
+
+  window.addEventListener("load", () => {
+    applyDraft();
+    requestAnimationFrame(applyDraft);
+  });
+})();
+</script>`;
+}
+
+function injectStandalonePreviewRuntime(html, previewData) {
+  const runtimeScript = buildStandalonePreviewRuntimeScript(previewData);
+  if (/<\/body>/i.test(html)) {
+    return html.replace(/<\/body>/i, `${runtimeScript}</body>`);
+  }
+  return `${html}${runtimeScript}`;
 }
 
 function deepClone(value) {
@@ -782,6 +1145,13 @@ function setupPreviewCinematicVideo(video) {
     lastTick = 0;
   };
 
+  const restartForward = () => {
+    stopReverse();
+    video.currentTime = video.duration && video.duration > 0.001 ? 0.001 : 0;
+    video.playbackRate = speed;
+    video.play().catch(() => {});
+  };
+
   const reverseStep = (timestamp) => {
     if (!reversing) return;
     if (!lastTick) lastTick = timestamp;
@@ -790,10 +1160,7 @@ function setupPreviewCinematicVideo(video) {
     const nextTime = Math.max(0, video.currentTime - delta * speed);
     video.currentTime = nextTime;
     if (nextTime <= 0.02) {
-      stopReverse();
-      video.currentTime = 0;
-      video.playbackRate = speed;
-      video.play().catch(() => {});
+      restartForward();
       return;
     }
     reverseFrame = requestAnimationFrame(reverseStep);
@@ -813,6 +1180,7 @@ function setupPreviewCinematicVideo(video) {
   video.defaultMuted = true;
   video.playsInline = true;
   video.autoplay = true;
+  video.preload = "auto";
   video.loop = loopMode !== "boomerang";
   video.playbackRate = speed;
   video.addEventListener("canplay", () => {
@@ -830,6 +1198,11 @@ function setupPreviewCinematicVideo(video) {
     video.addEventListener("timeupdate", () => {
       if (!reversing && video.duration && video.currentTime >= video.duration - 0.04) {
         startReverse();
+      }
+    });
+    video.addEventListener("seeked", () => {
+      if (reversing && video.currentTime <= 0.02) {
+        restartForward();
       }
     });
     video.addEventListener("play", () => {
@@ -860,7 +1233,7 @@ function renderPreviewCinematicLayer(frameDocument, layer, options = {}) {
   video.autoplay = true;
   video.muted = true;
   video.playsInline = true;
-  video.preload = "metadata";
+  video.preload = "auto";
   const source = frameDocument.createElement("source");
   source.src = buildPreviewVideoUrl(layer);
   source.type = /\.webm$/i.test(source.src) ? "video/webm" : /\.ogg$/i.test(source.src) ? "video/ogg" : "video/mp4";
@@ -1172,25 +1545,17 @@ function openDraftPreviewWindow() {
 }
 
 function buildLocalFullPreviewHtml() {
-  const frameDocument = siteFrame.contentWindow?.document;
-  if (!frameDocument?.documentElement) {
+  if (!siteSourceHtml || !siteSourcePreviewUrl) {
     throw new Error("The inline preview is not ready yet.");
   }
 
-  const html = frameDocument.documentElement.outerHTML;
-  const parser = new DOMParser();
-  const previewDoc = parser.parseFromString(`<!doctype html>${html}`, "text/html");
-  const title = String(editableContent?.hero?.title || siteConfig?.title || "").trim();
-  const canonicalUrl = String(seoDraft?.publicSiteUrl || "").trim();
-
-  if (title) {
-    previewDoc.title = title;
-  }
-  upsertLinkTag(previewDoc, "canonical", canonicalUrl);
-  upsertMetaTag(previewDoc, "property", "og:url", canonicalUrl || "");
-  upsertMetaTag(previewDoc, "name", "robots", canonicalUrl ? "index, follow" : "noindex, nofollow");
-
-  return `<!doctype html>\n${previewDoc.documentElement.outerHTML}`;
+  const previewHtml = buildPreviewSrcdoc(siteSourceHtml, siteSourcePreviewUrl);
+  return injectStandalonePreviewRuntime(previewHtml, {
+    title: String(editableContent?.hero?.title || siteConfig?.title || "").trim(),
+    publicSiteUrl: String(seoDraft?.publicSiteUrl || "").trim(),
+    editableContent,
+    cinematicLayers: buildStandalonePreviewCinematicLayers(),
+  });
 }
 
 function openLocalFullPreview(previewWindow) {
@@ -1283,6 +1648,8 @@ async function loadSite() {
     throw new Error("The site preview URL is missing.");
   }
   const previewHtml = await fetchText(previewUrl);
+  siteSourceHtml = previewHtml;
+  siteSourcePreviewUrl = previewUrl;
   siteFrame.srcdoc = buildPreviewSrcdoc(previewHtml, previewUrl);
 }
 

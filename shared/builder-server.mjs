@@ -881,6 +881,13 @@ export function startBuilderServer({ appDir, publicDir }) {
       lastTick = 0;
     };
 
+    const restartForward = () => {
+      stopReverse();
+      video.currentTime = video.duration && video.duration > 0.001 ? 0.001 : 0;
+      video.playbackRate = speed;
+      video.play().catch(() => {});
+    };
+
     const reverseStep = (timestamp) => {
       if (!reversing) return;
       if (!lastTick) lastTick = timestamp;
@@ -889,10 +896,7 @@ export function startBuilderServer({ appDir, publicDir }) {
       const nextTime = Math.max(0, video.currentTime - delta * speed);
       video.currentTime = nextTime;
       if (nextTime <= 0.02) {
-        stopReverse();
-        video.currentTime = 0;
-        video.playbackRate = speed;
-        video.play().catch(() => {});
+        restartForward();
         return;
       }
       frameId = requestAnimationFrame(reverseStep);
@@ -912,6 +916,7 @@ export function startBuilderServer({ appDir, publicDir }) {
     video.defaultMuted = true;
     video.playsInline = true;
     video.autoplay = true;
+    video.preload = "auto";
     video.loop = loopMode !== "boomerang";
     video.playbackRate = speed;
     video.addEventListener("canplay", () => {
@@ -929,6 +934,11 @@ export function startBuilderServer({ appDir, publicDir }) {
       video.addEventListener("timeupdate", () => {
         if (!reversing && video.duration && video.currentTime >= video.duration - 0.04) {
           startReverse();
+        }
+      });
+      video.addEventListener("seeked", () => {
+        if (reversing && video.currentTime <= 0.02) {
+          restartForward();
         }
       });
       video.addEventListener("play", () => {
@@ -957,7 +967,7 @@ export function startBuilderServer({ appDir, publicDir }) {
     video.autoplay = true;
     video.muted = true;
     video.playsInline = true;
-    video.preload = "metadata";
+    video.preload = "auto";
     video.src = layer.url;
     wrapper.appendChild(video);
     setupVideo(video);

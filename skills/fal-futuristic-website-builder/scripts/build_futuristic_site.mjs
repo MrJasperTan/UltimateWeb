@@ -1979,7 +1979,7 @@ function renderCinematicVideoMarkup(layer, className = "") {
       ? "video/ogg"
       : "video/mp4";
   return `
-      <video class="${classes}" data-cinematic-video="true" data-loop-mode="${escapeHtml(layer.loopMode)}" data-playback-speed="${escapeHtml(layer.speed)}" autoplay muted playsinline preload="metadata">
+      <video class="${classes}" data-cinematic-video="true" data-loop-mode="${escapeHtml(layer.loopMode)}" data-playback-speed="${escapeHtml(layer.speed)}" autoplay muted playsinline preload="auto">
         <source src="${escapeHtml(layer.video.url)}" type="${sourceType}" />
       </video>`;
 }
@@ -2853,6 +2853,13 @@ function setupLoopingVideo(video, loopMode = "loop", rate = 1) {
     lastTick = 0;
   };
 
+  const restartForward = () => {
+    stopReverse();
+    video.currentTime = video.duration && video.duration > 0.001 ? 0.001 : 0;
+    video.playbackRate = speed;
+    video.play().catch(() => {});
+  };
+
   const reverseStep = (timestamp) => {
     if (!reversing) return;
     if (!lastTick) lastTick = timestamp;
@@ -2861,10 +2868,7 @@ function setupLoopingVideo(video, loopMode = "loop", rate = 1) {
     const nextTime = Math.max(0, video.currentTime - delta * speed);
     video.currentTime = nextTime;
     if (nextTime <= 0.02) {
-      stopReverse();
-      video.currentTime = 0;
-      video.playbackRate = speed;
-      video.play().catch(() => {});
+      restartForward();
       return;
     }
     reverseFrame = requestAnimationFrame(reverseStep);
@@ -2884,6 +2888,7 @@ function setupLoopingVideo(video, loopMode = "loop", rate = 1) {
   video.defaultMuted = true;
   video.playsInline = true;
   video.autoplay = true;
+  video.preload = "auto";
   video.loop = loopMode !== "boomerang";
   video.playbackRate = speed;
   video.addEventListener("canplay", () => {
@@ -2902,6 +2907,11 @@ function setupLoopingVideo(video, loopMode = "loop", rate = 1) {
     video.addEventListener("timeupdate", () => {
       if (!reversing && video.duration && video.currentTime >= video.duration - 0.04) {
         startReverse();
+      }
+    });
+    video.addEventListener("seeked", () => {
+      if (reversing && video.currentTime <= 0.02) {
+        restartForward();
       }
     });
     video.addEventListener("play", () => {
