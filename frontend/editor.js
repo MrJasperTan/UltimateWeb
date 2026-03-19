@@ -3,6 +3,7 @@ const editorSubtitle = document.getElementById("editor-subtitle");
 const statusText = document.getElementById("status-text");
 const jobText = document.getElementById("job-text");
 const publishButton = document.getElementById("publish-btn");
+const cinematicLayersButton = document.getElementById("cinematic-layers-btn");
 const seoSettingsButton = document.getElementById("seo-settings-btn");
 const previewShell = document.getElementById("preview-shell");
 const siteFrame = document.getElementById("site-frame");
@@ -21,10 +22,12 @@ const siteSlug = String(urlParams.get("slug") || "").trim();
 let siteConfig = null;
 let editableContent = null;
 let mediaDraft = null;
+let cinematicDraft = null;
 let seoDraft = null;
 let activeModal = null;
 let pollTimer = null;
 let handleTimer = null;
+const previewObjectUrls = new Set();
 
 function toApiUrl(path) {
   if (configuredApiBase) return `${configuredApiBase}${path}`;
@@ -167,6 +170,30 @@ function ensureEditableContent(raw) {
   };
 }
 
+function ensureCinematicLayer(rawLayer, fallbackLabel) {
+  const video = rawLayer?.video || {};
+  return {
+    enabled: Boolean(rawLayer?.enabled && video?.url),
+    label: String(rawLayer?.label || fallbackLabel || "").trim(),
+    layout: String(rawLayer?.layout || "card").trim() === "full-background" ? "full-background" : "card",
+    loopMode: String(rawLayer?.loopMode || "loop").trim() === "boomerang" ? "boomerang" : "loop",
+    speed: Number(rawLayer?.speed) > 0 ? Number(rawLayer.speed) : 1,
+    sourceUrl: String(video?.url || "").trim(),
+    filename: String(video?.filename || "").trim(),
+    file: null,
+  };
+}
+
+function ensureCinematicLayers(rawLayers, sections) {
+  const sectionCount = Array.isArray(sections) ? sections.length : 0;
+  return {
+    hero: ensureCinematicLayer(rawLayers?.hero, "Hero"),
+    sections: Array.from({ length: sectionCount }, (_, index) =>
+      ensureCinematicLayer(rawLayers?.sections?.[index], getSectionDisplayLabel(sections[index], index))
+    ),
+  };
+}
+
 function resetMediaDraft() {
   mediaDraft = {
     startPrompt: siteConfig?.startPrompt || "",
@@ -176,6 +203,11 @@ function resetMediaDraft() {
     endImageFile: null,
     videoFile: null,
   };
+}
+
+function resetCinematicDraft() {
+  releaseAllPreviewUrls();
+  cinematicDraft = ensureCinematicLayers(siteConfig?.cinematicLayers, editableContent?.sections || []);
 }
 
 function resetSeoDraft() {
@@ -228,6 +260,83 @@ function createFileField(name, label, note) {
       <input type="file" name="${name}" />
       <small>${note}</small>
     </label>
+  `;
+}
+
+function createSelectField(name, label, value, options) {
+  return `
+    <label>
+      <span>${label}</span>
+      <select name="${name}">
+        ${options.map((option) => `<option value="${escapeHtml(option.value)}"${option.value === value ? " selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
+      </select>
+    </label>
+  `;
+}
+
+function buildPreviewVideoUrl(layer) {
+  if (layer?.file instanceof File) {
+    if (!layer.previewObjectUrl) {
+      layer.previewObjectUrl = URL.createObjectURL(layer.file);
+      previewObjectUrls.add(layer.previewObjectUrl);
+    }
+    return layer.previewObjectUrl;
+  }
+  return toPublicAssetUrl(layer?.sourceUrl || "");
+}
+
+function revokeLayerPreviewUrl(layer) {
+  if (!layer?.previewObjectUrl) return;
+  URL.revokeObjectURL(layer.previewObjectUrl);
+  previewObjectUrls.delete(layer.previewObjectUrl);
+  layer.previewObjectUrl = "";
+}
+
+function releaseAllPreviewUrls() {
+  previewObjectUrls.forEach((url) => URL.revokeObjectURL(url));
+  previewObjectUrls.clear();
+}
+
+function renderCinematicPreviewMedia(layer) {
+  const previewUrl = buildPreviewVideoUrl(layer);
+  if (!previewUrl) {
+    return `<p>No cinematic video selected.</p>`;
+  }
+  return `<video src="${escapeHtml(previewUrl)}" controls muted playsinline></video>`;
+}
+
+function renderCinematicLayerEditor(slotKey, title, layer) {
+  const reuseNote = layer.sourceUrl
+    ? `Current video: ${escapeHtml(layer.filename || layer.sourceUrl.split("/").pop() || "configured asset")}`
+    : "No current cinematic video configured.";
+  return `
+    <div class="stack-card${layer.enabled ? "" : " is-disabled"}">
+      <label class="field-toggle">
+        <input type="checkbox" name="enabled-${slotKey}" ${layer.enabled ? "checked" : ""} />
+        <span>${escapeHtml(title)}</span>
+      </label>
+      ${renderCinematicPreviewMedia(layer)}
+      <small>${reuseNote}</small>
+      <div class="field-row compact">
+        ${createSelectField(`layout-${slotKey}`, "Layout", layer.layout, [
+          { value: "card", label: "Card" },
+          { value: "full-background", label: "Full Background" },
+        ])}
+        ${createSelectField(`loopMode-${slotKey}`, "Playback", layer.loopMode, [
+          { value: "loop", label: "Loop" },
+          { value: "boomerang", label: "Boomerang" },
+        ])}
+        <label>
+          <span>Speed</span>
+          <input type="number" name="speed-${slotKey}" min="0.25" max="2.5" step="0.1" value="${escapeHtml(layer.speed || 1)}" />
+        </label>
+      </div>
+      <label>
+        <span>Replace Video</span>
+        <input type="file" name="video-${slotKey}" accept="video/*" />
+        <small>Leave empty to keep the current video for this slot.</small>
+      </label>
+    </div>
   `;
 }
 
@@ -421,6 +530,26 @@ function openSeoModal() {
   });
 }
 
+function openCinematicModal() {
+  const sectionsMarkup = cinematicDraft.sections
+    .map((layer, index) =>
+      renderCinematicLayerEditor(`section-${index}`, getSectionDisplayLabel(editableContent.sections[index], index), layer)
+    )
+    .join("");
+
+  openModal({
+    type: "cinematic",
+    title: "Cinematic Layers",
+    body: `
+      <div class="stack-list">
+        ${renderCinematicLayerEditor("hero", "Hero", cinematicDraft.hero)}
+        ${sectionsMarkup}
+      </div>
+      <p class="field-note">These motion layers preserve the existing copy and layout. Publishing creates a new cinematic version with the selected video treatment.</p>
+    `,
+  });
+}
+
 function applyModalChanges() {
   if (!activeModal) return;
   const formData = new FormData();
@@ -482,6 +611,31 @@ function applyModalChanges() {
     mediaDraft.videoFile = formData.get("video") instanceof File ? formData.get("video") : null;
   }
 
+  if (activeModal.type === "cinematic") {
+    const applyLayerChanges = (slotKey, target) => {
+      const nextFile = formData.get(`video-${slotKey}`);
+      target.enabled = formData.get(`enabled-${slotKey}`) === "on";
+      target.layout = String(formData.get(`layout-${slotKey}`) || "card").trim() === "full-background" ? "full-background" : "card";
+      target.loopMode = String(formData.get(`loopMode-${slotKey}`) || "loop").trim() === "boomerang" ? "boomerang" : "loop";
+      target.speed = Math.min(2.5, Math.max(0.25, Number(formData.get(`speed-${slotKey}`) || 1) || 1));
+      if (nextFile instanceof File && nextFile.size > 0) {
+        revokeLayerPreviewUrl(target);
+        target.file = nextFile;
+        target.filename = nextFile.name;
+      }
+      if (!target.enabled) {
+        revokeLayerPreviewUrl(target);
+        target.file = null;
+      }
+    };
+
+    applyLayerChanges("hero", cinematicDraft.hero);
+    cinematicDraft.sections.forEach((layer, index) => {
+      applyLayerChanges(`section-${index}`, layer);
+    });
+    setStatus("Cinematic layer settings updated.", "Publish to generate the new motion-enhanced version.");
+  }
+
   if (activeModal.type === "seo") {
     seoDraft.publicSiteUrl = String(formData.get("publicSiteUrl") || "").trim();
   }
@@ -492,6 +646,209 @@ function applyModalChanges() {
 
 function updateElementText(element, value) {
   if (element) element.textContent = value;
+}
+
+function ensureCinematicPreviewStyles(frameDocument) {
+  if (!frameDocument || frameDocument.getElementById("uw-editor-cinematic-preview-style")) return;
+  const style = frameDocument.createElement("style");
+  style.id = "uw-editor-cinematic-preview-style";
+  style.textContent = `
+    .hero-standalone { position: relative; }
+    .hero-standalone > *:not(.hero-cinematic) { position: relative; z-index: 2; }
+    .hero-cinematic,
+    .section-cinematic {
+      position: absolute;
+      overflow: hidden;
+      border-radius: 1.6rem;
+      border: 1px solid rgba(255,255,255,0.1);
+      background:
+        linear-gradient(160deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03)),
+        rgba(5,8,10,0.34);
+      box-shadow: 0 28px 70px rgba(0,0,0,0.34);
+      z-index: 0;
+    }
+    .hero-cinematic::after,
+    .section-cinematic::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(180deg, rgba(8,10,15,0.04), rgba(8,10,15,0.28)),
+        radial-gradient(circle at 20% 20%, rgba(255,255,255,0.14), transparent 28%);
+    }
+    .hero-cinematic-full {
+      inset: 0;
+      border-radius: 0;
+      border: 0;
+      box-shadow: none;
+      background: rgba(0,0,0,0.12);
+    }
+    .hero-cinematic-full::after {
+      background:
+        linear-gradient(90deg, rgba(7,8,12,0.82) 0%, rgba(7,8,12,0.46) 38%, rgba(7,8,12,0.28) 62%, rgba(7,8,12,0.62) 100%),
+        radial-gradient(circle at 20% 20%, rgba(255,255,255,0.1), transparent 26%);
+    }
+    .hero-cinematic-card { inset: 8vh 5vw 12vh 49vw; }
+    .section-cinematic { top: 50%; transform: translateY(-50%); }
+    .section-cinematic-card { width: min(34vw, 32rem); aspect-ratio: 16 / 10; }
+    .section-cinematic-right { right: 5vw; }
+    .section-cinematic-left { left: 5vw; }
+    .section-cinematic-center { left: 50%; transform: translate(-50%, -50%); width: min(72vw, 56rem); aspect-ratio: 16 / 7; }
+    .section-cinematic-full { inset: clamp(1rem, 3vw, 2rem) 4vw; top: 0; transform: none; border-radius: 2rem; }
+    .section-cinematic-full::after {
+      background:
+        linear-gradient(180deg, rgba(7,9,13,0.68), rgba(7,9,13,0.38)),
+        radial-gradient(circle at 50% 12%, rgba(255,255,255,0.14), transparent 24%);
+    }
+    .cinematic-video {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+      pointer-events: none;
+    }
+    .scroll-section { isolation: isolate; }
+    .section-inner { position: relative; z-index: 2; }
+    @media (max-width: 900px) {
+      .hero-cinematic-card,
+      .section-cinematic-card,
+      .section-cinematic-center,
+      .section-cinematic-full {
+        position: relative;
+        inset: auto;
+        left: auto;
+        right: auto;
+        top: auto;
+        transform: none;
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        margin: 0 auto 1rem;
+      }
+    }
+  `;
+  frameDocument.head.appendChild(style);
+}
+
+function setupPreviewCinematicVideo(video) {
+  if (!video || video.dataset.editorCinematicBound === "true") return;
+  video.dataset.editorCinematicBound = "true";
+  const loopMode = String(video.dataset.loopMode || "loop");
+  const speed = Math.min(2.5, Math.max(0.25, Number(video.dataset.playbackSpeed || 1) || 1));
+  let reversing = false;
+  let reverseFrame = 0;
+  let lastTick = 0;
+
+  const stopReverse = () => {
+    if (reverseFrame) cancelAnimationFrame(reverseFrame);
+    reverseFrame = 0;
+    reversing = false;
+    lastTick = 0;
+  };
+
+  const reverseStep = (timestamp) => {
+    if (!reversing) return;
+    if (!lastTick) lastTick = timestamp;
+    const delta = (timestamp - lastTick) / 1000;
+    lastTick = timestamp;
+    const nextTime = Math.max(0, video.currentTime - delta * speed);
+    video.currentTime = nextTime;
+    if (nextTime <= 0.02) {
+      stopReverse();
+      video.currentTime = 0;
+      video.playbackRate = speed;
+      video.play().catch(() => {});
+      return;
+    }
+    reverseFrame = requestAnimationFrame(reverseStep);
+  };
+
+  const startReverse = () => {
+    if (loopMode !== "boomerang" || reversing) return;
+    reversing = true;
+    video.pause();
+    reverseFrame = requestAnimationFrame(reverseStep);
+  };
+
+  video.muted = true;
+  video.defaultMuted = true;
+  video.playsInline = true;
+  video.autoplay = true;
+  video.loop = loopMode !== "boomerang";
+  video.playbackRate = speed;
+  video.addEventListener("canplay", () => {
+    video.playbackRate = speed;
+    video.play().catch(() => {});
+  });
+  video.addEventListener("loadeddata", () => {
+    video.playbackRate = speed;
+  });
+  if (loopMode === "boomerang") {
+    video.addEventListener("ended", startReverse);
+    video.addEventListener("timeupdate", () => {
+      if (!reversing && video.duration && video.currentTime >= video.duration - 0.04) {
+        startReverse();
+      }
+    });
+    video.addEventListener("play", () => {
+      if (reversing) stopReverse();
+    });
+  }
+}
+
+function getSectionCinematicPlacementClass(sectionNode, layer) {
+  if (layer.layout === "full-background") return "section-cinematic section-cinematic-full";
+  if (sectionNode.classList.contains("align-right")) return "section-cinematic section-cinematic-card section-cinematic-left";
+  if (sectionNode.classList.contains("align-center")) return "section-cinematic section-cinematic-card section-cinematic-center";
+  return "section-cinematic section-cinematic-card section-cinematic-right";
+}
+
+function renderPreviewCinematicLayer(frameDocument, layer, options = {}) {
+  if (!layer?.enabled) return null;
+  const wrapper = frameDocument.createElement("div");
+  wrapper.className = options.type === "hero"
+    ? `hero-cinematic ${layer.layout === "full-background" ? "hero-cinematic-full" : "hero-cinematic-card"}`
+    : getSectionCinematicPlacementClass(options.sectionNode, layer);
+  if (options.index !== undefined) wrapper.dataset.cinematicLayer = String(options.index);
+  const video = frameDocument.createElement("video");
+  video.className = "cinematic-video";
+  video.setAttribute("data-cinematic-video", "true");
+  video.dataset.loopMode = layer.loopMode || "loop";
+  video.dataset.playbackSpeed = String(layer.speed || 1);
+  video.autoplay = true;
+  video.muted = true;
+  video.playsInline = true;
+  video.preload = "metadata";
+  const source = frameDocument.createElement("source");
+  source.src = buildPreviewVideoUrl(layer);
+  source.type = /\.webm$/i.test(source.src) ? "video/webm" : /\.ogg$/i.test(source.src) ? "video/ogg" : "video/mp4";
+  video.appendChild(source);
+  wrapper.appendChild(video);
+  setupPreviewCinematicVideo(video);
+  return wrapper;
+}
+
+function applyCinematicPreview(frameDocument) {
+  ensureCinematicPreviewStyles(frameDocument);
+
+  const heroNode = frameDocument.querySelector(".hero-standalone");
+  if (heroNode) {
+    heroNode.querySelectorAll(".hero-cinematic").forEach((node) => node.remove());
+    const heroLayer = renderPreviewCinematicLayer(frameDocument, cinematicDraft.hero, { type: "hero" });
+    if (heroLayer) {
+      heroNode.insertBefore(heroLayer, heroNode.firstChild);
+    }
+  }
+
+  const sectionNodes = Array.from(frameDocument.querySelectorAll(".scroll-section")).filter((node) => node.id !== "cta");
+  sectionNodes.forEach((sectionNode, index) => {
+    sectionNode.querySelectorAll(".section-cinematic").forEach((node) => node.remove());
+    const layer = cinematicDraft.sections[index];
+    const cinematicNode = renderPreviewCinematicLayer(frameDocument, layer, { sectionNode, index });
+    if (cinematicNode) {
+      sectionNode.insertBefore(cinematicNode, sectionNode.firstChild);
+    }
+  });
 }
 
 function applyPreview() {
@@ -540,6 +897,8 @@ function applyPreview() {
       });
     }
   });
+
+  applyCinematicPreview(frameDocument);
 
   renderHandles();
 }
@@ -719,6 +1078,26 @@ function startPolling(jobId) {
   }, 2200);
 }
 
+function buildCinematicLayersPayload() {
+  const serializeLayer = (slotKey, layer) => {
+    const uploadField = layer.file instanceof File ? `cinematic-${slotKey}-video` : "";
+    return {
+      enabled: Boolean(layer.enabled),
+      label: layer.label,
+      layout: layer.layout,
+      loopMode: layer.loopMode,
+      speed: layer.speed,
+      sourceUrl: layer.file instanceof File ? (layer.sourceUrl || "") : (layer.sourceUrl || ""),
+      uploadField,
+    };
+  };
+
+  return {
+    hero: serializeLayer("hero", cinematicDraft.hero),
+    sections: cinematicDraft.sections.map((layer, index) => serializeLayer(`section-${index}`, layer)),
+  };
+}
+
 async function publishEdits() {
   if (!siteConfig) return;
   publishButton.disabled = true;
@@ -735,9 +1114,14 @@ async function publishEdits() {
   payload.append("videoPrompt", mediaDraft.videoPrompt || "");
   payload.append("editSourceSlug", siteConfig.slug);
   payload.append("contentOverrides", JSON.stringify(editableContent));
+  payload.append("cinematicLayers", JSON.stringify(buildCinematicLayersPayload()));
   if (mediaDraft.startImageFile) payload.append("startImage", mediaDraft.startImageFile);
   if (mediaDraft.endImageFile) payload.append("endImage", mediaDraft.endImageFile);
   if (mediaDraft.videoFile) payload.append("video", mediaDraft.videoFile);
+  if (cinematicDraft.hero.file) payload.append("cinematic-hero-video", cinematicDraft.hero.file);
+  cinematicDraft.sections.forEach((layer, index) => {
+    if (layer.file) payload.append(`cinematic-section-${index}-video`, layer.file);
+  });
 
   const response = await apiFetch("/api/build", {
     method: "POST",
@@ -768,6 +1152,7 @@ async function loadSite() {
   siteConfig = await response.json();
   editableContent = ensureEditableContent(siteConfig.editableContent);
   resetMediaDraft();
+  resetCinematicDraft();
   resetSeoDraft();
 
   editorTitle.textContent = editableContent.hero.title || siteConfig.title;
@@ -806,6 +1191,7 @@ publishButton.addEventListener("click", async () => {
     setStatus(`Could not publish changes: ${error.message}`);
   }
 });
+cinematicLayersButton.addEventListener("click", openCinematicModal);
 seoSettingsButton.addEventListener("click", openSeoModal);
 
 window.addEventListener("beforeunload", () => {

@@ -24,6 +24,7 @@ html, body { margin: 0; min-height: 100%; background:
 body { padding: 24px; }
 a { color: inherit; }
 button, input, textarea { font: inherit; }
+select { font: inherit; }
 button { cursor: pointer; }
 
 .editor-shell { display: grid; gap: 18px; }
@@ -247,7 +248,10 @@ label {
 }
 
 input[type="text"],
+input[type="number"],
+input[type="url"],
 input[type="file"],
+select,
 textarea {
   width: 100%;
   border-radius: 16px;
@@ -290,6 +294,27 @@ textarea {
   margin: 0;
 }
 
+.field-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.field-row.compact {
+  grid-template-columns: 1.1fr 1fr 0.9fr;
+}
+
+.field-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+}
+
+.field-toggle input[type="checkbox"] {
+  width: auto;
+}
+
 .stack-list {
   display: grid;
   gap: 12px;
@@ -304,6 +329,27 @@ textarea {
   background: rgba(255, 255, 255, 0.03);
 }
 
+.stack-card.is-disabled {
+  opacity: 0.7;
+}
+
+.stack-card h3,
+.stack-card p {
+  margin: 0;
+}
+
+.stack-card video {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.stack-card small {
+  color: var(--muted);
+}
+
 @media (max-width: 980px) {
   body { padding: 14px; }
   .editor-topbar,
@@ -313,5 +359,7 @@ textarea {
   .preview-shell,
   #site-frame { min-height: 70vh; height: 70vh; }
   .media-preview-grid,
-  .field-grid.two-col { grid-template-columns: 1fr; }
+  .field-grid.two-col,
+  .field-row,
+  .field-row.compact { grid-template-columns: 1fr; }
 }

@@ -63,15 +63,18 @@ The actual server implementation lives in `shared/builder-server.mjs`.
 - `changeRequest`
 - `editSourceSlug`
 - `contentOverrides` from the editor
+- optional public `siteUrl` for canonical/indexable output
+- optional `cinematicLayers` payload for hero/section motion slots
 
 ## Current User Flows
 
 - Sign in or sign up from the portal.
-- Launch a build with topic, mode, optional source URL, palette, media, and prompt overrides.
+- Launch a build with topic, mode, optional source URL, palette, media, prompt overrides, and optional public site URL.
 - Poll build job state via `/api/jobs/:id`.
 - View completed results in the private gallery.
 - Open a generated site in the inline editor with `editor.html?slug=<slug>`.
 - Rebuild from an existing site while reusing current media or replacing selected assets.
+- Configure hero and per-section cinematic motion layers in the editor, then publish a new premium version.
 - Delete a generated site through the site deletion endpoint.
 
 ## Main API Surface
@@ -98,6 +101,7 @@ The actual server implementation lives in `shared/builder-server.mjs`.
 - Both tables have row-level security enabled.
 - The app additionally checks authenticated ownership before serving private generated-site files from disk.
 - Some sample slugs are hard-coded as public in `PUBLIC_SAMPLE_SLUGS` inside `shared/builder-server.mjs`.
+- Generated `pipeline-metadata.json` now also carries SEO metadata and optional `cinematicLayers` definitions.
 
 ## Environment
 
@@ -125,6 +129,7 @@ Notes:
 - Prefer reading current server/frontend code over inferring behavior from docs.
 - If a route or access rule matters, verify it in `shared/builder-server.mjs` before changing related code.
 - If a change touches persistence or auth, review the Supabase helper and migration together.
+- For cinematic layers, the primary implementation files are `frontend/editor.js`, `shared/builder-server.mjs`, and `skills/fal-futuristic-website-builder/scripts/build_futuristic_site.mjs`.
 
 ## Editing Guidance
 
@@ -133,6 +138,14 @@ Notes:
 - If changing auth, gallery, editor, or generated-site access rules, review both `shared/builder-server.mjs` and `shared/supabase.mjs`.
 - If changing the builder UX, inspect both `frontend/index.html` and `frontend/app.js`.
 - If changing editor behavior, inspect `frontend/editor.html`, `frontend/editor.css`, and `frontend/editor.js`.
+- If changing generated motion behavior, inspect both the editor preview injection path and the generated-site runtime emitted by `build_futuristic_site.mjs`.
+
+## Current Status
+
+- SEO-ready output is implemented for generated sites, with optional public URL support.
+- Editor-driven cinematic hero/section layers are implemented, including layout mode, loop mode, and playback speed.
+- Live cinematic preview inside the editor iframe is implemented.
+- Next recommended step: add a `Full Preview` flow that opens the current unsaved editor draft in a standalone full-page preview, not just the iframe.
 
 ## Documentation Split
 

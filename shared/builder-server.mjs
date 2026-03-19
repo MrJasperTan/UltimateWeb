@@ -639,6 +639,32 @@ export function startBuilderServer({ appDir, publicDir }) {
         ? metadata.sourceContext.palette
         : [];
     const editableContent = metadata.editableContent || parseEditableContentFromSite(siteRoot, metadata);
+    const cinematicLayers = metadata.cinematicLayers
+      ? {
+          hero: metadata.cinematicLayers.hero
+            ? {
+                ...metadata.cinematicLayers.hero,
+                video: metadata.cinematicLayers.hero.video?.url
+                  ? {
+                      ...metadata.cinematicLayers.hero.video,
+                      url: `/generated-sites/${slug}/${String(metadata.cinematicLayers.hero.video.url).replace(/^\/+/, "")}`,
+                    }
+                  : metadata.cinematicLayers.hero.video,
+              }
+            : null,
+          sections: Array.isArray(metadata.cinematicLayers.sections)
+            ? metadata.cinematicLayers.sections.map((layer) => ({
+                ...layer,
+                video: layer?.video?.url
+                  ? {
+                      ...layer.video,
+                      url: `/generated-sites/${slug}/${String(layer.video.url).replace(/^\/+/, "")}`,
+                    }
+                  : layer?.video,
+              }))
+            : [],
+        }
+      : null;
 
     return {
       slug,
@@ -654,6 +680,7 @@ export function startBuilderServer({ appDir, publicDir }) {
       editSourceSlug: cleanOptionalString(metadata.editSourceSlug),
       siteUrl: `/generated-sites/${slug}/index.html`,
       seo: metadata.seo || null,
+      cinematicLayers,
       editableContent,
       media: {
         startImage: currentMedia?.startImage
@@ -705,6 +732,67 @@ export function startBuilderServer({ appDir, publicDir }) {
       startImage: pickExistingFile(startCandidates),
       endImage: pickExistingFile(endCandidates),
       videoPath: existsSync(videoPath) && statSync(videoPath).isFile() ? videoPath : null,
+    };
+  }
+
+  async function resolveGeneratedSiteAssetInput(userId, rawValue) {
+    const value = cleanOptionalString(rawValue);
+    if (!value) return null;
+    if (/^https?:\/\//i.test(value)) return value;
+    const match = value.match(/^\/generated-sites\/([^/]+)\/(.+)$/);
+    if (!match) return value;
+
+    const slug = match[1];
+    const relativePath = `${slug}/${match[2]}`;
+    const siteRecord = await findGeneratedSiteRecord(userId, slug);
+    if (!siteRecord) {
+      throw new Error("The selected cinematic asset does not belong to this account.");
+    }
+    const resolved = safeResolve(generatedDir, relativePath);
+    if (!resolved || !existsSync(resolved) || !statSync(resolved).isFile()) {
+      throw new Error("The selected cinematic asset file was not found.");
+    }
+    return resolved;
+  }
+
+  async function hydrateCinematicLayersForBuild(userId, rawLayers, files = {}) {
+    if (!rawLayers || typeof rawLayers !== "object") return null;
+
+    const hydrateLayer = async (layer, fallbackLabel) => {
+      if (!layer || typeof layer !== "object") {
+        return {
+          enabled: false,
+          label: fallbackLabel,
+          layout: "card",
+          loopMode: "loop",
+          speed: 1,
+          sourceInput: null,
+        };
+      }
+
+      const uploadField = cleanOptionalString(layer.uploadField);
+      const uploadedFile = uploadField ? files?.[uploadField] : null;
+      const sourceInput = uploadedFile?.path
+        ? uploadedFile.path
+        : await resolveGeneratedSiteAssetInput(userId, layer.sourceUrl || layer.sourceInput);
+
+      return {
+        enabled: Boolean(layer.enabled) && Boolean(sourceInput),
+        label: cleanOptionalString(layer.label) || fallbackLabel,
+        layout: String(layer.layout || "card"),
+        loopMode: String(layer.loopMode || "loop"),
+        speed: Number(layer.speed || 1),
+        sourceInput,
+      };
+    };
+
+    return {
+      hero: await hydrateLayer(rawLayers.hero, "Hero"),
+      sections: await Promise.all(
+        (Array.isArray(rawLayers.sections) ? rawLayers.sections : []).map((layer, index) =>
+          hydrateLayer(layer, `Section ${index + 1}`)
+        )
+      ),
     };
   }
 
@@ -815,6 +903,7 @@ export function startBuilderServer({ appDir, publicDir }) {
       ["--change-request", options.changeRequest],
       ["--edit-source-slug", options.editSourceSlug],
       ["--content-overrides", options.contentOverrides ? JSON.stringify(options.contentOverrides) : null],
+      ["--cinematic-layers", options.cinematicLayers ? JSON.stringify(options.cinematicLayers) : null],
     ];
 
     for (const [flag, value] of optionalArgs) {
@@ -1105,6 +1194,9 @@ export function startBuilderServer({ appDir, publicDir }) {
         const contentOverrides = cleanOptionalString(body.fields.contentOverrides)
           ? JSON.parse(String(body.fields.contentOverrides))
           : null;
+        const rawCinematicLayers = cleanOptionalString(body.fields.cinematicLayers)
+          ? JSON.parse(String(body.fields.cinematicLayers))
+          : null;
         const colors = parseColorList(body.fields.colors);
         const hasUploadedMedia = Boolean(uploadedStartImage || uploadedEndImage || uploadedVideo);
 
@@ -1119,6 +1211,7 @@ export function startBuilderServer({ appDir, publicDir }) {
         const existingMedia = !hasUploadedMedia && editSourceSlug
           ? resolveEditSourceMedia(editSourceSlug)
           : null;
+        const cinematicLayers = await hydrateCinematicLayersForBuild(session.user.id, rawCinematicLayers, body.files);
         const startImage = uploadedStartImage || existingMedia?.startImage || null;
         const endImage = uploadedEndImage || existingMedia?.endImage || null;
         const video = uploadedVideo || existingMedia?.videoPath || null;
@@ -1162,6 +1255,7 @@ export function startBuilderServer({ appDir, publicDir }) {
           changeRequest,
           editSourceSlug,
           contentOverrides,
+          cinematicLayers,
         });
         sendJson(response, 202, {
           id: job.id,

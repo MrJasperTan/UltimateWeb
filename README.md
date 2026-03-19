@@ -8,9 +8,11 @@ Ultimateweb is a local website-generation system for building, storing, and iter
 - Private per-user gallery and build history
 - FAL-powered site generation pipeline
 - Support for uploaded or reused start images, end images, and video
+- SEO-ready generated output with canonical/OG/Twitter/JSON-LD support
 - Three site modes: `conversion`, `editorial`, and `hybrid`
 - Edit flow for rebuilding an existing generated site
 - In-browser editor with structured content overrides
+- In-browser editor support for cinematic motion layers on the hero and individual sections
 - Protected generated-site serving with a small public sample allowlist
 
 ## Current Product Scope
@@ -29,6 +31,8 @@ Ultimateweb is a local website-generation system for building, storing, and iter
   - `changeRequest`
   - edit-mode rebuilds from an existing generated site
   - structured `contentOverrides` from the editor
+  - optional `siteUrl` for production SEO/canonical output
+  - optional cinematic layers with per-slot video, layout, loop mode, and playback speed
 - Completed sites are persisted per user in Supabase and served from `generated-sites/<slug>/`.
 - A small allowlist of sample slugs is public; everything else under `/generated-sites/*` is account-scoped.
 
@@ -113,7 +117,7 @@ node server.mjs
 - The frontend calls `/api/config` first to discover backend base URL and whether Supabase is enabled.
 - The shared server handles auth, session cookies, build requests, job polling, gallery reads, deletion, and generated-site access checks.
 - Build jobs spawn the FAL pipeline script and then persist both job state and completed site metadata to Supabase.
-- The editor loads an existing generated site, lets the user modify content/media inputs, and sends a rebuild request using `contentOverrides` and optional replacement media.
+- The editor loads an existing generated site, lets the user modify content/media inputs, manage cinematic hero/section motion layers, and sends a rebuild request using `contentOverrides` plus optional replacement media.
 
 ## Environment Notes
 
@@ -121,6 +125,14 @@ node server.mjs
 - `FAL_KEY` is required for builds that need the pipeline to generate video. If a request already provides a video file or video URL, the server can still run without `FAL_KEY`.
 - `ULTIMATEWEB_ALLOWED_ORIGINS` controls credentialed CORS when the frontend is hosted on a different origin.
 - `ULTIMATEWEB_API_BASE` is emitted by `/api/config` so the frontend/editor can target a different backend base URL.
+
+## SEO And Premium Motion
+
+- The generator now emits SEO-oriented metadata by default, including title, description, Open Graph, Twitter card tags, JSON-LD, and a self-contained favicon.
+- When a real public URL is known, `siteUrl` enables canonical URL output plus production `robots.txt` and `sitemap.xml`.
+- The editor now supports `Cinematic Layers`, an optional premium motion treatment for the hero and each section.
+- Each cinematic slot can be configured as a `card` or `full background`, with `loop` or `boomerang` playback and adjustable speed.
+- Cinematic layers are regenerated on publish and stored in the generated site metadata for future edits.
 
 ## Data Model
 
@@ -139,3 +151,4 @@ Schema source:
 - Backend logging is appended to `/tmp/ultimateweb-backend.log`.
 - The repo currently has untracked generated output under `generated-sites/`; treat that directory as runtime/project data rather than core app source.
 - Public sample cards on the homepage point at checked-in sample slugs under `frontend/samples/` and selected public slugs under `generated-sites/`.
+- A full-screen unsaved editor preview route is the next planned enhancement; current cinematic layers preview live inside the editor iframe and publish into the generated site output.

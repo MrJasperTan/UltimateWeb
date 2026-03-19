@@ -61,6 +61,7 @@ Optional:
   --video-url        Existing video URL; skips fal media generation
   --change-request   Plain-language edit request applied to generated prompts
   --edit-source-slug Source site slug when creating a new version
+  --cinematic-layers JSON string with hero/section video layer settings
   --start-prompt     Override first-frame prompt
   --end-prompt       Override last-frame prompt
   --motion-prompt    Override video motion prompt
@@ -521,6 +522,102 @@ async function materializeImageAsset(inputValue, outputPath) {
   convertImageToWebp(tempPath, outputPath);
   rmSync(tempPath, { force: true });
   return source;
+}
+
+function normalizeCinematicLayout(value) {
+  const layout = String(value || "card").trim().toLowerCase();
+  if (layout === "full-background" || layout === "background") return "full-background";
+  return "card";
+}
+
+function normalizeLoopMode(value) {
+  const mode = String(value || "loop").trim().toLowerCase();
+  return mode === "boomerang" ? "boomerang" : "loop";
+}
+
+function normalizePlaybackSpeed(value) {
+  const speed = Number(value);
+  if (!Number.isFinite(speed)) return 1;
+  return Math.min(2.5, Math.max(0.25, Number(speed.toFixed(2))));
+}
+
+function guessVideoExtension(value) {
+  const raw = String(value || "");
+  try {
+    const parsed = isValidHttpUrl(raw) ? new URL(raw) : null;
+    const ext = extname(parsed ? parsed.pathname : raw).toLowerCase();
+    if (ext && /\.(mp4|mov|webm|m4v|ogg)$/i.test(ext)) return ext;
+  } catch {
+    // Ignore parse failure.
+  }
+  const localExt = extname(raw).toLowerCase();
+  if (localExt && /\.(mp4|mov|webm|m4v|ogg)$/i.test(localExt)) return localExt;
+  return ".mp4";
+}
+
+function normalizeCinematicLayer(rawLayer = {}, fallbackLabel = "") {
+  const sourceInput = cleanOptionalString(rawLayer.sourceInput)
+    || cleanOptionalString(rawLayer.sourceUrl)
+    || cleanOptionalString(rawLayer.url);
+  return {
+    enabled: Boolean(rawLayer.enabled) && Boolean(sourceInput),
+    label: cleanOptionalString(rawLayer.label) || fallbackLabel,
+    layout: normalizeCinematicLayout(rawLayer.layout),
+    loopMode: normalizeLoopMode(rawLayer.loopMode),
+    speed: normalizePlaybackSpeed(rawLayer.speed),
+    sourceInput,
+  };
+}
+
+function normalizeCinematicLayersInput(rawLayers, sectionCount = 0) {
+  const source = rawLayers && typeof rawLayers === "object" ? rawLayers : {};
+  return {
+    hero: normalizeCinematicLayer(source.hero, "Hero"),
+    sections: Array.from({ length: sectionCount }, (_, index) =>
+      normalizeCinematicLayer(source.sections?.[index], `Section ${index + 1}`)
+    ),
+  };
+}
+
+async function materializeCinematicLayers(rawLayers, mediaDir, sectionCount = 0) {
+  const normalized = normalizeCinematicLayersInput(rawLayers, sectionCount);
+
+  const materializeLayer = async (layer, filenameBase) => {
+    if (!layer.enabled || !layer.sourceInput) {
+      return {
+        enabled: false,
+        label: layer.label,
+        layout: layer.layout,
+        loopMode: layer.loopMode,
+        speed: layer.speed,
+        video: { available: false, filename: null, url: null },
+      };
+    }
+
+    const extension = guessVideoExtension(layer.sourceInput);
+    const filename = `${filenameBase}${extension}`;
+    const outputPath = join(mediaDir, filename);
+    await materializeAsset(layer.sourceInput, outputPath);
+    return {
+      enabled: true,
+      label: layer.label,
+      layout: layer.layout,
+      loopMode: layer.loopMode,
+      speed: layer.speed,
+      video: {
+        available: true,
+        filename,
+        url: `media/${filename}`,
+      },
+    };
+  };
+
+  return {
+    hero: await materializeLayer(normalized.hero, "cinematic-hero"),
+    sections: await Promise.all(
+      normalized.sections.map((layer, index) => materializeLayer(layer, `cinematic-section-${index + 1}`))
+    ),
+  };
 }
 
 async function downloadImageAsWebp(url, outputPath) {
@@ -1873,13 +1970,59 @@ function renderCardMarkup(cards) {
     .join("");
 }
 
-function renderSectionMarkup(section, timing, index, totalSections) {
+function renderCinematicVideoMarkup(layer, className = "") {
+  if (!layer?.enabled || !layer.video?.available || !layer.video?.url) return "";
+  const classes = ["cinematic-video", className].filter(Boolean).join(" ");
+  const sourceType = /\.webm$/i.test(layer.video.url)
+    ? "video/webm"
+    : /\.ogg$/i.test(layer.video.url)
+      ? "video/ogg"
+      : "video/mp4";
+  return `
+      <video class="${classes}" data-cinematic-video="true" data-loop-mode="${escapeHtml(layer.loopMode)}" data-playback-speed="${escapeHtml(layer.speed)}" autoplay muted playsinline preload="metadata">
+        <source src="${escapeHtml(layer.video.url)}" type="${sourceType}" />
+      </video>`;
+}
+
+function renderHeroCinematicMarkup(layer) {
+  if (!layer?.enabled) return "";
+  if (layer.layout === "full-background") {
+    return `
+    <div class="hero-cinematic hero-cinematic-full">
+${renderCinematicVideoMarkup(layer)}
+    </div>`;
+  }
+  return `
+    <div class="hero-cinematic hero-cinematic-card">
+${renderCinematicVideoMarkup(layer)}
+    </div>`;
+}
+
+function renderSectionCinematicMarkup(layer, section, index) {
+  if (!layer?.enabled) return "";
+  const layoutClass = layer.layout === "full-background" ? "section-cinematic-full" : "section-cinematic-card";
+  const sideClass = layer.layout === "full-background"
+    ? ""
+    : section.alignment === "right"
+      ? "section-cinematic-left"
+      : section.alignment === "center"
+      ? "section-cinematic-center"
+        : "section-cinematic-right";
+  const className = ["section-cinematic", layoutClass, sideClass].filter(Boolean).join(" ");
+  return `
+      <div class="${className}" data-cinematic-layer="${index}">
+${renderCinematicVideoMarkup(layer)}
+      </div>`;
+}
+
+function renderSectionMarkup(section, timing, index, totalSections, cinematicLayer = null) {
   const alignClass = `align-${section.alignment || "left"}`;
   const commonAttrs = `class="scroll-section section-${escapeHtml(section.kind)} ${alignClass}" data-enter="${timing.enter}" data-leave="${timing.leave}" data-animation="${escapeHtml(section.animation || "fade-up")}" data-editor-section="${index}" data-editor-kind="${escapeHtml(section.kind)}"`;
 
   if (section.kind === "stats") {
     return `
     <section ${commonAttrs}>
+${renderSectionCinematicMarkup(cinematicLayer, section, index)}
       <div class="section-inner section-inner-wide">
         <p class="section-label">${escapeHtml(section.label)}</p>
         <h2 class="section-heading">${escapeHtml(section.heading)}</h2>
@@ -1901,6 +2044,7 @@ ${section.stats
   if (section.kind === "cards") {
     return `
     <section ${commonAttrs}>
+${renderSectionCinematicMarkup(cinematicLayer, section, index)}
       <div class="section-inner section-inner-wide">
         <p class="section-label">${escapeHtml(section.label)}</p>
         <h2 class="section-heading">${escapeHtml(section.heading)}</h2>
@@ -1914,6 +2058,7 @@ ${renderCardMarkup(section.cards)}
   if (section.kind === "faq") {
     return `
     <section ${commonAttrs}>
+${renderSectionCinematicMarkup(cinematicLayer, section, index)}
       <div class="section-inner section-inner-wide">
         <p class="section-label">${escapeHtml(section.label)}</p>
         <h2 class="section-heading">${escapeHtml(section.heading)}</h2>
@@ -1933,6 +2078,7 @@ ${renderCardMarkup(
   const button = section.kind === "cta" ? `<a class="cta-button" href="#">${escapeHtml(section.button)}</a>` : "";
   return `
     <section ${commonAttrs}${extra}>
+${renderSectionCinematicMarkup(cinematicLayer, section, index)}
       <div class="section-inner">
         <p class="section-label">${escapeHtml(section.label)}</p>
         <h2 class="section-heading">${escapeHtml(section.heading)}</h2>
@@ -1953,6 +2099,7 @@ function writeScaffoldFiles({
   sourceContext,
   contentOverrides = null,
   siteUrl = null,
+  cinematicLayers = null,
 }) {
   const businessProfile = buildBusinessProfile(topic, brand, sourceContext, research);
   const profile = applyContentOverrides(buildContentProfile(businessProfile, pageMode), contentOverrides);
@@ -2010,8 +2157,20 @@ function writeScaffoldFiles({
     },
   ];
   const timings = buildSectionTiming(renderedSections);
+  const normalizedCinematicLayers = {
+    hero: cinematicLayers?.hero || { enabled: false },
+    sections: Array.isArray(cinematicLayers?.sections) ? cinematicLayers.sections : [],
+  };
   const sectionsHtml = renderedSections
-    .map((section, index) => renderSectionMarkup(section, timings[index], index, renderedSections.length))
+    .map((section, index) =>
+      renderSectionMarkup(
+        section,
+        timings[index],
+        index,
+        renderedSections.length,
+        normalizedCinematicLayers.sections[index] || null
+      )
+    )
     .join("\n");
   const scrollHeight = Math.max(1300, 240 + renderedSections.length * 165);
 
@@ -2058,6 +2217,7 @@ function writeScaffoldFiles({
   </header>
 
   <section class="hero-standalone" data-editor-hero="true">
+${renderHeroCinematicMarkup(normalizedCinematicLayers.hero)}
     <p class="hero-kicker">${escapeHtml(profile.heroKicker)}</p>
     <h1>${headline}</h1>
     <p class="hero-sub">${escapeHtml(profile.heroSub)}</p>
@@ -2191,6 +2351,98 @@ body { font-family: var(--font-body); overflow-x: hidden; }
     linear-gradient(135deg, var(--bg) 0%, #030405 100%);
 }
 
+.hero-standalone > *:not(.hero-cinematic) {
+  position: relative;
+  z-index: 2;
+}
+
+.hero-cinematic,
+.section-cinematic {
+  position: absolute;
+  overflow: hidden;
+  border-radius: 1.6rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background:
+    linear-gradient(160deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03)),
+    rgba(5, 8, 10, 0.34);
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.34);
+}
+
+.hero-cinematic::after,
+.section-cinematic::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(8, 10, 15, 0.04), rgba(8, 10, 15, 0.28)),
+    radial-gradient(circle at 20% 20%, rgba(255,255,255,0.14), transparent 28%);
+}
+
+.hero-cinematic-full {
+  inset: 0;
+  border-radius: 0;
+  border: 0;
+  box-shadow: none;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.hero-cinematic-full::after {
+  background:
+    linear-gradient(90deg, rgba(7, 8, 12, 0.82) 0%, rgba(7, 8, 12, 0.46) 38%, rgba(7, 8, 12, 0.28) 62%, rgba(7, 8, 12, 0.62) 100%),
+    radial-gradient(circle at 20% 20%, rgba(255,255,255,0.1), transparent 26%);
+}
+
+.hero-cinematic-card {
+  inset: 8vh 5vw 12vh 49vw;
+}
+
+.section-cinematic {
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 0;
+}
+
+.section-cinematic-card {
+  width: min(34vw, 32rem);
+  aspect-ratio: 16 / 10;
+}
+
+.section-cinematic-right {
+  right: 5vw;
+}
+
+.section-cinematic-left {
+  left: 5vw;
+}
+
+.section-cinematic-center {
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(72vw, 56rem);
+  aspect-ratio: 16 / 7;
+}
+
+.section-cinematic-full {
+  inset: clamp(1rem, 3vw, 2rem) 4vw;
+  transform: none;
+  top: 0;
+  border-radius: 2rem;
+}
+
+.section-cinematic-full::after {
+  background:
+    linear-gradient(180deg, rgba(7, 9, 13, 0.68), rgba(7, 9, 13, 0.38)),
+    radial-gradient(circle at 50% 12%, rgba(255,255,255,0.14), transparent 24%);
+}
+
+.cinematic-video {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
 .hero-kicker {
   letter-spacing: 0.18em;
   font-size: 0.75rem;
@@ -2285,6 +2537,7 @@ h1 {
   transform: translateY(-50%);
   opacity: 0;
   padding-block: clamp(2rem, 7vh, 6rem);
+  isolation: isolate;
 }
 
 .align-left { padding-left: 5vw; padding-right: 55vw; }
@@ -2296,6 +2549,8 @@ h1 {
   max-width: 100%;
   display: grid;
   gap: 1rem;
+  position: relative;
+  z-index: 2;
 }
 
 .section-inner-wide {
@@ -2420,6 +2675,24 @@ h1 {
     padding: 1rem;
     border-radius: 0.5rem;
   }
+  .hero-cinematic-card,
+  .section-cinematic-card,
+  .section-cinematic-center,
+  .section-cinematic-full {
+    position: relative;
+    inset: auto;
+    left: auto;
+    right: auto;
+    top: auto;
+    transform: none;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    margin: 0 auto 1rem;
+  }
+  .hero-standalone {
+    min-height: auto;
+    padding-top: 6rem;
+  }
   .stats-grid {
     grid-template-columns: 1fr;
     text-align: center;
@@ -2446,6 +2719,7 @@ const mediaStage = document.querySelector(".media-stage");
 const canvasWrap = document.querySelector(".canvas-wrap");
 const hero = document.querySelector(".hero-standalone");
 const darkOverlay = document.getElementById("dark-overlay");
+const cinematicVideos = Array.from(document.querySelectorAll("[data-cinematic-video]"));
 
 const frames = new Array(FRAME_COUNT);
 const frameLoads = new Set();
@@ -2563,6 +2837,72 @@ function setupSmoothScroll() {
   lenis.on("scroll", ScrollTrigger.update);
   gsap.ticker.add((time) => lenis.raf(time * 1000));
   gsap.ticker.lagSmoothing(0);
+}
+
+function setupLoopingVideo(video, loopMode = "loop", rate = 1) {
+  if (!video) return;
+  const speed = Math.min(2.5, Math.max(0.25, Number(rate) || 1));
+  let reverseFrame = null;
+  let reversing = false;
+  let lastTick = 0;
+
+  const stopReverse = () => {
+    if (reverseFrame) cancelAnimationFrame(reverseFrame);
+    reverseFrame = null;
+    reversing = false;
+    lastTick = 0;
+  };
+
+  const reverseStep = (timestamp) => {
+    if (!reversing) return;
+    if (!lastTick) lastTick = timestamp;
+    const delta = (timestamp - lastTick) / 1000;
+    lastTick = timestamp;
+    const nextTime = Math.max(0, video.currentTime - delta * speed);
+    video.currentTime = nextTime;
+    if (nextTime <= 0.02) {
+      stopReverse();
+      video.currentTime = 0;
+      video.playbackRate = speed;
+      video.play().catch(() => {});
+      return;
+    }
+    reverseFrame = requestAnimationFrame(reverseStep);
+  };
+
+  const startReverse = () => {
+    if (loopMode !== "boomerang" || reversing) return;
+    reversing = true;
+    video.pause();
+    reverseFrame = requestAnimationFrame(reverseStep);
+  };
+
+  video.muted = true;
+  video.defaultMuted = true;
+  video.playsInline = true;
+  video.autoplay = true;
+  video.loop = loopMode !== "boomerang";
+  video.playbackRate = speed;
+  video.addEventListener("canplay", () => {
+    video.playbackRate = speed;
+    video.play().catch(() => {});
+  });
+  video.addEventListener("loadeddata", () => {
+    video.playbackRate = speed;
+  });
+
+  if (loopMode === "boomerang") {
+    video.addEventListener("ended", startReverse);
+    video.addEventListener("timeupdate", () => {
+      if (!reversing && video.duration && video.currentTime >= video.duration - 0.04) {
+        startReverse();
+      }
+    });
+    video.addEventListener("play", () => {
+      if (!reversing) return;
+      stopReverse();
+    });
+  }
 }
 
 function placeSections() {
@@ -2721,6 +3061,16 @@ function setupHeroTransition() {
   });
 }
 
+function setupCinematicVideos() {
+  cinematicVideos.forEach((video) => {
+    setupLoopingVideo(
+      video,
+      String(video.dataset.loopMode || "loop"),
+      Number(video.dataset.playbackSpeed || 1)
+    );
+  });
+}
+
 window.addEventListener("resize", () => {
   resizeCanvas();
   drawFallbackFrame(currentFrame);
@@ -2736,6 +3086,7 @@ setupCounters();
 setupMarquee();
 setupDarkOverlay();
 setupHeroTransition();
+setupCinematicVideos();
 `;
 
   writeFileSync(join(siteDir, "index.html"), html);
@@ -2748,6 +3099,7 @@ setupHeroTransition();
     sectionKinds: renderedSections.map((section) => section.kind),
     trustLine: profile.trustLine,
     editableContent,
+    cinematicLayers: normalizedCinematicLayers,
     seo: {
       title: seoTitle,
       description: seoDescription,
@@ -3014,6 +3366,10 @@ async function main() {
   const contentOverrides = cleanOptionalString(options["content-overrides"])
     ? JSON.parse(String(options["content-overrides"]))
     : null;
+  const previewProfile = applyContentOverrides(buildContentProfile(businessProfile, pageMode), contentOverrides);
+  const rawCinematicLayers = cleanOptionalString(options["cinematic-layers"])
+    ? JSON.parse(String(options["cinematic-layers"]))
+    : null;
   const startPrompt = applyChangeRequest(String(options["start-prompt"] || defaults.startPrompt), changeRequest);
   const endPrompt = applyChangeRequest(String(options["end-prompt"] || defaults.endPrompt), changeRequest);
   const motionPrompt = applyChangeRequest(String(options["motion-prompt"] || defaults.motionPrompt), changeRequest);
@@ -3194,6 +3550,8 @@ async function main() {
   console.log("Extracting frames...");
   const extraction = runFrameExtraction(videoPath, framesDir);
 
+  const cinematicLayers = await materializeCinematicLayers(rawCinematicLayers, mediaDir, previewProfile.sections.length);
+
   console.log("Scaffolding website...");
   const scaffold = writeScaffoldFiles({
     siteDir,
@@ -3206,6 +3564,7 @@ async function main() {
     sourceContext,
     contentOverrides,
     siteUrl,
+    cinematicLayers,
   });
 
   metadata.startImageUrl = startImageUrl;
@@ -3220,6 +3579,7 @@ async function main() {
   metadata.sectionKinds = scaffold.sectionKinds;
   metadata.trustLine = scaffold.trustLine;
   metadata.editableContent = scaffold.editableContent;
+  metadata.cinematicLayers = scaffold.cinematicLayers;
   metadata.seo = scaffold.seo;
   metadata.sourceContext = sourceContext;
   metadata.research = research || {
