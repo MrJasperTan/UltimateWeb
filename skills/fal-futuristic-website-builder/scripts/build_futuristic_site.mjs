@@ -1979,7 +1979,7 @@ function renderCinematicVideoMarkup(layer, className = "") {
       ? "video/ogg"
       : "video/mp4";
   return `
-      <video class="${classes}" data-cinematic-video="true" data-loop-mode="${escapeHtml(layer.loopMode)}" data-playback-speed="${escapeHtml(layer.speed)}" autoplay muted playsinline preload="auto">
+      <video class="${classes}" data-cinematic-video="true" data-loop-mode="${escapeHtml(layer.loopMode)}" data-playback-speed="${escapeHtml(layer.speed)}" autoplay muted playsinline preload="metadata">
         <source src="${escapeHtml(layer.video.url)}" type="${sourceType}" />
       </video>`;
 }

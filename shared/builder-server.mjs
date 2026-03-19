@@ -957,7 +957,7 @@ export function startBuilderServer({ appDir, publicDir }) {
     video.autoplay = true;
     video.muted = true;
     video.playsInline = true;
-    video.preload = "auto";
+    video.preload = "metadata";
     video.src = layer.url;
     wrapper.appendChild(video);
     setupVideo(video);

@@ -860,7 +860,7 @@ function renderPreviewCinematicLayer(frameDocument, layer, options = {}) {
   video.autoplay = true;
   video.muted = true;
   video.playsInline = true;
-  video.preload = "auto";
+  video.preload = "metadata";
   const source = frameDocument.createElement("source");
   source.src = buildPreviewVideoUrl(layer);
   source.type = /\.webm$/i.test(source.src) ? "video/webm" : /\.ogg$/i.test(source.src) ? "video/ogg" : "video/mp4";
@@ -1189,37 +1189,6 @@ function buildLocalFullPreviewHtml() {
   upsertLinkTag(previewDoc, "canonical", canonicalUrl);
   upsertMetaTag(previewDoc, "property", "og:url", canonicalUrl || "");
   upsertMetaTag(previewDoc, "name", "robots", canonicalUrl ? "index, follow" : "noindex, nofollow");
-
-  const staticStyle = previewDoc.createElement("style");
-  staticStyle.textContent = `
-    html, body { min-height: 100%; overflow-x: hidden; }
-    body { overflow-y: auto !important; }
-    #loader,
-    .media-stage,
-    .canvas-wrap,
-    #dark-overlay { display: none !important; }
-    #scroll-container {
-      height: auto !important;
-      display: grid !important;
-      gap: 0 !important;
-      padding-bottom: 4rem !important;
-    }
-    .marquee-wrap {
-      position: relative !important;
-      top: auto !important;
-      left: auto !important;
-      opacity: 1 !important;
-      margin: 0 0 2rem !important;
-    }
-    .scroll-section {
-      position: relative !important;
-      top: auto !important;
-      opacity: 1 !important;
-      transform: none !important;
-      padding-block: clamp(2rem, 6vw, 5rem) !important;
-    }
-  `;
-  previewDoc.head.appendChild(staticStyle);
 
   return `<!doctype html>\n${previewDoc.documentElement.outerHTML}`;
 }
