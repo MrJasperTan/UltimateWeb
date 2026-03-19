@@ -62,6 +62,7 @@ Optional:
   --change-request   Plain-language edit request applied to generated prompts
   --edit-source-slug Source site slug when creating a new version
   --cinematic-layers JSON string with hero/section video layer settings
+  --experience-upgrades JSON string with guided scroll, audio, and depth settings
   --start-prompt     Override first-frame prompt
   --end-prompt       Override last-frame prompt
   --motion-prompt    Override video motion prompt
@@ -108,6 +109,30 @@ function normalizePageMode(rawMode) {
     throw new Error(`Invalid --page-mode "${rawMode}". Expected one of: conversion, editorial, hybrid.`);
   }
   return mode;
+}
+
+function normalizeExperienceUpgrades(rawValue) {
+  const raw = rawValue && typeof rawValue === "object" ? rawValue : {};
+  const guided = raw.guidedScroll && typeof raw.guidedScroll === "object" ? raw.guidedScroll : {};
+  const audio = raw.audio && typeof raw.audio === "object" ? raw.audio : {};
+  const depth = raw.depthHero && typeof raw.depthHero === "object" ? raw.depthHero : {};
+
+  return {
+    guidedScroll: {
+      enabled: Boolean(guided.enabled),
+      initialDelayMs: Math.max(0, Number(guided.initialDelayMs || 6000) || 6000),
+      downDurationMs: Math.max(5000, Number(guided.downDurationMs || 112500) || 112500),
+      upDurationMs: Math.max(3000, Number(guided.upDurationMs || 56250) || 56250),
+      endPauseMs: Math.max(0, Number(guided.endPauseMs || 3000) || 3000),
+      resumeDelayMs: Math.max(250, Number(guided.resumeDelayMs || 2000) || 2000),
+    },
+    audio: {
+      enabled: Boolean(audio.enabled),
+    },
+    depthHero: {
+      enabled: Boolean(depth.enabled),
+    },
+  };
 }
 
 function slugify(input) {
@@ -2100,6 +2125,7 @@ function writeScaffoldFiles({
   contentOverrides = null,
   siteUrl = null,
   cinematicLayers = null,
+  experienceUpgrades = null,
 }) {
   const businessProfile = buildBusinessProfile(topic, brand, sourceContext, research);
   const profile = applyContentOverrides(buildContentProfile(businessProfile, pageMode), contentOverrides);
@@ -2161,6 +2187,9 @@ function writeScaffoldFiles({
     hero: cinematicLayers?.hero || { enabled: false },
     sections: Array.isArray(cinematicLayers?.sections) ? cinematicLayers.sections : [],
   };
+  const normalizedExperienceUpgrades = normalizeExperienceUpgrades(experienceUpgrades);
+  const hasExperienceControls = normalizedExperienceUpgrades.guidedScroll.enabled || normalizedExperienceUpgrades.audio.enabled;
+  const serializedExperienceUpgrades = JSON.stringify(normalizedExperienceUpgrades).replace(/</g, "\\u003c");
   const sectionsHtml = renderedSections
     .map((section, index) =>
       renderSectionMarkup(
@@ -2216,6 +2245,8 @@ function writeScaffoldFiles({
     <a href="#cta">${escapeHtml(profile.cta.headerCta)}</a>
   </header>
 
+  ${hasExperienceControls ? `<div class="experience-controls" data-experience-controls="true"></div>` : ""}
+
   <section class="hero-standalone" data-editor-hero="true">
 ${renderHeroCinematicMarkup(normalizedCinematicLayers.hero)}
     <p class="hero-kicker">${escapeHtml(profile.heroKicker)}</p>
@@ -2262,6 +2293,10 @@ ${sectionsHtml}
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { width: 100%; background: var(--bg); color: var(--text); }
 body { font-family: var(--font-body); overflow-x: hidden; }
+
+body.guided-mode-active {
+  cursor: ns-resize;
+}
 
 #loader {
   position: fixed;
@@ -2335,6 +2370,32 @@ body { font-family: var(--font-body); overflow-x: hidden; }
   filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.25));
 }
 
+.experience-controls {
+  position: fixed;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  z-index: 55;
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: end;
+}
+
+.experience-button {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  padding: 0.85rem 1.1rem;
+  color: #fff;
+  font: inherit;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.05)),
+    rgba(10, 9, 15, 0.8);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.24);
+}
+
 .hero-standalone {
   min-height: 100svh;
   padding: clamp(1.4rem, 4vw, 4rem);
@@ -2344,11 +2405,71 @@ body { font-family: var(--font-body); overflow-x: hidden; }
   gap: 1.2rem;
   position: relative;
   z-index: 15;
+  perspective: 1600px;
   background:
     radial-gradient(circle at 18% 22%, var(--hero-glow) 0%, transparent 34%),
     radial-gradient(circle at 82% 16%, var(--hero-glow-alt) 0%, transparent 30%),
     linear-gradient(160deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 34%),
     linear-gradient(135deg, var(--bg) 0%, #030405 100%);
+}
+
+.hero-depth-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.depth-orb,
+.depth-ring,
+.depth-beam {
+  position: absolute;
+  display: block;
+  will-change: transform;
+}
+
+.depth-orb {
+  border-radius: 999px;
+  filter: blur(8px);
+}
+
+.depth-orb-a {
+  width: min(28vw, 22rem);
+  height: min(28vw, 22rem);
+  top: 10vh;
+  left: 8vw;
+  background: radial-gradient(circle, rgba(246, 107, 162, 0.22), rgba(246, 107, 162, 0.02) 60%, transparent 72%);
+  transform: translate3d(calc(var(--depth-x, 0) * -18px), calc(var(--depth-y, 0) * -24px), 90px);
+}
+
+.depth-orb-b {
+  width: min(22vw, 18rem);
+  height: min(22vw, 18rem);
+  right: 10vw;
+  bottom: 16vh;
+  background: radial-gradient(circle, rgba(244, 177, 77, 0.18), rgba(244, 177, 77, 0.02) 58%, transparent 72%);
+  transform: translate3d(calc(var(--depth-x, 0) * 24px), calc(var(--depth-y, 0) * 16px), 70px);
+}
+
+.depth-ring {
+  width: min(42vw, 38rem);
+  height: min(42vw, 38rem);
+  right: 18vw;
+  top: 8vh;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 0 50px rgba(255, 255, 255, 0.04);
+  transform: rotate(18deg) translate3d(calc(var(--depth-x, 0) * 12px), calc(var(--depth-y, 0) * -12px), 20px);
+}
+
+.depth-beam {
+  inset: 12vh auto auto 42vw;
+  width: min(28vw, 24rem);
+  height: 65vh;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0));
+  clip-path: polygon(38% 0, 64% 0, 100% 100%, 0 100%);
+  opacity: 0.25;
+  transform: translate3d(calc(var(--depth-x, 0) * 20px), calc(var(--depth-y, 0) * -10px), 10px);
 }
 
 .hero-standalone > *:not(.hero-cinematic) {
@@ -2393,8 +2514,23 @@ body { font-family: var(--font-body); overflow-x: hidden; }
     radial-gradient(circle at 20% 20%, rgba(255,255,255,0.1), transparent 26%);
 }
 
+.hero-frame-glare {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at calc(52% + var(--depth-x, 0) * 16%), calc(28% + var(--depth-y, 0) * 14%), rgba(255, 255, 255, 0.22), transparent 24%),
+    linear-gradient(120deg, rgba(255, 255, 255, 0.06), transparent 40%);
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
 .hero-cinematic-card {
   inset: 8vh 5vw 12vh 49vw;
+  transform-style: preserve-3d;
+  transform:
+    translate3d(calc(var(--depth-x, 0) * 20px), calc(var(--scroll-shift-y, 0px) + var(--depth-y, 0) * -18px), 70px)
+    rotateX(calc(var(--depth-y, 0) * -5deg))
+    rotateY(calc(var(--depth-x, 0) * 7deg));
 }
 
 .section-cinematic {
@@ -2660,6 +2796,18 @@ h1 {
 }
 
 @media (max-width: 900px) {
+  .experience-controls {
+    left: 0.9rem;
+    right: 0.9rem;
+    bottom: 0.9rem;
+    justify-content: stretch;
+  }
+  .experience-button {
+    flex: 1 1 0;
+    text-align: center;
+    padding: 0.8rem 0.9rem;
+    font-size: 0.72rem;
+  }
   .align-left,
   .align-right,
   .align-center {
@@ -2692,6 +2840,7 @@ h1 {
   .hero-standalone {
     min-height: auto;
     padding-top: 6rem;
+    perspective: none;
   }
   .stats-grid {
     grid-template-columns: 1fr;
@@ -2700,11 +2849,15 @@ h1 {
   .brand-logo {
     height: 2rem;
   }
+  .hero-depth-grid {
+    opacity: 0.75;
+  }
   .cta-button { justify-self: center; }
 }
 `;
 
-  const js = `const FRAME_COUNT = ${frameCount};
+  const js = `const EXPERIENCE_UPGRADES = ${serializedExperienceUpgrades};
+const FRAME_COUNT = ${frameCount};
 const FRAME_SPEED = 1.0;
 const FRAME_PATH = (index) => \`frames/frame_\${String(index + 1).padStart(4, "0")}.${frameExtension}\`;
 const FRAME_WINDOW = 8;
@@ -2720,12 +2873,26 @@ const canvasWrap = document.querySelector(".canvas-wrap");
 const hero = document.querySelector(".hero-standalone");
 const darkOverlay = document.getElementById("dark-overlay");
 const cinematicVideos = Array.from(document.querySelectorAll("[data-cinematic-video]"));
+const experienceControls = document.querySelector("[data-experience-controls]");
 
 const frames = new Array(FRAME_COUNT);
 const frameLoads = new Set();
 let currentFrame = 0;
 let fallbackReady = false;
 let runtimeReady = false;
+let lenis = null;
+let guidedModeRaf = 0;
+let guidedModeActive = false;
+let guidedModeDismissed = false;
+let guidedModeStartedAt = 0;
+let guidedModePhase = "down";
+let guidedModePauseUntil = 0;
+let guidedResumeTimer = 0;
+let lastKnownScrollY = 0;
+let ambientAudioContext = null;
+let ambientAudioNodes = [];
+let ambientPulseTimer = 0;
+let ambientAudioEnabled = false;
 
 function resizeCanvas() {
   const ratio = window.devicePixelRatio || 1;
@@ -2829,7 +2996,7 @@ function setupMedia() {
 }
 
 function setupSmoothScroll() {
-  const lenis = new Lenis({
+  lenis = new Lenis({
     duration: 1.2,
     easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
     smoothWheel: true
@@ -2837,6 +3004,267 @@ function setupSmoothScroll() {
   lenis.on("scroll", ScrollTrigger.update);
   gsap.ticker.add((time) => lenis.raf(time * 1000));
   gsap.ticker.lagSmoothing(0);
+}
+
+function ensureExperienceControls() {
+  if (!experienceControls) return {};
+  if (!experienceControls.querySelector("[data-guided-mode-btn]") && EXPERIENCE_UPGRADES.guidedScroll.enabled) {
+    const guidedButton = document.createElement("button");
+    guidedButton.type = "button";
+    guidedButton.className = "experience-button";
+    guidedButton.setAttribute("data-guided-mode-btn", "true");
+    experienceControls.appendChild(guidedButton);
+  }
+  if (!experienceControls.querySelector("[data-sound-toggle-btn]") && EXPERIENCE_UPGRADES.audio.enabled) {
+    const soundButton = document.createElement("button");
+    soundButton.type = "button";
+    soundButton.className = "experience-button";
+    soundButton.setAttribute("data-sound-toggle-btn", "true");
+    soundButton.textContent = "Enable Sound";
+    experienceControls.appendChild(soundButton);
+  }
+  return {
+    guidedModeButton: experienceControls.querySelector("[data-guided-mode-btn]"),
+    soundToggleButton: experienceControls.querySelector("[data-sound-toggle-btn]"),
+  };
+}
+
+function updateGuidedModeUi(guidedModeButton) {
+  if (!guidedModeButton) return;
+  guidedModeButton.textContent = guidedModeActive
+    ? "Guided Mode: On"
+    : guidedModeDismissed
+      ? "Resume Guided Mode"
+      : "Guided Mode: Off";
+  document.body.classList.toggle("guided-mode-active", guidedModeActive);
+}
+
+function stopGuidedMode(guidedModeButton, markDismissed = true) {
+  guidedModeActive = false;
+  if (markDismissed) guidedModeDismissed = true;
+  if (guidedModeRaf) cancelAnimationFrame(guidedModeRaf);
+  guidedModeRaf = 0;
+  guidedModePauseUntil = 0;
+  updateGuidedModeUi(guidedModeButton);
+}
+
+function guidedModeStep() {
+  if (!guidedModeActive || !lenis) return;
+  if (guidedModePauseUntil && performance.now() < guidedModePauseUntil) {
+    guidedModeRaf = requestAnimationFrame(guidedModeStep);
+    return;
+  }
+  if (guidedModePauseUntil && performance.now() >= guidedModePauseUntil) {
+    guidedModePauseUntil = 0;
+    guidedModePhase = "up";
+    guidedModeStartedAt = 0;
+  }
+  if (!guidedModeStartedAt) guidedModeStartedAt = performance.now();
+  const duration = guidedModePhase === "down"
+    ? EXPERIENCE_UPGRADES.guidedScroll.downDurationMs
+    : EXPERIENCE_UPGRADES.guidedScroll.upDurationMs;
+  const elapsed = performance.now() - guidedModeStartedAt;
+  const progress = Math.min(1, elapsed / duration);
+  const eased = 1 - Math.pow(1 - progress, 2.2);
+  const maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+  const isNearBottom = window.scrollY >= Math.max(0, maxScroll - 8);
+  if (guidedModePhase === "down" && isNearBottom) {
+    guidedModePauseUntil = performance.now() + EXPERIENCE_UPGRADES.guidedScroll.endPauseMs;
+    lenis.scrollTo(maxScroll, { immediate: true, force: true });
+    guidedModeRaf = requestAnimationFrame(guidedModeStep);
+    return;
+  }
+  const target = guidedModePhase === "down" ? maxScroll : 0;
+  const origin = guidedModePhase === "down" ? 0 : maxScroll;
+  lenis.scrollTo(origin + (target - origin) * eased, { immediate: true, force: true });
+  if (progress >= 1) {
+    if (guidedModePhase === "down") {
+      guidedModePhase = "up";
+      guidedModeStartedAt = 0;
+      guidedModeRaf = requestAnimationFrame(guidedModeStep);
+      return;
+    }
+    stopGuidedMode(window.__uwGuidedModeButton, false);
+    return;
+  }
+  guidedModeRaf = requestAnimationFrame(guidedModeStep);
+}
+
+function startGuidedMode(guidedModeButton) {
+  if (!EXPERIENCE_UPGRADES.guidedScroll.enabled || !lenis || guidedModeActive) return;
+  if (guidedResumeTimer) {
+    window.clearTimeout(guidedResumeTimer);
+    guidedResumeTimer = 0;
+  }
+  guidedModeActive = true;
+  guidedModeStartedAt = 0;
+  guidedModePauseUntil = 0;
+  guidedModePhase = window.scrollY >= Math.max(0, document.documentElement.scrollHeight - window.innerHeight - 8) ? "up" : "down";
+  window.__uwGuidedModeButton = guidedModeButton || null;
+  updateGuidedModeUi(guidedModeButton);
+  guidedModeRaf = requestAnimationFrame(guidedModeStep);
+}
+
+function scheduleGuidedResume(guidedModeButton) {
+  if (!EXPERIENCE_UPGRADES.guidedScroll.enabled) return;
+  if (guidedResumeTimer) window.clearTimeout(guidedResumeTimer);
+  guidedResumeTimer = window.setTimeout(() => {
+    if (!guidedModeActive) {
+      guidedModeDismissed = false;
+      startGuidedMode(guidedModeButton);
+    }
+  }, EXPERIENCE_UPGRADES.guidedScroll.resumeDelayMs);
+}
+
+function bindGuidedMode(guidedModeButton) {
+  if (!guidedModeButton || guidedModeButton.dataset.bound === "true") return;
+  guidedModeButton.dataset.bound = "true";
+  const interrupt = () => {
+    if (guidedModeActive) stopGuidedMode(guidedModeButton, true);
+    scheduleGuidedResume(guidedModeButton);
+  };
+  ["wheel", "touchstart", "keydown", "mousedown"].forEach((eventName) => {
+    window.addEventListener(eventName, interrupt, { passive: true });
+  });
+  window.addEventListener("scroll", () => {
+    const currentScrollY = window.scrollY;
+    const delta = Math.abs(currentScrollY - lastKnownScrollY);
+    lastKnownScrollY = currentScrollY;
+    if (!guidedModeActive && delta > 2) scheduleGuidedResume(guidedModeButton);
+  }, { passive: true });
+  guidedModeButton.addEventListener("click", () => {
+    if (guidedModeActive) {
+      stopGuidedMode(guidedModeButton, true);
+      scheduleGuidedResume(guidedModeButton);
+      return;
+    }
+    guidedModeDismissed = false;
+    startGuidedMode(guidedModeButton);
+  });
+  window.addEventListener("load", () => {
+    window.setTimeout(() => {
+      if (!guidedModeDismissed) startGuidedMode(guidedModeButton);
+    }, EXPERIENCE_UPGRADES.guidedScroll.initialDelayMs);
+  }, { once: true });
+}
+
+function createAudioVoice(context, type, frequency, gainValue) {
+  const oscillator = context.createOscillator();
+  const filter = context.createBiquadFilter();
+  const gain = context.createGain();
+  oscillator.type = type;
+  oscillator.frequency.value = frequency;
+  filter.type = "lowpass";
+  filter.frequency.value = 420;
+  filter.Q.value = 0.7;
+  gain.gain.value = gainValue;
+  oscillator.connect(filter);
+  filter.connect(gain);
+  gain.connect(context.destination);
+  oscillator.start();
+  ambientAudioNodes.push(oscillator, filter, gain);
+  return { oscillator, filter, gain };
+}
+
+function playAmbientPulse() {
+  if (!ambientAudioContext) return;
+  const pulseOsc = ambientAudioContext.createOscillator();
+  const pulseGain = ambientAudioContext.createGain();
+  pulseOsc.type = "sine";
+  pulseOsc.frequency.setValueAtTime(220, ambientAudioContext.currentTime);
+  pulseOsc.frequency.exponentialRampToValueAtTime(110, ambientAudioContext.currentTime + 1.8);
+  pulseGain.gain.setValueAtTime(0.0001, ambientAudioContext.currentTime);
+  pulseGain.gain.exponentialRampToValueAtTime(0.018, ambientAudioContext.currentTime + 0.2);
+  pulseGain.gain.exponentialRampToValueAtTime(0.0001, ambientAudioContext.currentTime + 1.8);
+  pulseOsc.connect(pulseGain);
+  pulseGain.connect(ambientAudioContext.destination);
+  pulseOsc.start();
+  pulseOsc.stop(ambientAudioContext.currentTime + 2);
+}
+
+async function enableAmbientAudio(soundToggleButton) {
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextClass) return;
+  if (!ambientAudioContext) ambientAudioContext = new AudioContextClass();
+  await ambientAudioContext.resume();
+  if (!ambientAudioEnabled) {
+    const bass = createAudioVoice(ambientAudioContext, "triangle", 55, 0.018);
+    const pad = createAudioVoice(ambientAudioContext, "sawtooth", 110, 0.008);
+    createAudioVoice(ambientAudioContext, "sine", 220, 0.0035);
+    const lfo = ambientAudioContext.createOscillator();
+    const lfoGain = ambientAudioContext.createGain();
+    lfo.type = "sine";
+    lfo.frequency.value = 0.07;
+    lfoGain.gain.value = 110;
+    lfo.connect(lfoGain);
+    lfoGain.connect(bass.filter.frequency);
+    lfoGain.connect(pad.filter.frequency);
+    lfo.start();
+    ambientAudioNodes.push(lfo, lfoGain);
+    playAmbientPulse();
+    ambientPulseTimer = window.setInterval(playAmbientPulse, 6800);
+  }
+  ambientAudioEnabled = true;
+  if (soundToggleButton) soundToggleButton.textContent = "Sound: On";
+}
+
+function disableAmbientAudio(soundToggleButton) {
+  if (ambientPulseTimer) {
+    window.clearInterval(ambientPulseTimer);
+    ambientPulseTimer = 0;
+  }
+  ambientAudioNodes.forEach((node) => {
+    try { if (typeof node.stop === "function") node.stop(); } catch {}
+    try { if (typeof node.disconnect === "function") node.disconnect(); } catch {}
+  });
+  ambientAudioNodes = [];
+  ambientAudioEnabled = false;
+  if (soundToggleButton) soundToggleButton.textContent = "Enable Sound";
+}
+
+function bindSoundToggle(soundToggleButton) {
+  if (!soundToggleButton || soundToggleButton.dataset.bound === "true") return;
+  soundToggleButton.dataset.bound = "true";
+  soundToggleButton.addEventListener("click", async () => {
+    if (ambientAudioEnabled) {
+      disableAmbientAudio(soundToggleButton);
+      return;
+    }
+    try {
+      await enableAmbientAudio(soundToggleButton);
+    } catch {
+      soundToggleButton.textContent = "Sound Unavailable";
+    }
+  });
+}
+
+function setupHeroDepth() {
+  if (!EXPERIENCE_UPGRADES.depthHero.enabled || !hero) return;
+  if (!hero.querySelector(".hero-depth-grid")) {
+    const depthGrid = document.createElement("div");
+    depthGrid.className = "hero-depth-grid";
+    depthGrid.setAttribute("aria-hidden", "true");
+    depthGrid.innerHTML = '<span class="depth-orb depth-orb-a"></span><span class="depth-orb depth-orb-b"></span><span class="depth-ring"></span><span class="depth-beam"></span>';
+    hero.insertBefore(depthGrid, hero.firstChild);
+  }
+  const cinematicNode = hero.querySelector(".hero-cinematic-card");
+  if (cinematicNode && !cinematicNode.querySelector(".hero-frame-glare")) {
+    const glare = document.createElement("div");
+    glare.className = "hero-frame-glare";
+    glare.setAttribute("aria-hidden", "true");
+    cinematicNode.appendChild(glare);
+  }
+  hero.addEventListener("pointermove", (event) => {
+    const bounds = hero.getBoundingClientRect();
+    const x = ((event.clientX - bounds.left) / bounds.width - 0.5) * 2;
+    const y = ((event.clientY - bounds.top) / bounds.height - 0.5) * 2;
+    hero.style.setProperty("--depth-x", x.toFixed(3));
+    hero.style.setProperty("--depth-y", y.toFixed(3));
+  });
+  hero.addEventListener("pointerleave", () => {
+    hero.style.setProperty("--depth-x", "0");
+    hero.style.setProperty("--depth-y", "0");
+  });
 }
 
 function setupLoopingVideo(video, loopMode = "loop", rate = 1) {
@@ -3073,6 +3501,7 @@ function setupHeroTransition() {
       hero.style.opacity = String(Math.max(0, 1 - p * 15));
       const wipe = Math.min(1, Math.max(0, (p - 0.01) / 0.06));
       mediaStage.style.clipPath = \`circle(\${wipe * 75}% at 50% 50%)\`;
+      hero.style.setProperty("--scroll-shift-y", \`\${wipe * 2.5}vh\`);
     }
   });
 }
@@ -3095,6 +3524,10 @@ window.addEventListener("resize", () => {
 resizeCanvas();
 setupMedia();
 setupSmoothScroll();
+const { guidedModeButton, soundToggleButton } = ensureExperienceControls();
+bindGuidedMode(guidedModeButton);
+bindSoundToggle(soundToggleButton);
+setupHeroDepth();
 placeSections();
 setupFrameBinding();
 setupSectionAnimations();
@@ -3116,6 +3549,7 @@ setupCinematicVideos();
     trustLine: profile.trustLine,
     editableContent,
     cinematicLayers: normalizedCinematicLayers,
+    experienceUpgrades: normalizedExperienceUpgrades,
     seo: {
       title: seoTitle,
       description: seoDescription,
@@ -3386,6 +3820,9 @@ async function main() {
   const rawCinematicLayers = cleanOptionalString(options["cinematic-layers"])
     ? JSON.parse(String(options["cinematic-layers"]))
     : null;
+  const rawExperienceUpgrades = cleanOptionalString(options["experience-upgrades"])
+    ? JSON.parse(String(options["experience-upgrades"]))
+    : null;
   const startPrompt = applyChangeRequest(String(options["start-prompt"] || defaults.startPrompt), changeRequest);
   const endPrompt = applyChangeRequest(String(options["end-prompt"] || defaults.endPrompt), changeRequest);
   const motionPrompt = applyChangeRequest(String(options["motion-prompt"] || defaults.motionPrompt), changeRequest);
@@ -3402,6 +3839,7 @@ async function main() {
     changeRequest,
     editSourceSlug: cleanOptionalString(options["edit-source-slug"]),
     contentOverrides,
+    experienceUpgrades: rawExperienceUpgrades,
     videoDurationSeconds: normalizedDuration,
     prompts: { startPrompt, endPrompt, motionPrompt },
     generatedAt: new Date().toISOString(),
@@ -3581,6 +4019,7 @@ async function main() {
     contentOverrides,
     siteUrl,
     cinematicLayers,
+    experienceUpgrades: rawExperienceUpgrades,
   });
 
   metadata.startImageUrl = startImageUrl;
@@ -3596,6 +4035,7 @@ async function main() {
   metadata.trustLine = scaffold.trustLine;
   metadata.editableContent = scaffold.editableContent;
   metadata.cinematicLayers = scaffold.cinematicLayers;
+  metadata.experienceUpgrades = scaffold.experienceUpgrades;
   metadata.seo = scaffold.seo;
   metadata.sourceContext = sourceContext;
   metadata.research = research || {

@@ -3,6 +3,7 @@ const editorSubtitle = document.getElementById("editor-subtitle");
 const statusText = document.getElementById("status-text");
 const jobText = document.getElementById("job-text");
 const publishButton = document.getElementById("publish-btn");
+const experienceSettingsButton = document.getElementById("experience-settings-btn");
 const cinematicLayersButton = document.getElementById("cinematic-layers-btn");
 const seoSettingsButton = document.getElementById("seo-settings-btn");
 const fullPreviewButton = document.getElementById("full-preview-btn");
@@ -15,15 +16,57 @@ const modalBody = document.getElementById("modal-body");
 const modalCloseButton = document.getElementById("modal-close-btn");
 const modalCancelButton = document.getElementById("modal-cancel-btn");
 const modalSaveButton = document.getElementById("modal-save-btn");
+const experienceUpsellList = document.getElementById("experience-upsell-list");
+const experiencePackageSummary = document.getElementById("experience-package-summary");
 
 const configuredApiBase = String(window.ULTIMATEWEB_API_BASE || "").trim().replace(/\/+$/, "");
 const urlParams = new URLSearchParams(window.location.search);
 const siteSlug = String(urlParams.get("slug") || "").trim();
 
+const EXPERIENCE_UPGRADES = [
+  {
+    name: "Guided Autoscroll",
+    badge: "Attention Grabber",
+    impact: "Forces the visitor to see the strongest moments first.",
+    note: "Runs as a short guided mode and stops immediately when the user interacts.",
+  },
+  {
+    name: "Immersive Audio",
+    badge: "Atmosphere",
+    impact: "Adds cinematic sound design, ambient music, or branded motion cues.",
+    note: "Best shipped as optional audio with a clean sound-on entry point.",
+  },
+  {
+    name: "3D Depth Parallax",
+    badge: "Visual Pop",
+    impact: "Creates a coming-out-of-the-screen effect with layered depth and motion.",
+    note: "High perceived value without needing a heavy 3D production pipeline.",
+  },
+  {
+    name: "Sticky Story Scenes",
+    badge: "Premium Flow",
+    impact: "Turns ordinary sections into paced full-screen scenes.",
+    note: "Excellent for launches, hospitality, automotive, travel, and founder brands.",
+  },
+  {
+    name: "Motion Typography",
+    badge: "Editorial",
+    impact: "Makes key messaging land harder with staged, scroll-linked text reveals.",
+    note: "Useful when the copy needs to feel bold without redesigning the whole page.",
+  },
+  {
+    name: "Smart Sticky CTA",
+    badge: "Conversion",
+    impact: "Keeps the primary action visible and adapts the call to action by section.",
+    note: "Usually the easiest upsell to justify because it ties directly to leads.",
+  },
+];
+
 let siteConfig = null;
 let editableContent = null;
 let mediaDraft = null;
 let cinematicDraft = null;
+let experienceDraft = null;
 let seoDraft = null;
 let activeModal = null;
 let pollTimer = null;
@@ -274,9 +317,79 @@ function buildStandalonePreviewRuntimeScript(previewData) {
         object-fit: cover;
         pointer-events: none;
       }
+      body.guided-mode-active { cursor: ns-resize; }
+      .experience-controls {
+        position: fixed;
+        right: 1.25rem;
+        bottom: 1.25rem;
+        z-index: 55;
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        justify-content: end;
+      }
+      .experience-button {
+        border: 1px solid rgba(255,255,255,0.14);
+        border-radius: 999px;
+        padding: 0.85rem 1.1rem;
+        color: #fff;
+        font: inherit;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        background:
+          linear-gradient(180deg, rgba(255,255,255,0.16), rgba(255,255,255,0.05)),
+          rgba(10,9,15,0.8);
+        backdrop-filter: blur(14px);
+        box-shadow: 0 18px 40px rgba(0,0,0,0.24);
+      }
+      .hero-standalone { perspective: 1600px; }
+      .hero-depth-grid { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+      .depth-orb, .depth-ring, .depth-beam { position: absolute; display: block; will-change: transform; }
+      .depth-orb { border-radius: 999px; filter: blur(8px); }
+      .depth-orb-a {
+        width: min(28vw, 22rem); height: min(28vw, 22rem); top: 10vh; left: 8vw;
+        background: radial-gradient(circle, rgba(246,107,162,0.22), rgba(246,107,162,0.02) 60%, transparent 72%);
+        transform: translate3d(calc(var(--depth-x, 0) * -18px), calc(var(--depth-y, 0) * -24px), 90px);
+      }
+      .depth-orb-b {
+        width: min(22vw, 18rem); height: min(22vw, 18rem); right: 10vw; bottom: 16vh;
+        background: radial-gradient(circle, rgba(244,177,77,0.18), rgba(244,177,77,0.02) 58%, transparent 72%);
+        transform: translate3d(calc(var(--depth-x, 0) * 24px), calc(var(--depth-y, 0) * 16px), 70px);
+      }
+      .depth-ring {
+        width: min(42vw, 38rem); height: min(42vw, 38rem); right: 18vw; top: 8vh;
+        border-radius: 999px; border: 1px solid rgba(255,255,255,0.12); box-shadow: inset 0 0 50px rgba(255,255,255,0.04);
+        transform: rotate(18deg) translate3d(calc(var(--depth-x, 0) * 12px), calc(var(--depth-y, 0) * -12px), 20px);
+      }
+      .depth-beam {
+        inset: 12vh auto auto 42vw; width: min(28vw, 24rem); height: 65vh;
+        background: linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0));
+        clip-path: polygon(38% 0, 64% 0, 100% 100%, 0 100%); opacity: 0.25;
+        transform: translate3d(calc(var(--depth-x, 0) * 20px), calc(var(--depth-y, 0) * -10px), 10px);
+      }
+      .hero-frame-glare {
+        position: absolute; inset: 0;
+        background:
+          radial-gradient(circle at calc(52% + var(--depth-x, 0) * 16%), calc(28% + var(--depth-y, 0) * 14%), rgba(255,255,255,0.22), transparent 24%),
+          linear-gradient(120deg, rgba(255,255,255,0.06), transparent 40%);
+        mix-blend-mode: screen; pointer-events: none;
+      }
+      .hero-cinematic-card {
+        transform-style: preserve-3d;
+        transform:
+          translate3d(calc(var(--depth-x, 0) * 20px), calc(var(--scroll-shift-y, 0px) + var(--depth-y, 0) * -18px), 70px)
+          rotateX(calc(var(--depth-y, 0) * -5deg))
+          rotateY(calc(var(--depth-x, 0) * 7deg));
+      }
       .scroll-section { isolation: isolate; }
       .section-inner { position: relative; z-index: 2; }
       @media (max-width: 900px) {
+        .experience-controls {
+          left: 0.9rem; right: 0.9rem; bottom: 0.9rem; justify-content: stretch;
+        }
+        .experience-button {
+          flex: 1 1 0; text-align: center; padding: 0.8rem 0.9rem; font-size: 0.72rem;
+        }
         .hero-cinematic-card,
         .section-cinematic-card,
         .section-cinematic-center,
@@ -291,9 +404,292 @@ function buildStandalonePreviewRuntimeScript(previewData) {
           aspect-ratio: 16 / 9;
           margin: 0 auto 1rem;
         }
+        .hero-standalone { perspective: none; }
+        .hero-depth-grid { opacity: 0.75; }
       }
     \`;
     document.head.appendChild(style);
+  }
+
+  function ensureExperienceControls() {
+    const settings = draft.experienceUpgrades || {};
+    if (!settings.guidedScroll?.enabled && !settings.audio?.enabled) return {};
+    let controls = document.querySelector(".experience-controls");
+    if (!controls) {
+      controls = document.createElement("div");
+      controls.className = "experience-controls";
+      document.body.appendChild(controls);
+    }
+    if (settings.guidedScroll?.enabled && !controls.querySelector("[data-guided-mode-btn]")) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "experience-button";
+      button.setAttribute("data-guided-mode-btn", "true");
+      controls.appendChild(button);
+    }
+    if (settings.audio?.enabled && !controls.querySelector("[data-sound-toggle-btn]")) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "experience-button";
+      button.setAttribute("data-sound-toggle-btn", "true");
+      button.textContent = "Enable Sound";
+      controls.appendChild(button);
+    }
+    return {
+      guidedModeButton: controls.querySelector("[data-guided-mode-btn]"),
+      soundToggleButton: controls.querySelector("[data-sound-toggle-btn]"),
+    };
+  }
+
+  let guidedModeRaf = 0;
+  let guidedModeActive = false;
+  let guidedModeDismissed = false;
+  let guidedModeStartedAt = 0;
+  let guidedModePhase = "down";
+  let guidedModePauseUntil = 0;
+  let guidedResumeTimer = 0;
+  let lastKnownScrollY = 0;
+  let ambientAudioContext = null;
+  let ambientAudioNodes = [];
+  let ambientPulseTimer = 0;
+  let ambientAudioEnabled = false;
+
+  function updateGuidedModeUi(button) {
+    if (!button) return;
+    button.textContent = guidedModeActive ? "Guided Mode: On" : guidedModeDismissed ? "Resume Guided Mode" : "Guided Mode: Off";
+    document.body.classList.toggle("guided-mode-active", guidedModeActive);
+  }
+
+  function stopGuidedMode(button, markDismissed = true) {
+    guidedModeActive = false;
+    if (markDismissed) guidedModeDismissed = true;
+    if (guidedModeRaf) cancelAnimationFrame(guidedModeRaf);
+    guidedModeRaf = 0;
+    guidedModePauseUntil = 0;
+    updateGuidedModeUi(button);
+  }
+
+  function guidedModeStep(button) {
+    const settings = draft.experienceUpgrades?.guidedScroll || {};
+    if (!guidedModeActive) return;
+    const now = performance.now();
+    if (guidedModePauseUntil && now < guidedModePauseUntil) {
+      guidedModeRaf = requestAnimationFrame(() => guidedModeStep(button));
+      return;
+    }
+    if (guidedModePauseUntil && now >= guidedModePauseUntil) {
+      guidedModePauseUntil = 0;
+      guidedModePhase = "up";
+      guidedModeStartedAt = 0;
+    }
+    if (!guidedModeStartedAt) guidedModeStartedAt = now;
+    const duration = guidedModePhase === "down" ? Number(settings.downDurationMs || 112500) : Number(settings.upDurationMs || 56250);
+    const progress = Math.min(1, (now - guidedModeStartedAt) / duration);
+    const eased = 1 - Math.pow(1 - progress, 2.2);
+    const maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+    const isNearBottom = window.scrollY >= Math.max(0, maxScroll - 8);
+    if (guidedModePhase === "down" && isNearBottom) {
+      guidedModePauseUntil = now + Number(settings.endPauseMs || 3000);
+      window.scrollTo({ top: maxScroll, behavior: "auto" });
+      guidedModeRaf = requestAnimationFrame(() => guidedModeStep(button));
+      return;
+    }
+    const target = guidedModePhase === "down" ? maxScroll : 0;
+    const origin = guidedModePhase === "down" ? 0 : maxScroll;
+    window.scrollTo({ top: origin + (target - origin) * eased, behavior: "auto" });
+    if (progress >= 1) {
+      if (guidedModePhase === "down") {
+        guidedModePauseUntil = now + Number(settings.endPauseMs || 3000);
+      } else {
+        stopGuidedMode(button, false);
+        return;
+      }
+    }
+    guidedModeRaf = requestAnimationFrame(() => guidedModeStep(button));
+  }
+
+  function startGuidedMode(button) {
+    const settings = draft.experienceUpgrades?.guidedScroll || {};
+    if (!settings.enabled || guidedModeActive) return;
+    if (guidedResumeTimer) {
+      clearTimeout(guidedResumeTimer);
+      guidedResumeTimer = 0;
+    }
+    guidedModeActive = true;
+    guidedModeStartedAt = 0;
+    guidedModePauseUntil = 0;
+    guidedModePhase = window.scrollY >= Math.max(0, document.documentElement.scrollHeight - window.innerHeight - 8) ? "up" : "down";
+    updateGuidedModeUi(button);
+    guidedModeRaf = requestAnimationFrame(() => guidedModeStep(button));
+  }
+
+  function scheduleGuidedResume(button) {
+    const settings = draft.experienceUpgrades?.guidedScroll || {};
+    if (!settings.enabled) return;
+    if (guidedResumeTimer) clearTimeout(guidedResumeTimer);
+    guidedResumeTimer = setTimeout(() => {
+      if (!guidedModeActive) {
+        guidedModeDismissed = false;
+        startGuidedMode(button);
+      }
+    }, Number(settings.resumeDelayMs || 2000));
+  }
+
+  function bindGuidedMode(button) {
+    const settings = draft.experienceUpgrades?.guidedScroll || {};
+    if (!button || button.dataset.bound === "true" || !settings.enabled) return;
+    button.dataset.bound = "true";
+    const interrupt = () => {
+      if (guidedModeActive) stopGuidedMode(button, true);
+      scheduleGuidedResume(button);
+    };
+    ["wheel", "touchstart", "keydown", "mousedown"].forEach((eventName) => window.addEventListener(eventName, interrupt, { passive: true }));
+    window.addEventListener("scroll", () => {
+      const currentScrollY = window.scrollY;
+      const delta = Math.abs(currentScrollY - lastKnownScrollY);
+      lastKnownScrollY = currentScrollY;
+      if (!guidedModeActive && delta > 2) scheduleGuidedResume(button);
+    }, { passive: true });
+    button.addEventListener("click", () => {
+      if (guidedModeActive) {
+        stopGuidedMode(button, true);
+        scheduleGuidedResume(button);
+        return;
+      }
+      guidedModeDismissed = false;
+      startGuidedMode(button);
+    });
+    window.addEventListener("load", () => {
+      setTimeout(() => {
+        if (!guidedModeDismissed) startGuidedMode(button);
+      }, Number(settings.initialDelayMs || 6000));
+    }, { once: true });
+  }
+
+  function createAudioVoice(context, type, frequency, gainValue) {
+    const oscillator = context.createOscillator();
+    const filter = context.createBiquadFilter();
+    const gain = context.createGain();
+    oscillator.type = type;
+    oscillator.frequency.value = frequency;
+    filter.type = "lowpass";
+    filter.frequency.value = 420;
+    filter.Q.value = 0.7;
+    gain.gain.value = gainValue;
+    oscillator.connect(filter);
+    filter.connect(gain);
+    gain.connect(context.destination);
+    oscillator.start();
+    ambientAudioNodes.push(oscillator, filter, gain);
+    return { oscillator, filter, gain };
+  }
+
+  function playAmbientPulse() {
+    if (!ambientAudioContext) return;
+    const pulseOsc = ambientAudioContext.createOscillator();
+    const pulseGain = ambientAudioContext.createGain();
+    pulseOsc.type = "sine";
+    pulseOsc.frequency.setValueAtTime(220, ambientAudioContext.currentTime);
+    pulseOsc.frequency.exponentialRampToValueAtTime(110, ambientAudioContext.currentTime + 1.8);
+    pulseGain.gain.setValueAtTime(0.0001, ambientAudioContext.currentTime);
+    pulseGain.gain.exponentialRampToValueAtTime(0.018, ambientAudioContext.currentTime + 0.2);
+    pulseGain.gain.exponentialRampToValueAtTime(0.0001, ambientAudioContext.currentTime + 1.8);
+    pulseOsc.connect(pulseGain);
+    pulseGain.connect(ambientAudioContext.destination);
+    pulseOsc.start();
+    pulseOsc.stop(ambientAudioContext.currentTime + 2);
+  }
+
+  async function enableAmbientAudio(button) {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return;
+    if (!ambientAudioContext) ambientAudioContext = new AudioContextClass();
+    await ambientAudioContext.resume();
+    if (!ambientAudioEnabled) {
+      const bass = createAudioVoice(ambientAudioContext, "triangle", 55, 0.018);
+      const pad = createAudioVoice(ambientAudioContext, "sawtooth", 110, 0.008);
+      createAudioVoice(ambientAudioContext, "sine", 220, 0.0035);
+      const lfo = ambientAudioContext.createOscillator();
+      const lfoGain = ambientAudioContext.createGain();
+      lfo.type = "sine";
+      lfo.frequency.value = 0.07;
+      lfoGain.gain.value = 110;
+      lfo.connect(lfoGain);
+      lfoGain.connect(bass.filter.frequency);
+      lfoGain.connect(pad.filter.frequency);
+      lfo.start();
+      ambientAudioNodes.push(lfo, lfoGain);
+      playAmbientPulse();
+      ambientPulseTimer = setInterval(playAmbientPulse, 6800);
+    }
+    ambientAudioEnabled = true;
+    if (button) button.textContent = "Sound: On";
+  }
+
+  function disableAmbientAudio(button) {
+    if (ambientPulseTimer) clearInterval(ambientPulseTimer);
+    ambientPulseTimer = 0;
+    ambientAudioNodes.forEach((node) => {
+      try { if (typeof node.stop === "function") node.stop(); } catch {}
+      try { if (typeof node.disconnect === "function") node.disconnect(); } catch {}
+    });
+    ambientAudioNodes = [];
+    ambientAudioEnabled = false;
+    if (button) button.textContent = "Enable Sound";
+  }
+
+  function bindSoundToggle(button) {
+    if (!button || button.dataset.bound === "true") return;
+    button.dataset.bound = "true";
+    button.addEventListener("click", async () => {
+      if (ambientAudioEnabled) {
+        disableAmbientAudio(button);
+        return;
+      }
+      try {
+        await enableAmbientAudio(button);
+      } catch {
+        button.textContent = "Sound Unavailable";
+      }
+    });
+  }
+
+  function applyExperience() {
+    const settings = draft.experienceUpgrades || {};
+    const heroNode = document.querySelector(".hero-standalone");
+    if (settings.depthHero?.enabled && heroNode) {
+      if (!heroNode.querySelector(".hero-depth-grid")) {
+        const depthGrid = document.createElement("div");
+        depthGrid.className = "hero-depth-grid";
+        depthGrid.setAttribute("aria-hidden", "true");
+        depthGrid.innerHTML = '<span class="depth-orb depth-orb-a"></span><span class="depth-orb depth-orb-b"></span><span class="depth-ring"></span><span class="depth-beam"></span>';
+        heroNode.insertBefore(depthGrid, heroNode.firstChild);
+      }
+      const cinematicNode = heroNode.querySelector(".hero-cinematic-card");
+      if (cinematicNode && !cinematicNode.querySelector(".hero-frame-glare")) {
+        const glare = document.createElement("div");
+        glare.className = "hero-frame-glare";
+        glare.setAttribute("aria-hidden", "true");
+        cinematicNode.appendChild(glare);
+      }
+      if (heroNode.dataset.depthBound !== "true") {
+        heroNode.dataset.depthBound = "true";
+        heroNode.addEventListener("pointermove", (event) => {
+          const bounds = heroNode.getBoundingClientRect();
+          const x = ((event.clientX - bounds.left) / bounds.width - 0.5) * 2;
+          const y = ((event.clientY - bounds.top) / bounds.height - 0.5) * 2;
+          heroNode.style.setProperty("--depth-x", x.toFixed(3));
+          heroNode.style.setProperty("--depth-y", y.toFixed(3));
+        });
+        heroNode.addEventListener("pointerleave", () => {
+          heroNode.style.setProperty("--depth-x", "0");
+          heroNode.style.setProperty("--depth-y", "0");
+        });
+      }
+    }
+    const { guidedModeButton, soundToggleButton } = ensureExperienceControls();
+    bindGuidedMode(guidedModeButton);
+    bindSoundToggle(soundToggleButton);
   }
 
   function setupVideo(video) {
@@ -489,6 +885,7 @@ function buildStandalonePreviewRuntimeScript(previewData) {
     applySeo();
     applyContent();
     applyCinematic();
+    applyExperience();
   }
 
   const scheduleApplyDraft = () => {
@@ -610,6 +1007,32 @@ function resetMediaDraft() {
 function resetCinematicDraft() {
   releaseAllPreviewUrls();
   cinematicDraft = ensureCinematicLayers(siteConfig?.cinematicLayers, editableContent?.sections || []);
+}
+
+function ensureExperienceDraft(raw) {
+  const guided = raw?.guidedScroll || {};
+  const audio = raw?.audio || {};
+  const depth = raw?.depthHero || {};
+  return {
+    guidedScroll: {
+      enabled: Boolean(guided.enabled),
+      initialDelayMs: Math.max(0, Number(guided.initialDelayMs || 6000) || 6000),
+      downDurationMs: Math.max(5000, Number(guided.downDurationMs || 112500) || 112500),
+      upDurationMs: Math.max(3000, Number(guided.upDurationMs || 56250) || 56250),
+      endPauseMs: Math.max(0, Number(guided.endPauseMs || 3000) || 3000),
+      resumeDelayMs: Math.max(250, Number(guided.resumeDelayMs || 2000) || 2000),
+    },
+    audio: {
+      enabled: Boolean(audio.enabled),
+    },
+    depthHero: {
+      enabled: Boolean(depth.enabled),
+    },
+  };
+}
+
+function resetExperienceDraft() {
+  experienceDraft = ensureExperienceDraft(siteConfig?.experienceUpgrades);
 }
 
 function resetSeoDraft() {
@@ -749,6 +1172,31 @@ function escapeHtml(value) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+function renderExperienceUpsells() {
+  if (!experienceUpsellList || !experiencePackageSummary) return;
+
+  experienceUpsellList.innerHTML = EXPERIENCE_UPGRADES
+    .map((upgrade) => `
+      <article class="experience-upsell-item">
+        <div class="experience-upsell-meta">
+          <h3>${escapeHtml(upgrade.name)}</h3>
+          <span class="experience-upsell-badge">${escapeHtml(upgrade.badge)}</span>
+        </div>
+        <p><strong>Impact:</strong> ${escapeHtml(upgrade.impact)}</p>
+        <p>${escapeHtml(upgrade.note)}</p>
+      </article>
+    `)
+    .join("");
+
+  const siteName = String(editableContent?.hero?.title || siteConfig?.title || "this site").trim();
+  experiencePackageSummary.innerHTML = `
+    <span class="experience-package-badge">Signature Package</span>
+    <h3>Sell the full motion stack</h3>
+    <p><strong>Best bundle for ${escapeHtml(siteName)}:</strong> Guided Autoscroll, Immersive Audio, 3D Depth Parallax, Sticky Story Scenes, Motion Typography, and Smart Sticky CTA.</p>
+    <p>Recommended workflow: sell the baseline build first, then upsell these as premium immersion and conversion upgrades.</p>
+  `;
 }
 
 function renderMediaCard(title, media, kind) {
@@ -932,6 +1380,45 @@ function openSeoModal() {
   });
 }
 
+function openExperienceModal() {
+  openModal({
+    type: "experience",
+    title: "Experience Upgrades",
+    body: `
+      <div class="stack-list">
+        <div class="stack-card">
+          <label class="field-toggle">
+            <input type="checkbox" name="guided-enabled" ${experienceDraft.guidedScroll.enabled ? "checked" : ""} />
+            <span>Guided Autoscroll</span>
+          </label>
+          <p class="field-note">Use this for cinematic pass-through experiences after the first build. It applies to the published edited version rather than the inline editor preview.</p>
+          <div class="field-grid two-col">
+            <label><span>Start Delay (seconds)</span><input type="number" name="guided-delay" min="0" step="0.25" value="${escapeHtml((experienceDraft.guidedScroll.initialDelayMs / 1000).toFixed(2))}" /></label>
+            <label><span>Resume Delay (seconds)</span><input type="number" name="guided-resume-delay" min="0.25" step="0.25" value="${escapeHtml((experienceDraft.guidedScroll.resumeDelayMs / 1000).toFixed(2))}" /></label>
+            <label><span>Scroll Down Duration (seconds)</span><input type="number" name="guided-down-duration" min="5" step="0.25" value="${escapeHtml((experienceDraft.guidedScroll.downDurationMs / 1000).toFixed(2))}" /></label>
+            <label><span>Return Duration (seconds)</span><input type="number" name="guided-up-duration" min="3" step="0.25" value="${escapeHtml((experienceDraft.guidedScroll.upDurationMs / 1000).toFixed(2))}" /></label>
+            <label><span>End Pause (seconds)</span><input type="number" name="guided-end-pause" min="0" step="0.25" value="${escapeHtml((experienceDraft.guidedScroll.endPauseMs / 1000).toFixed(2))}" /></label>
+          </div>
+        </div>
+        <div class="stack-card">
+          <label class="field-toggle">
+            <input type="checkbox" name="audio-enabled" ${experienceDraft.audio.enabled ? "checked" : ""} />
+            <span>Immersive Audio Toggle</span>
+          </label>
+          <p class="field-note">Adds an optional ambient sound layer with a visitor-controlled sound button.</p>
+        </div>
+        <div class="stack-card">
+          <label class="field-toggle">
+            <input type="checkbox" name="depth-enabled" ${experienceDraft.depthHero.enabled ? "checked" : ""} />
+            <span>3D Depth Hero</span>
+          </label>
+          <p class="field-note">Enables layered hero depth, motion response, and added visual pop on the final page.</p>
+        </div>
+      </div>
+    `,
+  });
+}
+
 function openCinematicModal() {
   const sectionsMarkup = cinematicDraft.sections
     .map((layer, index) =>
@@ -1044,6 +1531,18 @@ function applyModalChanges() {
 
   if (activeModal.type === "seo") {
     seoDraft.publicSiteUrl = String(formData.get("publicSiteUrl") || "").trim();
+  }
+
+  if (activeModal.type === "experience") {
+    experienceDraft.guidedScroll.enabled = formData.get("guided-enabled") === "on";
+    experienceDraft.guidedScroll.initialDelayMs = Math.max(0, (Number(formData.get("guided-delay") || 6) || 6) * 1000);
+    experienceDraft.guidedScroll.resumeDelayMs = Math.max(250, (Number(formData.get("guided-resume-delay") || 2) || 2) * 1000);
+    experienceDraft.guidedScroll.downDurationMs = Math.max(5000, (Number(formData.get("guided-down-duration") || 112.5) || 112.5) * 1000);
+    experienceDraft.guidedScroll.upDurationMs = Math.max(3000, (Number(formData.get("guided-up-duration") || 56.25) || 56.25) * 1000);
+    experienceDraft.guidedScroll.endPauseMs = Math.max(0, (Number(formData.get("guided-end-pause") || 3) || 3) * 1000);
+    experienceDraft.audio.enabled = formData.get("audio-enabled") === "on";
+    experienceDraft.depthHero.enabled = formData.get("depth-enabled") === "on";
+    setStatus("Experience upgrade settings updated.", "These settings are applied when you publish the next edited version.");
   }
 
   applyPreview();
@@ -1548,6 +2047,7 @@ function buildDraftPayload() {
   payload.append("editSourceSlug", siteConfig.slug);
   payload.append("contentOverrides", JSON.stringify(editableContent));
   payload.append("cinematicLayers", JSON.stringify(buildCinematicLayersPayload()));
+  payload.append("experienceUpgrades", JSON.stringify(experienceDraft));
   if (mediaDraft.startImageFile) payload.append("startImage", mediaDraft.startImageFile);
   if (mediaDraft.endImageFile) payload.append("endImage", mediaDraft.endImageFile);
   if (mediaDraft.videoFile) payload.append("video", mediaDraft.videoFile);
@@ -1577,6 +2077,7 @@ function buildLocalFullPreviewHtml() {
     publicSiteUrl: String(seoDraft?.publicSiteUrl || "").trim(),
     editableContent,
     cinematicLayers: buildStandalonePreviewCinematicLayers(),
+    experienceUpgrades: experienceDraft,
   });
 }
 
@@ -1658,7 +2159,9 @@ async function loadSite() {
   editableContent = ensureEditableContent(siteConfig.editableContent);
   resetMediaDraft();
   resetCinematicDraft();
+  resetExperienceDraft();
   resetSeoDraft();
+  renderExperienceUpsells();
 
   editorTitle.textContent = editableContent.hero.title || siteConfig.title;
   editorSubtitle.textContent = "Tap any circle in the preview to edit that part of the page.";
@@ -1699,6 +2202,7 @@ publishButton.addEventListener("click", async () => {
     setStatus(`Could not publish changes: ${error.message}`);
   }
 });
+experienceSettingsButton.addEventListener("click", openExperienceModal);
 cinematicLayersButton.addEventListener("click", openCinematicModal);
 seoSettingsButton.addEventListener("click", openSeoModal);
 fullPreviewButton.addEventListener("click", async () => {
