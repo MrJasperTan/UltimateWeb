@@ -471,17 +471,6 @@ function applyPreview() {
   const frameDocument = frameWindow?.document;
   if (!frameDocument) return;
 
-  updateElementText(frameDocument.querySelector(".hero-kicker"), editableContent.hero.kicker);
-  updateElementText(frameDocument.querySelector(".hero-standalone h1"), String(editableContent.hero.title || "").toUpperCase());
-  updateElementText(frameDocument.querySelector(".hero-sub"), editableContent.hero.sub);
-  updateElementText(frameDocument.querySelector(".hero-trust"), editableContent.hero.trustLine);
-  updateElementText(
-    frameDocument.querySelector(".marquee-text"),
-    [editableContent.marqueeText, editableContent.marqueeText, editableContent.marqueeText].filter(Boolean).join(" · ")
-  );
-  updateElementText(frameDocument.querySelector(".site-header a"), editableContent.cta.headerCta);
-  updateElementText(frameDocument.querySelector("title"), `${editableContent.hero.title || siteConfig.topic} | ${siteConfig.topic}`);
-
   const sectionNodes = Array.from(frameDocument.querySelectorAll(".scroll-section"));
   editableContent.sections.forEach((section, index) => {
     const node = sectionNodes[index];
@@ -524,14 +513,6 @@ function applyPreview() {
     }
   });
 
-  const ctaNode = frameDocument.querySelector("#cta");
-  if (ctaNode) {
-    updateElementText(ctaNode.querySelector(".section-label"), editableContent.cta.label);
-    updateElementText(ctaNode.querySelector(".section-heading"), editableContent.cta.heading);
-    updateElementText(ctaNode.querySelector(".section-body"), editableContent.cta.body);
-    updateElementText(ctaNode.querySelector(".cta-button"), editableContent.cta.button);
-  }
-
   renderHandles();
 }
 
@@ -539,6 +520,7 @@ function getHandleDescriptors() {
   const frameDocument = siteFrame.contentWindow?.document;
   if (!frameDocument) return [];
   const descriptors = [];
+  const sectionNodes = Array.from(frameDocument.querySelectorAll(".scroll-section"));
 
   const heroNode = frameDocument.querySelector(".hero-standalone");
   if (heroNode) descriptors.push({
@@ -569,11 +551,22 @@ function getHandleDescriptors() {
     shortLabel: "B",
     node: marqueeNode,
     anchorNode: marqueeNode,
-    placement: "anchor-left",
+    placement: "fixed-lower-right",
+    isVisible: ({ frameHeight }) => {
+      const firstSection = sectionNodes[0];
+      const secondSection = sectionNodes[1];
+      const lastEditableSection = sectionNodes[Math.max(0, editableContent.sections.length - 1)];
+      const firstRect = firstSection?.getBoundingClientRect();
+      const secondRect = secondSection?.getBoundingClientRect();
+      const lastRect = lastEditableSection?.getBoundingClientRect();
+      const pastFirstSection = Boolean(firstRect) && firstRect.bottom <= frameHeight * 0.35;
+      const secondSectionEntering = Boolean(secondRect) && secondRect.top <= frameHeight * 0.78;
+      const beforeLastSectionEnds = !lastRect || lastRect.bottom >= frameHeight * 0.24;
+      return (pastFirstSection || secondSectionEntering) && beforeLastSectionEnds;
+    },
     action: openMarqueeModal,
   });
 
-  const sectionNodes = Array.from(frameDocument.querySelectorAll(".scroll-section"));
   editableContent.sections.forEach((section, index) => {
     const node = sectionNodes[index];
     if (!node) return;
@@ -624,12 +617,16 @@ function renderHandles() {
 
   const descriptors = getHandleDescriptors();
   descriptors.forEach((descriptor) => {
+    if (typeof descriptor.isVisible === "function" && !descriptor.isVisible({ frameHeight, frameWidth })) return;
     const rect = descriptor.anchorNode ? descriptor.anchorNode.getBoundingClientRect() : null;
     let top = 14;
     let left = 14;
     if (descriptor.placement === "fixed-right") {
       top = descriptor.top;
       left = frameWidth - 142;
+    } else if (descriptor.placement === "fixed-lower-right") {
+      top = frameHeight - 76;
+      left = Math.max(14, frameWidth - 164);
     } else if (descriptor.placement === "anchor-left" && rect) {
       top = rect.top + Math.max(6, rect.height * 0.5) - 20;
       left = 14;
