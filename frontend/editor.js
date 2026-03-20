@@ -559,11 +559,16 @@ function buildStandalonePreviewRuntimeScript(previewData) {
       guidedModeDismissed = false;
       startGuidedMode(button);
     });
-    window.addEventListener("load", () => {
+    const bootGuidedMode = () => {
       setTimeout(() => {
         if (!guidedModeDismissed) startGuidedMode(button);
       }, Number(settings.initialDelayMs || 6000));
-    }, { once: true });
+    };
+    if (document.readyState === "complete") {
+      bootGuidedMode();
+    } else {
+      window.addEventListener("load", bootGuidedMode, { once: true });
+    }
   }
 
   function createAudioVoice(context, type, frequency, gainValue) {
@@ -1179,14 +1184,14 @@ function renderExperienceUpsells() {
 
   experienceUpsellList.innerHTML = EXPERIENCE_UPGRADES
     .map((upgrade) => `
-      <article class="experience-upsell-item">
+      <button class="experience-upsell-item" type="button" data-open-experience-settings="true">
         <div class="experience-upsell-meta">
           <h3>${escapeHtml(upgrade.name)}</h3>
           <span class="experience-upsell-badge">${escapeHtml(upgrade.badge)}</span>
         </div>
         <p><strong>Impact:</strong> ${escapeHtml(upgrade.impact)}</p>
         <p>${escapeHtml(upgrade.note)}</p>
-      </article>
+      </button>
     `)
     .join("");
 
@@ -1196,7 +1201,15 @@ function renderExperienceUpsells() {
     <h3>Sell the full motion stack</h3>
     <p><strong>Best bundle for ${escapeHtml(siteName)}:</strong> Guided Autoscroll, Immersive Audio, 3D Depth Parallax, Sticky Story Scenes, Motion Typography, and Smart Sticky CTA.</p>
     <p>Recommended workflow: sell the baseline build first, then upsell these as premium immersion and conversion upgrades.</p>
+    <button class="experience-package-action" type="button" data-open-experience-settings="true">Configure Experience</button>
   `;
+
+  experienceUpsellList.querySelectorAll("[data-open-experience-settings]").forEach((button) => {
+    button.addEventListener("click", openExperienceModal);
+  });
+  experiencePackageSummary.querySelectorAll("[data-open-experience-settings]").forEach((button) => {
+    button.addEventListener("click", openExperienceModal);
+  });
 }
 
 function renderMediaCard(title, media, kind) {

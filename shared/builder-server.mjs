@@ -1085,11 +1085,16 @@ export function startBuilderServer({ appDir, publicDir }) {
       guidedModeDismissed = false;
       startGuidedMode(button);
     });
-    window.addEventListener("load", () => {
+    const bootGuidedMode = () => {
       setTimeout(() => {
         if (!guidedModeDismissed) startGuidedMode(button);
       }, Number(settings.initialDelayMs || 6000));
-    }, { once: true });
+    };
+    if (document.readyState === "complete") {
+      bootGuidedMode();
+    } else {
+      window.addEventListener("load", bootGuidedMode, { once: true });
+    }
   }
 
   function createAudioVoice(context, type, frequency, gainValue) {
