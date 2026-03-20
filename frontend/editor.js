@@ -472,6 +472,7 @@ function buildStandalonePreviewRuntimeScript(previewData) {
   function guidedModeStep(button) {
     const settings = draft.experienceUpgrades?.guidedScroll || {};
     if (!guidedModeActive) return;
+    const scroller = document.scrollingElement || document.documentElement;
     const now = performance.now();
     if (guidedModePauseUntil && now < guidedModePauseUntil) {
       guidedModeRaf = requestAnimationFrame(() => guidedModeStep(button));
@@ -486,17 +487,17 @@ function buildStandalonePreviewRuntimeScript(previewData) {
     const duration = guidedModePhase === "down" ? Number(settings.downDurationMs || 112500) : Number(settings.upDurationMs || 56250);
     const progress = Math.min(1, (now - guidedModeStartedAt) / duration);
     const eased = 1 - Math.pow(1 - progress, 2.2);
-    const maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
-    const isNearBottom = window.scrollY >= Math.max(0, maxScroll - 8);
+    const maxScroll = Math.max(0, scroller.scrollHeight - window.innerHeight);
+    const isNearBottom = scroller.scrollTop >= Math.max(0, maxScroll - 8);
     if (guidedModePhase === "down" && isNearBottom) {
       guidedModePauseUntil = now + Number(settings.endPauseMs || 3000);
-      window.scrollTo({ top: maxScroll, behavior: "auto" });
+      scroller.scrollTop = maxScroll;
       guidedModeRaf = requestAnimationFrame(() => guidedModeStep(button));
       return;
     }
     const target = guidedModePhase === "down" ? maxScroll : 0;
     const origin = guidedModePhase === "down" ? 0 : maxScroll;
-    window.scrollTo({ top: origin + (target - origin) * eased, behavior: "auto" });
+    scroller.scrollTop = origin + (target - origin) * eased;
     if (progress >= 1) {
       if (guidedModePhase === "down") {
         guidedModePauseUntil = now + Number(settings.endPauseMs || 3000);
@@ -518,7 +519,8 @@ function buildStandalonePreviewRuntimeScript(previewData) {
     guidedModeActive = true;
     guidedModeStartedAt = 0;
     guidedModePauseUntil = 0;
-    guidedModePhase = window.scrollY >= Math.max(0, document.documentElement.scrollHeight - window.innerHeight - 8) ? "up" : "down";
+    const scroller = document.scrollingElement || document.documentElement;
+    guidedModePhase = scroller.scrollTop >= Math.max(0, scroller.scrollHeight - window.innerHeight - 8) ? "up" : "down";
     updateGuidedModeUi(button);
     guidedModeRaf = requestAnimationFrame(() => guidedModeStep(button));
   }
@@ -545,7 +547,8 @@ function buildStandalonePreviewRuntimeScript(previewData) {
     };
     ["wheel", "touchstart", "keydown", "mousedown"].forEach((eventName) => window.addEventListener(eventName, interrupt, { passive: true }));
     window.addEventListener("scroll", () => {
-      const currentScrollY = window.scrollY;
+      const scroller = document.scrollingElement || document.documentElement;
+      const currentScrollY = scroller.scrollTop;
       const delta = Math.abs(currentScrollY - lastKnownScrollY);
       lastKnownScrollY = currentScrollY;
       if (!guidedModeActive && delta > 2) scheduleGuidedResume(button);
