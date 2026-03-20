@@ -972,6 +972,7 @@ export function startBuilderServer({ appDir, publicDir }) {
   let guidedModeDismissed = false;
   let guidedModeStartedAt = 0;
   let guidedModePhase = "down";
+  let guidedModeOrigin = 0;
   let guidedModePauseUntil = 0;
   let guidedResumeTimer = 0;
   let lastKnownScrollY = 0;
@@ -991,6 +992,8 @@ export function startBuilderServer({ appDir, publicDir }) {
     if (markDismissed) guidedModeDismissed = true;
     if (guidedModeRaf) cancelAnimationFrame(guidedModeRaf);
     guidedModeRaf = 0;
+    const scroller = document.scrollingElement || document.documentElement;
+    guidedModeOrigin = scroller.scrollTop;
     guidedModePauseUntil = 0;
     updateGuidedModeUi(button);
   }
@@ -1007,6 +1010,7 @@ export function startBuilderServer({ appDir, publicDir }) {
     if (guidedModePauseUntil && now >= guidedModePauseUntil) {
       guidedModePauseUntil = 0;
       guidedModePhase = "up";
+      guidedModeOrigin = scroller.scrollTop;
       guidedModeStartedAt = 0;
     }
     if (!guidedModeStartedAt) guidedModeStartedAt = now;
@@ -1022,11 +1026,11 @@ export function startBuilderServer({ appDir, publicDir }) {
       return;
     }
     const target = guidedModePhase === "down" ? maxScroll : 0;
-    const origin = guidedModePhase === "down" ? 0 : maxScroll;
-    scroller.scrollTop = origin + (target - origin) * eased;
+    scroller.scrollTop = guidedModeOrigin + (target - guidedModeOrigin) * eased;
     if (progress >= 1) {
       if (guidedModePhase === "down") {
         guidedModePauseUntil = now + Number(settings.endPauseMs || 3000);
+        guidedModeOrigin = scroller.scrollTop;
       } else {
         stopGuidedMode(button, false);
         return;
@@ -1046,6 +1050,7 @@ export function startBuilderServer({ appDir, publicDir }) {
     guidedModeStartedAt = 0;
     guidedModePauseUntil = 0;
     const scroller = document.scrollingElement || document.documentElement;
+    guidedModeOrigin = scroller.scrollTop;
     guidedModePhase = scroller.scrollTop >= Math.max(0, scroller.scrollHeight - window.innerHeight - 8) ? "up" : "down";
     updateGuidedModeUi(button);
     guidedModeRaf = requestAnimationFrame(() => guidedModeStep(button));
