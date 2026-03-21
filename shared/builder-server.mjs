@@ -461,6 +461,73 @@ function stripHtml(value) {
     .trim();
 }
 
+function normalizeExperienceUpgrades(raw) {
+  const guided = raw?.guidedScroll && typeof raw.guidedScroll === "object" ? raw.guidedScroll : {};
+  const audio = raw?.audio && typeof raw.audio === "object" ? raw.audio : {};
+  const depth = raw?.depthHero && typeof raw.depthHero === "object" ? raw.depthHero : {};
+  return {
+    guidedScroll: {
+      enabled: Boolean(guided.enabled),
+      initialDelayMs: Math.max(0, Number(guided.initialDelayMs || 6000) || 6000),
+      downDurationMs: Math.max(5000, Number(guided.downDurationMs || 112500) || 112500),
+      upDurationMs: Math.max(3000, Number(guided.upDurationMs || 56250) || 56250),
+      endPauseMs: Math.max(0, Number(guided.endPauseMs || 3000) || 3000),
+      resumeDelayMs: Math.max(250, Number(guided.resumeDelayMs || 2000) || 2000),
+    },
+    audio: {
+      enabled: Boolean(audio.enabled),
+    },
+    depthHero: {
+      enabled: Boolean(depth.enabled),
+    },
+  };
+}
+
+function parseExperienceUpgradesFromSite(siteRoot) {
+  const htmlPath = join(siteRoot, "index.html");
+  if (!existsSync(htmlPath) || !statSync(htmlPath).isFile()) return null;
+  const html = readFileSync(htmlPath, "utf-8");
+  const appScriptPath = join(siteRoot, "js", "app.js");
+  const appScript = existsSync(appScriptPath) && statSync(appScriptPath).isFile()
+    ? readFileSync(appScriptPath, "utf-8")
+    : "";
+
+  const guidedEnabled = /id=["']guided-mode-btn["']/i.test(html) || /\bguidedModeButton\b/.test(appScript);
+  const audioEnabled = /id=["']sound-toggle-btn["']/i.test(html) || /\bsoundToggleButton\b/.test(appScript);
+  const depthEnabled = /\bhero-depth-grid\b/i.test(html) || /\bhero-depth-grid\b/.test(appScript);
+
+  if (!guidedEnabled && !audioEnabled && !depthEnabled) return null;
+
+  const guidedDurationMatch = appScript.match(
+    /guidedModePhase\s*===\s*["']down["']\s*\?\s*(\d+)\s*:\s*(\d+)/
+  );
+  const downDurationMs = guidedDurationMatch ? Number(guidedDurationMatch[1]) : 112500;
+  const upDurationMs = guidedDurationMatch ? Number(guidedDurationMatch[2]) : 56250;
+
+  const endPauseMatch = appScript.match(
+    /guidedModePauseUntil\s*=\s*(?:timestamp|performance\.now\(\))\s*\+\s*(\d+)/
+  );
+  const initialDelayMatch = appScript.match(
+    /if\s*\(!guidedModeDismissed\)\s*startGuidedMode\(\);\s*}\s*,\s*(\d+)\s*\)/
+  );
+  const resumeDelayMatch = appScript.match(
+    /guidedResumeTimer\s*=\s*window\.setTimeout\([\s\S]*?,\s*(\d+)\s*\);/
+  );
+
+  return normalizeExperienceUpgrades({
+    guidedScroll: {
+      enabled: guidedEnabled,
+      initialDelayMs: initialDelayMatch ? Number(initialDelayMatch[1]) : 6000,
+      downDurationMs,
+      upDurationMs,
+      endPauseMs: endPauseMatch ? Number(endPauseMatch[1]) : 3000,
+      resumeDelayMs: resumeDelayMatch ? Number(resumeDelayMatch[1]) : 2000,
+    },
+    audio: { enabled: audioEnabled },
+    depthHero: { enabled: depthEnabled },
+  });
+}
+
 function parseEditableContentFromSite(siteRoot, metadata = null) {
   const htmlPath = join(siteRoot, "index.html");
   if (!existsSync(htmlPath)) return null;
@@ -1470,6 +1537,8 @@ export function startBuilderServer({ appDir, publicDir }) {
         ? metadata.sourceContext.palette
         : [];
     const editableContent = metadata.editableContent || parseEditableContentFromSite(siteRoot, metadata);
+    const rawExperienceUpgrades = metadata.experienceUpgrades || parseExperienceUpgradesFromSite(siteRoot);
+    const experienceUpgrades = rawExperienceUpgrades ? normalizeExperienceUpgrades(rawExperienceUpgrades) : null;
     const cinematicLayers = metadata.cinematicLayers
       ? {
           hero: metadata.cinematicLayers.hero
@@ -1512,7 +1581,7 @@ export function startBuilderServer({ appDir, publicDir }) {
       siteUrl: `/generated-sites/${slug}/index.html`,
       seo: metadata.seo || null,
       cinematicLayers,
-      experienceUpgrades: metadata.experienceUpgrades || null,
+      experienceUpgrades,
       editableContent,
       media: {
         startImage: currentMedia?.startImage
