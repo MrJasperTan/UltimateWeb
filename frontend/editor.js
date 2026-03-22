@@ -2624,6 +2624,14 @@ function openDraftPreviewWindow() {
 }
 
 function buildLocalFullPreviewHtml() {
+  const liveFrameDocument = siteFrame.contentWindow?.document;
+  if (liveFrameDocument?.documentElement) {
+    const doctype = liveFrameDocument.doctype
+      ? `<!DOCTYPE ${liveFrameDocument.doctype.name}>`
+      : "<!doctype html>";
+    return `${doctype}\n${liveFrameDocument.documentElement.outerHTML}`;
+  }
+
   if (!siteSourceHtml || !siteSourcePreviewUrl) {
     throw new Error("The inline preview is not ready yet.");
   }
@@ -2676,26 +2684,8 @@ async function openFullPreview() {
   if (!siteConfig) return;
   const previewWindow = openDraftPreviewWindow();
   fullPreviewButton.disabled = true;
-  setStatus("Preparing full preview...", "Generating a temporary standalone preview with your unsaved draft.");
-
-  const payload = buildDraftPayload();
-  const response = await apiFetch(`/api/sites/${encodeURIComponent(siteConfig.slug)}/preview`, {
-    method: "POST",
-    body: payload,
-  });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    openLocalFullPreview(previewWindow);
-    return;
-  }
-
-  const previewUrl = resolveAbsoluteUrl(data.previewUrl);
-  if (previewWindow) {
-    previewWindow.location.replace(previewUrl);
-  } else {
-    window.open(previewUrl, "_blank");
-  }
-  setStatus("Full preview ready.", "Opened a temporary standalone preview in a new tab.");
+  setStatus("Preparing full preview...", "Opening the current live preview state in a standalone tab.");
+  openLocalFullPreview(previewWindow);
 }
 
 async function loadSite() {
