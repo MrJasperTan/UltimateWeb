@@ -2629,7 +2629,13 @@ function buildLocalFullPreviewHtml() {
     const doctype = liveFrameDocument.doctype
       ? `<!DOCTYPE ${liveFrameDocument.doctype.name}>`
       : "<!doctype html>";
-    return `${doctype}\n${liveFrameDocument.documentElement.outerHTML}`;
+    return injectStandalonePreviewRuntime(`${doctype}\n${liveFrameDocument.documentElement.outerHTML}`, {
+      title: String(editableContent?.hero?.title || siteConfig?.title || "").trim(),
+      publicSiteUrl: String(seoDraft?.publicSiteUrl || "").trim(),
+      editableContent,
+      cinematicLayers: buildStandalonePreviewCinematicLayers(),
+      experienceUpgrades: experienceDraft,
+    });
   }
 
   if (!siteSourceHtml || !siteSourcePreviewUrl) {
