@@ -461,23 +461,30 @@ function buildStandalonePreviewRuntimeScript(previewData) {
       controls.className = "experience-controls";
       document.body.appendChild(controls);
     }
-    if (settings.guidedScroll?.enabled && !controls.querySelector("[data-guided-mode-btn]")) {
-      const button = document.createElement("button");
-      button.type = "button";
+    const prepareButton = (selector, dataAttribute, slot, icon) => {
+      let button = controls.querySelector(selector);
+      if (button && button.dataset.bound === "true") {
+        const clone = button.cloneNode(true);
+        button.replaceWith(clone);
+        button = clone;
+      }
+      if (!button) {
+        button = document.createElement("button");
+        button.type = "button";
+        controls.appendChild(button);
+      }
       button.className = "experience-button";
-      button.setAttribute("data-guided-mode-btn", "true");
-      button.setAttribute("data-experience-slot", "guided");
-      button.textContent = "↕";
-      controls.appendChild(button);
+      button.setAttribute(dataAttribute, "true");
+      button.setAttribute("data-experience-slot", slot);
+      button.textContent = icon;
+      delete button.dataset.bound;
+      return button;
+    };
+    if (settings.guidedScroll?.enabled) {
+      prepareButton("[data-guided-mode-btn]", "data-guided-mode-btn", "guided", "↕");
     }
-    if (settings.audio?.enabled && !controls.querySelector("[data-sound-toggle-btn]")) {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "experience-button";
-      button.setAttribute("data-sound-toggle-btn", "true");
-      button.setAttribute("data-experience-slot", "sound");
-      button.textContent = "♪";
-      controls.appendChild(button);
+    if (settings.audio?.enabled) {
+      prepareButton("[data-sound-toggle-btn]", "data-sound-toggle-btn", "sound", "♪");
     }
     return {
       guidedModeButton: controls.querySelector("[data-guided-mode-btn]"),
