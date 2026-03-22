@@ -353,29 +353,33 @@ function buildStandalonePreviewRuntimeScript(previewData) {
         pointer-events: none;
       }
       body.guided-mode-active { cursor: ns-resize; }
-      .experience-controls {
-        position: fixed;
-        right: 1.25rem;
-        bottom: 1.25rem;
-        z-index: 55;
-        display: flex;
-        gap: 0.75rem;
-        flex-wrap: wrap;
-        justify-content: end;
-      }
+      .experience-controls { position: fixed; inset: 0; pointer-events: none; z-index: 55; }
       .experience-button {
+        position: fixed;
+        bottom: 1.25rem;
         border: 1px solid rgba(255,255,255,0.14);
         border-radius: 999px;
-        padding: 0.85rem 1.1rem;
+        width: 3.25rem;
+        height: 3.25rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
         color: #fff;
         font: inherit;
-        letter-spacing: 0.1em;
-        text-transform: uppercase;
+        font-size: 1.2rem;
+        line-height: 1;
         background:
           linear-gradient(180deg, rgba(255,255,255,0.16), rgba(255,255,255,0.05)),
           rgba(10,9,15,0.8);
         backdrop-filter: blur(14px);
         box-shadow: 0 18px 40px rgba(0,0,0,0.24);
+        pointer-events: auto;
+      }
+      .experience-button[data-experience-slot="guided"] { left: 1.25rem; }
+      .experience-button[data-experience-slot="sound"] { right: 1.25rem; }
+      .experience-button[data-experience-active="true"] {
+        border-color: rgba(255,255,255,0.28);
+        box-shadow: 0 18px 40px rgba(0,0,0,0.24), 0 0 0 1px rgba(255,255,255,0.08) inset;
       }
       .hero-standalone { perspective: 1600px; }
       .hero-depth-grid { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
@@ -419,12 +423,14 @@ function buildStandalonePreviewRuntimeScript(previewData) {
       .scroll-section { isolation: isolate; }
       .section-inner { position: relative; z-index: 2; }
       @media (max-width: 900px) {
-        .experience-controls {
-          left: 0.9rem; right: 0.9rem; bottom: 0.9rem; justify-content: stretch;
-        }
         .experience-button {
-          flex: 1 1 0; text-align: center; padding: 0.8rem 0.9rem; font-size: 0.72rem;
+          bottom: 0.9rem;
+          width: 3rem;
+          height: 3rem;
+          font-size: 1.05rem;
         }
+        .experience-button[data-experience-slot="guided"] { left: 0.9rem; }
+        .experience-button[data-experience-slot="sound"] { right: 0.9rem; }
         .hero-cinematic-card,
         .section-cinematic-card,
         .section-cinematic-center,
@@ -460,6 +466,8 @@ function buildStandalonePreviewRuntimeScript(previewData) {
       button.type = "button";
       button.className = "experience-button";
       button.setAttribute("data-guided-mode-btn", "true");
+      button.setAttribute("data-experience-slot", "guided");
+      button.textContent = "↕";
       controls.appendChild(button);
     }
     if (settings.audio?.enabled && !controls.querySelector("[data-sound-toggle-btn]")) {
@@ -467,7 +475,8 @@ function buildStandalonePreviewRuntimeScript(previewData) {
       button.type = "button";
       button.className = "experience-button";
       button.setAttribute("data-sound-toggle-btn", "true");
-      button.textContent = "Enable Sound";
+      button.setAttribute("data-experience-slot", "sound");
+      button.textContent = "♪";
       controls.appendChild(button);
     }
     return {
@@ -492,7 +501,10 @@ function buildStandalonePreviewRuntimeScript(previewData) {
 
   function updateGuidedModeUi(button) {
     if (!button) return;
-    button.textContent = guidedModeActive ? "Guided Mode: On" : guidedModeDismissed ? "Resume Guided Mode" : "Guided Mode: Off";
+    button.textContent = "↕";
+    button.dataset.experienceActive = guidedModeActive ? "true" : "false";
+    button.setAttribute("aria-label", guidedModeActive ? "Guided mode on" : guidedModeDismissed ? "Resume guided mode" : "Guided mode off");
+    button.title = button.getAttribute("aria-label");
     document.body.classList.toggle("guided-mode-active", guidedModeActive);
   }
 
@@ -671,7 +683,12 @@ function buildStandalonePreviewRuntimeScript(previewData) {
       ambientPulseTimer = setInterval(playAmbientPulse, 6800);
     }
     ambientAudioEnabled = true;
-    if (button) button.textContent = "Sound: On";
+    if (button) {
+      button.textContent = "♪";
+      button.dataset.experienceActive = "true";
+      button.setAttribute("aria-label", "Sound on");
+      button.title = "Sound on";
+    }
   }
 
   function disableAmbientAudio(button) {
@@ -683,7 +700,12 @@ function buildStandalonePreviewRuntimeScript(previewData) {
     });
     ambientAudioNodes = [];
     ambientAudioEnabled = false;
-    if (button) button.textContent = "Enable Sound";
+    if (button) {
+      button.textContent = "♪";
+      button.dataset.experienceActive = "false";
+      button.setAttribute("aria-label", "Sound off");
+      button.title = "Sound off";
+    }
   }
 
   function bindSoundToggle(button) {
@@ -1719,29 +1741,33 @@ function ensureExperiencePreviewStyles(frameDocument) {
   style.id = "uw-editor-experience-preview-style";
   style.textContent = `
     body.guided-mode-active { cursor: ns-resize; }
-    .experience-controls {
-      position: fixed;
-      right: 1.25rem;
-      bottom: 1.25rem;
-      z-index: 55;
-      display: flex;
-      gap: 0.75rem;
-      flex-wrap: wrap;
-      justify-content: end;
-    }
+    .experience-controls { position: fixed; inset: 0; pointer-events: none; z-index: 55; }
     .experience-button {
+      position: fixed;
+      bottom: 1.25rem;
       border: 1px solid rgba(255,255,255,0.14);
       border-radius: 999px;
-      padding: 0.85rem 1.1rem;
+      width: 3.25rem;
+      height: 3.25rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       color: #fff;
       font: inherit;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
+      font-size: 1.2rem;
+      line-height: 1;
       background:
         linear-gradient(180deg, rgba(255,255,255,0.16), rgba(255,255,255,0.05)),
         rgba(10,9,15,0.8);
       backdrop-filter: blur(14px);
       box-shadow: 0 18px 40px rgba(0,0,0,0.24);
+      pointer-events: auto;
+    }
+    .experience-button[data-experience-slot="guided"] { left: 1.25rem; }
+    .experience-button[data-experience-slot="sound"] { right: 1.25rem; }
+    .experience-button[data-experience-active="true"] {
+      border-color: rgba(255,255,255,0.28);
+      box-shadow: 0 18px 40px rgba(0,0,0,0.24), 0 0 0 1px rgba(255,255,255,0.08) inset;
     }
     .hero-standalone { perspective: 1600px; }
     .hero-depth-grid { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
@@ -1784,12 +1810,14 @@ function ensureExperiencePreviewStyles(frameDocument) {
         rotateY(calc(var(--depth-x, 0) * 7deg));
     }
     @media (max-width: 900px) {
-      .experience-controls {
-        left: 0.9rem; right: 0.9rem; bottom: 0.9rem; justify-content: stretch;
-      }
       .experience-button {
-        flex: 1 1 0; text-align: center; padding: 0.8rem 0.9rem; font-size: 0.72rem;
+        bottom: 0.9rem;
+        width: 3rem;
+        height: 3rem;
+        font-size: 1.05rem;
       }
+      .experience-button[data-experience-slot="guided"] { left: 0.9rem; }
+      .experience-button[data-experience-slot="sound"] { right: 0.9rem; }
       .hero-standalone { perspective: none; }
       .hero-depth-grid { opacity: 0.75; }
       .hero-frame-stage { transform: none; }
@@ -1985,16 +2013,23 @@ function stopInlinePreviewAudio(frameWindow, button = inlineExperienceState.soun
   });
   inlineExperienceState.audioNodes = [];
   inlineExperienceState.audioEnabled = false;
-  if (button) button.textContent = "Enable Sound";
+  if (button) {
+    button.textContent = "♪";
+    button.dataset.experienceActive = "false";
+    button.setAttribute("aria-label", "Sound off");
+    button.title = "Sound off";
+  }
 }
 
 function updateInlineGuidedModeUi(frameDocument) {
   if (inlineExperienceState.guidedButton) {
-    inlineExperienceState.guidedButton.textContent = inlineExperienceState.guidedActive
-      ? "Guided Mode: On"
-      : inlineExperienceState.guidedDismissed
-        ? "Resume Guided Mode"
-        : "Guided Mode: Off";
+    inlineExperienceState.guidedButton.textContent = "↕";
+    inlineExperienceState.guidedButton.dataset.experienceActive = inlineExperienceState.guidedActive ? "true" : "false";
+    inlineExperienceState.guidedButton.setAttribute(
+      "aria-label",
+      inlineExperienceState.guidedActive ? "Guided mode on" : inlineExperienceState.guidedDismissed ? "Resume guided mode" : "Guided mode off"
+    );
+    inlineExperienceState.guidedButton.title = inlineExperienceState.guidedButton.getAttribute("aria-label");
   }
   frameDocument.body.classList.toggle("guided-mode-active", inlineExperienceState.guidedActive);
 }
@@ -2102,7 +2137,15 @@ function prepareManagedExperienceButton(frameDocument, controls, selector, dataA
   button.dataset.uwManaged = "true";
   button.setAttribute(dataAttribute, "true");
   button.style.display = "";
-  if (!button.textContent.trim()) button.textContent = defaultLabel;
+  if (dataAttribute === "data-guided-mode-btn") {
+    button.setAttribute("data-experience-slot", "guided");
+    button.textContent = "↕";
+  } else if (dataAttribute === "data-sound-toggle-btn") {
+    button.setAttribute("data-experience-slot", "sound");
+    button.textContent = "♪";
+  } else if (!button.textContent.trim()) {
+    button.textContent = defaultLabel;
+  }
   return button;
 }
 
@@ -2163,7 +2206,10 @@ function bindInlineExperienceControls(frameDocument) {
     inlineExperienceState.soundButton.addEventListener("click", async () => {
       const AudioContextClass = frameWindow.AudioContext || frameWindow.webkitAudioContext;
       if (!AudioContextClass) {
-        inlineExperienceState.soundButton.textContent = "Sound Unavailable";
+        inlineExperienceState.soundButton.textContent = "♪";
+        inlineExperienceState.soundButton.dataset.experienceActive = "false";
+        inlineExperienceState.soundButton.setAttribute("aria-label", "Sound unavailable");
+        inlineExperienceState.soundButton.title = "Sound unavailable";
         return;
       }
       if (inlineExperienceState.audioEnabled) {
@@ -2220,9 +2266,15 @@ function bindInlineExperienceControls(frameDocument) {
         pulse();
         inlineExperienceState.audioPulseTimer = frameWindow.setInterval(pulse, 6800);
         inlineExperienceState.audioEnabled = true;
-        inlineExperienceState.soundButton.textContent = "Sound: On";
+        inlineExperienceState.soundButton.textContent = "♪";
+        inlineExperienceState.soundButton.dataset.experienceActive = "true";
+        inlineExperienceState.soundButton.setAttribute("aria-label", "Sound on");
+        inlineExperienceState.soundButton.title = "Sound on";
       } catch {
-        inlineExperienceState.soundButton.textContent = "Sound Unavailable";
+        inlineExperienceState.soundButton.textContent = "♪";
+        inlineExperienceState.soundButton.dataset.experienceActive = "false";
+        inlineExperienceState.soundButton.setAttribute("aria-label", "Sound unavailable");
+        inlineExperienceState.soundButton.title = "Sound unavailable";
       }
     });
   }

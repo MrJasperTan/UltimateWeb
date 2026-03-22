@@ -2374,30 +2374,35 @@ body.guided-mode-active {
   filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.25));
 }
 
-.experience-controls {
-  position: fixed;
-  right: 1.25rem;
-  bottom: 1.25rem;
-  z-index: 55;
-  display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-  justify-content: end;
-}
+.experience-controls { position: fixed; inset: 0; pointer-events: none; z-index: 55; }
 
 .experience-button {
+  position: fixed;
+  bottom: 1.25rem;
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 999px;
-  padding: 0.85rem 1.1rem;
+  width: 3.25rem;
+  height: 3.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   color: #fff;
   font: inherit;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-size: 1.2rem;
+  line-height: 1;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.05)),
     rgba(10, 9, 15, 0.8);
   backdrop-filter: blur(14px);
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.24);
+  pointer-events: auto;
+}
+
+.experience-button[data-experience-slot="guided"] { left: 1.25rem; }
+.experience-button[data-experience-slot="sound"] { right: 1.25rem; }
+.experience-button[data-experience-active="true"] {
+  border-color: rgba(255, 255, 255, 0.28);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.24), 0 0 0 1px rgba(255, 255, 255, 0.08) inset;
 }
 
 .hero-standalone {
@@ -2817,18 +2822,14 @@ h1 {
 }
 
 @media (max-width: 900px) {
-  .experience-controls {
-    left: 0.9rem;
-    right: 0.9rem;
-    bottom: 0.9rem;
-    justify-content: stretch;
-  }
   .experience-button {
-    flex: 1 1 0;
-    text-align: center;
-    padding: 0.8rem 0.9rem;
-    font-size: 0.72rem;
+    bottom: 0.9rem;
+    width: 3rem;
+    height: 3rem;
+    font-size: 1.05rem;
   }
+  .experience-button[data-experience-slot="guided"] { left: 0.9rem; }
+  .experience-button[data-experience-slot="sound"] { right: 0.9rem; }
   .align-left,
   .align-right,
   .align-center {
@@ -3034,6 +3035,8 @@ function ensureExperienceControls() {
     guidedButton.type = "button";
     guidedButton.className = "experience-button";
     guidedButton.setAttribute("data-guided-mode-btn", "true");
+    guidedButton.setAttribute("data-experience-slot", "guided");
+    guidedButton.textContent = "↕";
     experienceControls.appendChild(guidedButton);
   }
   if (!experienceControls.querySelector("[data-sound-toggle-btn]") && EXPERIENCE_UPGRADES.audio.enabled) {
@@ -3041,7 +3044,8 @@ function ensureExperienceControls() {
     soundButton.type = "button";
     soundButton.className = "experience-button";
     soundButton.setAttribute("data-sound-toggle-btn", "true");
-    soundButton.textContent = "Enable Sound";
+    soundButton.setAttribute("data-experience-slot", "sound");
+    soundButton.textContent = "♪";
     experienceControls.appendChild(soundButton);
   }
   return {
@@ -3052,11 +3056,10 @@ function ensureExperienceControls() {
 
 function updateGuidedModeUi(guidedModeButton) {
   if (!guidedModeButton) return;
-  guidedModeButton.textContent = guidedModeActive
-    ? "Guided Mode: On"
-    : guidedModeDismissed
-      ? "Resume Guided Mode"
-      : "Guided Mode: Off";
+  guidedModeButton.textContent = "↕";
+  guidedModeButton.dataset.experienceActive = guidedModeActive ? "true" : "false";
+  guidedModeButton.setAttribute("aria-label", guidedModeActive ? "Guided mode on" : guidedModeDismissed ? "Resume guided mode" : "Guided mode off");
+  guidedModeButton.title = guidedModeButton.getAttribute("aria-label");
   document.body.classList.toggle("guided-mode-active", guidedModeActive);
 }
 
@@ -3226,7 +3229,12 @@ async function enableAmbientAudio(soundToggleButton) {
     ambientPulseTimer = window.setInterval(playAmbientPulse, 6800);
   }
   ambientAudioEnabled = true;
-  if (soundToggleButton) soundToggleButton.textContent = "Sound: On";
+  if (soundToggleButton) {
+    soundToggleButton.textContent = "♪";
+    soundToggleButton.dataset.experienceActive = "true";
+    soundToggleButton.setAttribute("aria-label", "Sound on");
+    soundToggleButton.title = "Sound on";
+  }
 }
 
 function disableAmbientAudio(soundToggleButton) {
@@ -3240,7 +3248,12 @@ function disableAmbientAudio(soundToggleButton) {
   });
   ambientAudioNodes = [];
   ambientAudioEnabled = false;
-  if (soundToggleButton) soundToggleButton.textContent = "Enable Sound";
+  if (soundToggleButton) {
+    soundToggleButton.textContent = "♪";
+    soundToggleButton.dataset.experienceActive = "false";
+    soundToggleButton.setAttribute("aria-label", "Sound off");
+    soundToggleButton.title = "Sound off";
+  }
 }
 
 function bindSoundToggle(soundToggleButton) {
@@ -4130,4 +4143,3 @@ main().catch((error) => {
   console.error(`Error: ${error.message}`);
   process.exitCode = 1;
 });
-

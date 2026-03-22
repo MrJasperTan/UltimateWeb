@@ -915,29 +915,33 @@ export function startBuilderServer({ appDir, publicDir }) {
         pointer-events: none;
       }
       body.guided-mode-active { cursor: ns-resize; }
-      .experience-controls {
-        position: fixed;
-        right: 1.25rem;
-        bottom: 1.25rem;
-        z-index: 55;
-        display: flex;
-        gap: 0.75rem;
-        flex-wrap: wrap;
-        justify-content: end;
-      }
+      .experience-controls { position: fixed; inset: 0; pointer-events: none; z-index: 55; }
       .experience-button {
+        position: fixed;
+        bottom: 1.25rem;
         border: 1px solid rgba(255,255,255,0.14);
         border-radius: 999px;
-        padding: 0.85rem 1.1rem;
+        width: 3.25rem;
+        height: 3.25rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
         color: #fff;
         font: inherit;
-        letter-spacing: 0.1em;
-        text-transform: uppercase;
+        font-size: 1.2rem;
+        line-height: 1;
         background:
           linear-gradient(180deg, rgba(255,255,255,0.16), rgba(255,255,255,0.05)),
           rgba(10,9,15,0.8);
         backdrop-filter: blur(14px);
         box-shadow: 0 18px 40px rgba(0,0,0,0.24);
+        pointer-events: auto;
+      }
+      .experience-button[data-experience-slot="guided"] { left: 1.25rem; }
+      .experience-button[data-experience-slot="sound"] { right: 1.25rem; }
+      .experience-button[data-experience-active="true"] {
+        border-color: rgba(255,255,255,0.28);
+        box-shadow: 0 18px 40px rgba(0,0,0,0.24), 0 0 0 1px rgba(255,255,255,0.08) inset;
       }
       .hero-standalone { perspective: 1600px; }
       .hero-depth-grid { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
@@ -994,12 +998,14 @@ export function startBuilderServer({ appDir, publicDir }) {
       .scroll-section { isolation: isolate; }
       .section-inner { position: relative; z-index: 2; }
       @media (max-width: 900px) {
-        .experience-controls {
-          left: 0.9rem; right: 0.9rem; bottom: 0.9rem; justify-content: stretch;
-        }
         .experience-button {
-          flex: 1 1 0; text-align: center; padding: 0.8rem 0.9rem; font-size: 0.72rem;
+          bottom: 0.9rem;
+          width: 3rem;
+          height: 3rem;
+          font-size: 1.05rem;
         }
+        .experience-button[data-experience-slot="guided"] { left: 0.9rem; }
+        .experience-button[data-experience-slot="sound"] { right: 0.9rem; }
         .hero-cinematic-card,
         .section-cinematic-card,
         .section-cinematic-center,
@@ -1035,6 +1041,8 @@ export function startBuilderServer({ appDir, publicDir }) {
       button.type = "button";
       button.className = "experience-button";
       button.setAttribute("data-guided-mode-btn", "true");
+      button.setAttribute("data-experience-slot", "guided");
+      button.textContent = "↕";
       controls.appendChild(button);
     }
     if (settings.audio?.enabled && !controls.querySelector("[data-sound-toggle-btn]")) {
@@ -1042,7 +1050,8 @@ export function startBuilderServer({ appDir, publicDir }) {
       button.type = "button";
       button.className = "experience-button";
       button.setAttribute("data-sound-toggle-btn", "true");
-      button.textContent = "Enable Sound";
+      button.setAttribute("data-experience-slot", "sound");
+      button.textContent = "♪";
       controls.appendChild(button);
     }
     return {
@@ -1067,7 +1076,10 @@ export function startBuilderServer({ appDir, publicDir }) {
 
   function updateGuidedModeUi(button) {
     if (!button) return;
-    button.textContent = guidedModeActive ? "Guided Mode: On" : guidedModeDismissed ? "Resume Guided Mode" : "Guided Mode: Off";
+    button.textContent = "↕";
+    button.dataset.experienceActive = guidedModeActive ? "true" : "false";
+    button.setAttribute("aria-label", guidedModeActive ? "Guided mode on" : guidedModeDismissed ? "Resume guided mode" : "Guided mode off");
+    button.title = button.getAttribute("aria-label");
     document.body.classList.toggle("guided-mode-active", guidedModeActive);
   }
 
@@ -1246,7 +1258,12 @@ export function startBuilderServer({ appDir, publicDir }) {
       ambientPulseTimer = setInterval(playAmbientPulse, 6800);
     }
     ambientAudioEnabled = true;
-    if (button) button.textContent = "Sound: On";
+    if (button) {
+      button.textContent = "♪";
+      button.dataset.experienceActive = "true";
+      button.setAttribute("aria-label", "Sound on");
+      button.title = "Sound on";
+    }
   }
 
   function disableAmbientAudio(button) {
@@ -1258,7 +1275,12 @@ export function startBuilderServer({ appDir, publicDir }) {
     });
     ambientAudioNodes = [];
     ambientAudioEnabled = false;
-    if (button) button.textContent = "Enable Sound";
+    if (button) {
+      button.textContent = "♪";
+      button.dataset.experienceActive = "false";
+      button.setAttribute("aria-label", "Sound off");
+      button.title = "Sound off";
+    }
   }
 
   function bindSoundToggle(button) {
