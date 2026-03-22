@@ -1832,6 +1832,21 @@ function renderPreviewCinematicLayer(frameDocument, layer, options = {}) {
   return wrapper;
 }
 
+function toggleLegacyHeroMedia(frameDocument, enabled) {
+  const nodes = [
+    frameDocument.querySelector(".hero-standalone .hero-frame-stage"),
+    frameDocument.querySelector(".hero-standalone .hero-depth-grid"),
+    frameDocument.querySelector(".video-stage"),
+  ].filter(Boolean);
+
+  nodes.forEach((node) => {
+    if (!node.dataset.editorOriginalDisplay) {
+      node.dataset.editorOriginalDisplay = node.style.display || "";
+    }
+    node.style.display = enabled ? "none" : node.dataset.editorOriginalDisplay;
+  });
+}
+
 function applyCinematicPreview(frameDocument) {
   ensureCinematicPreviewStyles(frameDocument);
 
@@ -1839,6 +1854,7 @@ function applyCinematicPreview(frameDocument) {
   if (heroNode) {
     heroNode.querySelectorAll(".hero-cinematic").forEach((node) => node.remove());
     const heroLayer = renderPreviewCinematicLayer(frameDocument, cinematicDraft.hero, { type: "hero", hostNode: heroNode });
+    toggleLegacyHeroMedia(frameDocument, Boolean(cinematicDraft.hero?.enabled));
     if (heroLayer) {
       heroNode.insertBefore(heroLayer, heroNode.firstChild);
     }

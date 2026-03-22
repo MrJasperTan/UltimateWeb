@@ -1449,6 +1449,21 @@ export function startBuilderServer({ appDir, publicDir }) {
     return wrapper;
   }
 
+  function toggleLegacyHeroMedia(enabled) {
+    [
+      document.querySelector(".hero-standalone .hero-frame-stage"),
+      document.querySelector(".hero-standalone .hero-depth-grid"),
+      document.querySelector(".video-stage"),
+    ]
+      .filter(Boolean)
+      .forEach((node) => {
+        if (!node.dataset.previewOriginalDisplay) {
+          node.dataset.previewOriginalDisplay = node.style.display || "";
+        }
+        node.style.display = enabled ? "none" : node.dataset.previewOriginalDisplay;
+      });
+  }
+
   function applyContent() {
     const content = draft.editableContent || {};
     updateText(".hero-kicker", content.hero && content.hero.kicker);
@@ -1517,6 +1532,7 @@ export function startBuilderServer({ appDir, publicDir }) {
     if (heroNode) {
       heroNode.querySelectorAll(".hero-cinematic").forEach((node) => node.remove());
       const heroLayer = renderLayer(layers.hero, { type: "hero", hostNode: heroNode });
+      toggleLegacyHeroMedia(Boolean(layers.hero && layers.hero.enabled));
       if (heroLayer) heroNode.insertBefore(heroLayer, heroNode.firstChild);
     }
 
@@ -2492,4 +2508,3 @@ export function startBuilderServer({ appDir, publicDir }) {
 export function resolveAppDir(importMetaUrl) {
   return dirname(new URL(importMetaUrl).pathname);
 }
-
