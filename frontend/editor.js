@@ -463,11 +463,6 @@ function buildStandalonePreviewRuntimeScript(previewData) {
     }
     const prepareButton = (selector, dataAttribute, slot, icon) => {
       let button = controls.querySelector(selector);
-      if (button && button.dataset.bound === "true") {
-        const clone = button.cloneNode(true);
-        button.replaceWith(clone);
-        button = clone;
-      }
       if (!button) {
         button = document.createElement("button");
         button.type = "button";
@@ -477,7 +472,6 @@ function buildStandalonePreviewRuntimeScript(previewData) {
       button.setAttribute(dataAttribute, "true");
       button.setAttribute("data-experience-slot", slot);
       button.textContent = icon;
-      delete button.dataset.bound;
       return button;
     };
     if (settings.guidedScroll?.enabled) {
@@ -2130,7 +2124,7 @@ function scheduleInlineGuidedResume(frameDocument) {
 
 function prepareManagedExperienceButton(frameDocument, controls, selector, dataAttribute, defaultLabel) {
   let button = controls.querySelector(selector);
-  if (button && button.dataset.uwManaged !== "true") {
+  if (button && (button.dataset.uwManaged !== "true" || button.dataset.bound === "true")) {
     const clone = button.cloneNode(true);
     button.replaceWith(clone);
     button = clone;
@@ -2688,7 +2682,10 @@ function buildLocalFullPreviewHtml() {
     const doctype = liveFrameDocument.doctype
       ? `<!DOCTYPE ${liveFrameDocument.doctype.name}>`
       : "<!doctype html>";
-    return injectStandalonePreviewRuntime(`${doctype}\n${liveFrameDocument.documentElement.outerHTML}`, {
+    const sanitizedHtml = `${doctype}\n${liveFrameDocument.documentElement.outerHTML}`
+      .replace(/\sdata-bound="true"/g, "")
+      .replace(/\sdata-bound='true'/g, "");
+    return injectStandalonePreviewRuntime(sanitizedHtml, {
       title: String(editableContent?.hero?.title || siteConfig?.title || "").trim(),
       publicSiteUrl: String(seoDraft?.publicSiteUrl || "").trim(),
       editableContent,
