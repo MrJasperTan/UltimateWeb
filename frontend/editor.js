@@ -885,7 +885,7 @@ function buildStandalonePreviewRuntimeScript(previewData) {
     updateText(".hero-sub", content.hero && content.hero.sub);
     updateText(".hero-trust", content.hero && content.hero.trustLine);
     updateText(".marquee-text", content.marqueeText);
-    updateText(".site-header a[href="#cta"]", content.cta && content.cta.headerCta);
+    updateText('.site-header a[href="#cta"]', content.cta && content.cta.headerCta);
 
     const sectionNodes = Array.from(document.querySelectorAll(".scroll-section")).filter((node) => node.id !== "cta");
     (content.sections || []).forEach((section, index) => {
