@@ -2,6 +2,8 @@
 
 Ultimateweb is a local website-generation system for building, storing, and iterating on animated landing pages. It serves a browser-based builder portal, runs a FAL-powered media/site pipeline, stores per-user history in Supabase, and includes an in-browser editor for revising generated sites.
 
+
+
 ## Key Features
 
 - Supabase-backed authentication with email/password and Google OAuth
@@ -13,6 +15,7 @@ Ultimateweb is a local website-generation system for building, storing, and iter
 - Edit flow for rebuilding an existing generated site
 - In-browser editor with structured content overrides
 - In-browser editor support for cinematic motion layers on the hero and individual sections
+- Standalone `Full Preview` flow for opening the current unsaved editor draft in a new tab
 - Protected generated-site serving with a small public sample allowlist
 
 ## Current Product Scope
@@ -51,6 +54,7 @@ Ultimateweb is a local website-generation system for building, storing, and iter
 
 - `GET /`: builder portal
 - `GET /editor.html?slug=<slug>`: inline editor for a generated site
+- `POST /api/sites/:slug/preview`: authenticated temporary full-page preview for the current unsaved editor draft
 - `GET /api/config`: injects `ULTIMATEWEB_API_BASE` and whether Supabase is configured
 - `GET /api/auth/session`
 - `GET /api/auth/google`
@@ -118,6 +122,7 @@ node server.mjs
 - The shared server handles auth, session cookies, build requests, job polling, gallery reads, deletion, and generated-site access checks.
 - Build jobs spawn the FAL pipeline script and then persist both job state and completed site metadata to Supabase.
 - The editor loads an existing generated site, lets the user modify content/media inputs, manage cinematic hero/section motion layers, and sends a rebuild request using `contentOverrides` plus optional replacement media.
+- The editor also exposes a `Full Preview` button that attempts to open the current unsaved draft in a standalone page before publish.
 
 ## Environment Notes
 
@@ -133,6 +138,7 @@ node server.mjs
 - The editor now supports `Cinematic Layers`, an optional premium motion treatment for the hero and each section.
 - Each cinematic slot can be configured as a `card` or `full background`, with `loop` or `boomerang` playback and adjustable speed.
 - Cinematic layers are regenerated on publish and stored in the generated site metadata for future edits.
+- The editor also includes a `Full Preview` action intended to render unsaved copy, SEO, and cinematic-layer edits in a separate browser tab before publish.
 
 ## Data Model
 
@@ -151,4 +157,6 @@ Schema source:
 - Backend logging is appended to `/tmp/ultimateweb-backend.log`.
 - The repo currently has untracked generated output under `generated-sites/`; treat that directory as runtime/project data rather than core app source.
 - Public sample cards on the homepage point at checked-in sample slugs under `frontend/samples/` and selected public slugs under `generated-sites/`.
-- A full-screen unsaved editor preview route is the next planned enhancement; current cinematic layers preview live inside the editor iframe and publish into the generated site output.
+- Current known issues after the latest preview work:
+  - `Full Preview` can fall back to a partial standalone rendering when the server preview route is unavailable.
+  - `boomerang` playback remains unreliable and needs another debugging pass across editor preview and generated-site runtime.

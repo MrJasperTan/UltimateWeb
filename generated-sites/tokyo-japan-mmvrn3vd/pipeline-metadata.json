@@ -1,0 +1,98 @@
+{
+  "topic": "Tokyo Japan",
+  "brand": "Tokyo Japan",
+  "businessProfile": {
+    "topic": "Tokyo Japan",
+    "brand": "Tokyo Japan",
+    "category": "place",
+    "sourceContext": {
+      "url": null,
+      "title": null,
+      "description": null,
+      "pageText": null,
+      "palette": [],
+      "imageUrls": [],
+      "logoUrl": null
+    },
+    "research": null,
+    "logoUrl": null,
+    "referenceMedia": [],
+    "palette": [],
+    "locationSignal": null
+  },
+  "sourceUrl": null,
+  "pageMode": "hybrid",
+  "models": {
+    "startModel": "fal-ai/nano-banana-2",
+    "endModel": "fal-ai/nano-banana-2/edit",
+    "videoModel": "fal-ai/kling-video/v3/pro/image-to-video"
+  },
+  "paletteOverride": [],
+  "changeRequest": null,
+  "editSourceSlug": "tokyo-japan-mmr87ha2",
+  "videoDurationSeconds": "5",
+  "prompts": {
+    "startPrompt": "Cinematic portrait of Tokyo Japan, dramatic studio lighting, dark moody background, editorial photography style, sharp focus on face and expression, no text, no logos, ultra detailed",
+    "endPrompt": "Same Tokyo Japan subject. Show a dynamic action or iconic pose that captures their essence, dramatic lighting with motion blur accents, dark atmospheric background, no text, no logos, editorial photography, ultra detailed.",
+    "motionPrompt": "Cinematic portrait animation. Start from first frame. Smooth transition to the dynamic action pose. Elegant camera movement, dramatic lighting shifts, no sudden warping, no text, dark atmospheric background."
+  },
+  "generatedAt": "2026-03-18T08:15:07.181Z",
+  "usedExistingVideo": true,
+  "existingVideoPath": "/tmp/ultimateweb-upload-Oe97ey/mmvrn3v4-TransistionTest.mp4",
+  "derivedStartImageFromVideo": true,
+  "derivedEndImageFromVideo": true,
+  "startImageUrl": null,
+  "endImageUrl": null,
+  "videoUrl": null,
+  "localVideo": "/tmp/ultimateweb-upload-Oe97ey/mmvrn3v4-TransistionTest.mp4",
+  "videoMeta": {
+    "width": 640,
+    "height": 640,
+    "duration": 5.0625,
+    "fps": 16
+  },
+  "frameExtraction": {
+    "fps": 16,
+    "width": 1280
+  },
+  "frameCount": 81,
+  "frameExtension": "webp",
+  "category": "place",
+  "sectionKinds": [
+    "copy",
+    "copy",
+    "copy",
+    "stats",
+    "cards",
+    "cards",
+    "faq",
+    "cta"
+  ],
+  "trustLine": "Built with best-effort category research and premium design defaults.",
+  "sourceContext": {
+    "url": null,
+    "title": null,
+    "description": null,
+    "pageText": null,
+    "palette": [],
+    "imageUrls": [],
+    "logoUrl": null
+  },
+  "research": {
+    "category": "place",
+    "summary": null,
+    "facts": [],
+    "proofPoints": [],
+    "faqCandidates": [],
+    "sources": [],
+    "coverage": {
+      "snippetCount": 0,
+      "attributeCount": 0,
+      "sourceCount": 0,
+      "factCount": 0
+    },
+    "confidence": "low",
+    "inferredFallbackUsed": true,
+    "researchedFields": []
+  }
+}

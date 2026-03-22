@@ -748,6 +748,7 @@ export function startBuilderServer({ appDir, publicDir }) {
           layout: "card",
           loopMode: "loop",
           speed: 1,
+          parallax: false,
           url: "",
         };
       }
@@ -761,6 +762,7 @@ export function startBuilderServer({ appDir, publicDir }) {
           layout: String(layer.layout || "card"),
           loopMode: String(layer.loopMode || "loop"),
           speed: Number(layer.speed || 1),
+          parallax: Boolean(layer.parallax),
           url: `/draft-previews/${previewId}/assets/${encodeURIComponent(basename(uploadedFile.path))}`,
         };
       }
@@ -773,6 +775,7 @@ export function startBuilderServer({ appDir, publicDir }) {
           layout: String(layer.layout || "card"),
           loopMode: String(layer.loopMode || "loop"),
           speed: Number(layer.speed || 1),
+          parallax: Boolean(layer.parallax),
           url: "",
         };
       }
@@ -784,6 +787,7 @@ export function startBuilderServer({ appDir, publicDir }) {
         layout: String(layer.layout || "card"),
         loopMode: String(layer.loopMode || "loop"),
         speed: Number(layer.speed || 1),
+        parallax: Boolean(layer.parallax),
         url: sourceUrl,
       };
     };
@@ -973,6 +977,19 @@ export function startBuilderServer({ appDir, publicDir }) {
           translate3d(calc(var(--depth-x, 0) * 20px), calc(var(--scroll-shift-y, 0px) + var(--depth-y, 0) * -18px), 70px)
           rotateX(calc(var(--depth-y, 0) * -5deg))
           rotateY(calc(var(--depth-x, 0) * 7deg));
+      }
+      .hero-cinematic-card.cinematic-parallax {
+        transform:
+          translate3d(calc(var(--parallax-x, 0) * 20px), calc(var(--scroll-shift-y, 0px) + var(--parallax-y, 0) * -18px), 70px)
+          rotateX(calc(var(--parallax-y, 0) * -5deg))
+          rotateY(calc(var(--parallax-x, 0) * 7deg));
+      }
+      .section-cinematic-card.cinematic-parallax,
+      .section-cinematic-center.cinematic-parallax {
+        transform:
+          translate3d(calc(var(--parallax-x, 0) * 16px), calc(-50% + var(--parallax-y, 0) * -14px), 48px)
+          rotateX(calc(var(--parallax-y, 0) * -4deg))
+          rotateY(calc(var(--parallax-x, 0) * 6deg));
       }
       .scroll-section { isolation: isolate; }
       .section-inner { position: relative; z-index: 2; }
@@ -1387,12 +1404,34 @@ export function startBuilderServer({ appDir, publicDir }) {
     return "section-cinematic section-cinematic-card section-cinematic-right";
   }
 
+  function setupLayerParallax(wrapper, hostNode) {
+    if (!wrapper || !hostNode || wrapper.dataset.parallaxBound === "true") return;
+    wrapper.dataset.parallaxBound = "true";
+
+    const reset = () => {
+      wrapper.style.setProperty("--parallax-x", "0");
+      wrapper.style.setProperty("--parallax-y", "0");
+    };
+
+    hostNode.addEventListener("pointermove", (event) => {
+      const bounds = hostNode.getBoundingClientRect();
+      if (!bounds.width || !bounds.height) return;
+      const x = ((event.clientX - bounds.left) / bounds.width - 0.5) * 2;
+      const y = ((event.clientY - bounds.top) / bounds.height - 0.5) * 2;
+      wrapper.style.setProperty("--parallax-x", x.toFixed(3));
+      wrapper.style.setProperty("--parallax-y", y.toFixed(3));
+    });
+    hostNode.addEventListener("pointerleave", reset);
+    reset();
+  }
+
   function renderLayer(layer, options = {}) {
     if (!layer || !layer.enabled || !layer.url) return null;
     const wrapper = document.createElement("div");
     wrapper.className = options.type === "hero"
       ? "hero-cinematic " + (layer.layout === "full-background" ? "hero-cinematic-full" : "hero-cinematic-card")
       : getSectionPlacementClass(options.sectionNode, layer);
+    if (layer.parallax) wrapper.classList.add("cinematic-parallax");
     const video = document.createElement("video");
     video.className = "cinematic-video";
     video.dataset.loopMode = layer.loopMode || "loop";
@@ -1404,6 +1443,9 @@ export function startBuilderServer({ appDir, publicDir }) {
     video.src = layer.url;
     wrapper.appendChild(video);
     setupVideo(video);
+    if (layer.parallax) {
+      setupLayerParallax(wrapper, options.type === "hero" ? options.hostNode : options.sectionNode);
+    }
     return wrapper;
   }
 
@@ -1474,7 +1516,7 @@ export function startBuilderServer({ appDir, publicDir }) {
     const heroNode = document.querySelector(".hero-standalone");
     if (heroNode) {
       heroNode.querySelectorAll(".hero-cinematic").forEach((node) => node.remove());
-      const heroLayer = renderLayer(layers.hero, { type: "hero" });
+      const heroLayer = renderLayer(layers.hero, { type: "hero", hostNode: heroNode });
       if (heroLayer) heroNode.insertBefore(heroLayer, heroNode.firstChild);
     }
 
@@ -1667,6 +1709,7 @@ export function startBuilderServer({ appDir, publicDir }) {
           layout: "card",
           loopMode: "loop",
           speed: 1,
+          parallax: false,
           sourceInput: null,
         };
       }
@@ -1683,6 +1726,7 @@ export function startBuilderServer({ appDir, publicDir }) {
         layout: String(layer.layout || "card"),
         loopMode: String(layer.loopMode || "loop"),
         speed: Number(layer.speed || 1),
+        parallax: Boolean(layer.parallax),
         sourceInput,
       };
     };
@@ -2448,3 +2492,4 @@ export function startBuilderServer({ appDir, publicDir }) {
 export function resolveAppDir(importMetaUrl) {
   return dirname(new URL(importMetaUrl).pathname);
 }
+

@@ -590,6 +590,7 @@ function normalizeCinematicLayer(rawLayer = {}, fallbackLabel = "") {
     layout: normalizeCinematicLayout(rawLayer.layout),
     loopMode: normalizeLoopMode(rawLayer.loopMode),
     speed: normalizePlaybackSpeed(rawLayer.speed),
+    parallax: Boolean(rawLayer.parallax),
     sourceInput,
   };
 }
@@ -615,6 +616,7 @@ async function materializeCinematicLayers(rawLayers, mediaDir, sectionCount = 0)
         layout: layer.layout,
         loopMode: layer.loopMode,
         speed: layer.speed,
+        parallax: layer.parallax,
         video: { available: false, filename: null, url: null },
       };
     }
@@ -629,6 +631,7 @@ async function materializeCinematicLayers(rawLayers, mediaDir, sectionCount = 0)
       layout: layer.layout,
       loopMode: layer.loopMode,
       speed: layer.speed,
+      parallax: layer.parallax,
       video: {
         available: true,
         filename,
@@ -2011,14 +2014,15 @@ function renderCinematicVideoMarkup(layer, className = "") {
 
 function renderHeroCinematicMarkup(layer) {
   if (!layer?.enabled) return "";
+  const parallaxClass = layer.parallax ? " cinematic-parallax" : "";
   if (layer.layout === "full-background") {
     return `
-    <div class="hero-cinematic hero-cinematic-full">
+    <div class="hero-cinematic hero-cinematic-full${parallaxClass}" data-cinematic-parallax="${layer.parallax ? "true" : "false"}">
 ${renderCinematicVideoMarkup(layer)}
     </div>`;
   }
   return `
-    <div class="hero-cinematic hero-cinematic-card">
+    <div class="hero-cinematic hero-cinematic-card${parallaxClass}" data-cinematic-parallax="${layer.parallax ? "true" : "false"}">
 ${renderCinematicVideoMarkup(layer)}
     </div>`;
 }
@@ -2033,9 +2037,9 @@ function renderSectionCinematicMarkup(layer, section, index) {
       : section.alignment === "center"
       ? "section-cinematic-center"
         : "section-cinematic-right";
-  const className = ["section-cinematic", layoutClass, sideClass].filter(Boolean).join(" ");
+  const className = ["section-cinematic", layoutClass, sideClass, layer.parallax ? "cinematic-parallax" : ""].filter(Boolean).join(" ");
   return `
-      <div class="${className}" data-cinematic-layer="${index}">
+      <div class="${className}" data-cinematic-layer="${index}" data-cinematic-parallax="${layer.parallax ? "true" : "false"}">
 ${renderCinematicVideoMarkup(layer)}
       </div>`;
 }
@@ -2487,6 +2491,8 @@ body.guided-mode-active {
     linear-gradient(160deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03)),
     rgba(5, 8, 10, 0.34);
   box-shadow: 0 28px 70px rgba(0, 0, 0, 0.34);
+  transition: transform 180ms ease-out;
+  will-change: transform;
 }
 
 .hero-cinematic::after,
@@ -2533,6 +2539,13 @@ body.guided-mode-active {
     rotateY(calc(var(--depth-x, 0) * 7deg));
 }
 
+.hero-cinematic-card.cinematic-parallax {
+  transform:
+    translate3d(calc(var(--parallax-x, 0) * 20px), calc(var(--scroll-shift-y, 0px) + var(--parallax-y, 0) * -18px), 70px)
+    rotateX(calc(var(--parallax-y, 0) * -5deg))
+    rotateY(calc(var(--parallax-x, 0) * 7deg));
+}
+
 .section-cinematic {
   top: 50%;
   transform: translateY(-50%);
@@ -2542,6 +2555,14 @@ body.guided-mode-active {
 .section-cinematic-card {
   width: min(34vw, 32rem);
   aspect-ratio: 16 / 10;
+}
+
+.section-cinematic-card.cinematic-parallax,
+.section-cinematic-center.cinematic-parallax {
+  transform:
+    translate3d(calc(var(--parallax-x, 0) * 16px), calc(-50% + var(--parallax-y, 0) * -14px), 48px)
+    rotateX(calc(var(--parallax-y, 0) * -4deg))
+    rotateY(calc(var(--parallax-x, 0) * 6deg));
 }
 
 .section-cinematic-right {
@@ -3349,6 +3370,35 @@ function setupLoopingVideo(video, loopMode = "loop", rate = 1) {
   }
 }
 
+function setupCinematicParallax() {
+  const bindings = [
+    { wrapper: document.querySelector(".hero-cinematic.cinematic-parallax"), host: hero },
+    ...Array.from(document.querySelectorAll(".section-cinematic.cinematic-parallax")).map((wrapper) => ({
+      wrapper,
+      host: wrapper.closest(".scroll-section"),
+    })),
+  ];
+
+  bindings.forEach(({ wrapper, host }) => {
+    if (!wrapper || !host || wrapper.dataset.parallaxBound === "true") return;
+    wrapper.dataset.parallaxBound = "true";
+    const reset = () => {
+      wrapper.style.setProperty("--parallax-x", "0");
+      wrapper.style.setProperty("--parallax-y", "0");
+    };
+    host.addEventListener("pointermove", (event) => {
+      const bounds = host.getBoundingClientRect();
+      if (!bounds.width || !bounds.height) return;
+      const x = ((event.clientX - bounds.left) / bounds.width - 0.5) * 2;
+      const y = ((event.clientY - bounds.top) / bounds.height - 0.5) * 2;
+      wrapper.style.setProperty("--parallax-x", x.toFixed(3));
+      wrapper.style.setProperty("--parallax-y", y.toFixed(3));
+    });
+    host.addEventListener("pointerleave", reset);
+    reset();
+  });
+}
+
 function placeSections() {
   document.querySelectorAll(".scroll-section").forEach((section) => {
     const enter = Number(section.dataset.enter || 0);
@@ -3536,6 +3586,7 @@ setupMarquee();
 setupDarkOverlay();
 setupHeroTransition();
 setupCinematicVideos();
+setupCinematicParallax();
 `;
 
   writeFileSync(join(siteDir, "index.html"), html);
@@ -4079,3 +4130,4 @@ main().catch((error) => {
   console.error(`Error: ${error.message}`);
   process.exitCode = 1;
 });
+

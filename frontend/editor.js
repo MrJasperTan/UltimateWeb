@@ -196,6 +196,7 @@ function buildStandalonePreviewCinematicLayers() {
     layout: String(layer?.layout || "card") === "full-background" ? "full-background" : "card",
     loopMode: String(layer?.loopMode || "loop") === "boomerang" ? "boomerang" : "loop",
     speed: Math.min(2.5, Math.max(0.25, Number(layer?.speed || 1) || 1)),
+    parallax: Boolean(layer?.parallax),
     url: buildPreviewVideoUrl(layer) || "",
   });
 
@@ -299,8 +300,22 @@ function buildStandalonePreviewRuntimeScript(previewData) {
           radial-gradient(circle at 20% 20%, rgba(255,255,255,0.1), transparent 26%);
       }
       .hero-cinematic-card { inset: 8vh 5vw 12vh 49vw; }
+    .hero-cinematic-card.cinematic-parallax {
+      transform-style: preserve-3d;
+      transform:
+        translate3d(calc(var(--parallax-x, 0) * 20px), calc(var(--scroll-shift-y, 0px) + var(--parallax-y, 0) * -18px), 70px)
+        rotateX(calc(var(--parallax-y, 0) * -5deg))
+        rotateY(calc(var(--parallax-x, 0) * 7deg));
+    }
       .section-cinematic { top: 50%; transform: translateY(-50%); }
       .section-cinematic-card { width: min(34vw, 32rem); aspect-ratio: 16 / 10; }
+    .section-cinematic-card.cinematic-parallax,
+    .section-cinematic-center.cinematic-parallax {
+      transform:
+        translate3d(calc(var(--parallax-x, 0) * 16px), calc(-50% + var(--parallax-y, 0) * -14px), 48px)
+        rotateX(calc(var(--parallax-y, 0) * -4deg))
+        rotateY(calc(var(--parallax-x, 0) * 6deg));
+    }
       .section-cinematic-right { right: 5vw; }
       .section-cinematic-left { left: 5vw; }
       .section-cinematic-center { left: 50%; transform: translate(-50%, -50%); width: min(72vw, 56rem); aspect-ratio: 16 / 7; }
@@ -990,6 +1005,7 @@ function ensureCinematicLayer(rawLayer, fallbackLabel) {
     layout: String(rawLayer?.layout || "card").trim() === "full-background" ? "full-background" : "card",
     loopMode: String(rawLayer?.loopMode || "loop").trim() === "boomerang" ? "boomerang" : "loop",
     speed: Number(rawLayer?.speed) > 0 ? Number(rawLayer.speed) : 1,
+    parallax: Boolean(rawLayer?.parallax),
     sourceUrl: String(video?.url || "").trim(),
     filename: String(video?.filename || "").trim(),
     file: null,
@@ -1169,6 +1185,10 @@ function renderCinematicLayerEditor(slotKey, title, layer) {
           <input type="number" name="speed-${slotKey}" min="0.25" max="2.5" step="0.1" value="${escapeHtml(layer.speed || 1)}" />
         </label>
       </div>
+      <label class="field-toggle">
+        <input type="checkbox" name="parallax-${slotKey}" ${layer.parallax ? "checked" : ""} />
+        <span>Parallax Depth</span>
+      </label>
       <label>
         <span>Replace Video</span>
         <input type="file" name="video-${slotKey}" accept="video/*" />
@@ -1532,6 +1552,7 @@ function applyModalChanges() {
       target.layout = String(formData.get(`layout-${slotKey}`) || "card").trim() === "full-background" ? "full-background" : "card";
       target.loopMode = String(formData.get(`loopMode-${slotKey}`) || "loop").trim() === "boomerang" ? "boomerang" : "loop";
       target.speed = Math.min(2.5, Math.max(0.25, Number(formData.get(`speed-${slotKey}`) || 1) || 1));
+      target.parallax = formData.get(`parallax-${slotKey}`) === "on";
       if (nextFile instanceof File && nextFile.size > 0) {
         revokeLayerPreviewUrl(target);
         target.file = nextFile;
@@ -1592,6 +1613,8 @@ function ensureCinematicPreviewStyles(frameDocument) {
         rgba(5,8,10,0.34);
       box-shadow: 0 28px 70px rgba(0,0,0,0.34);
       z-index: 0;
+      transition: transform 180ms ease-out;
+      will-change: transform;
     }
     .hero-cinematic::after,
     .section-cinematic::after {
@@ -1616,8 +1639,22 @@ function ensureCinematicPreviewStyles(frameDocument) {
         radial-gradient(circle at 20% 20%, rgba(255,255,255,0.1), transparent 26%);
     }
     .hero-cinematic-card { inset: 8vh 5vw 12vh 49vw; }
+    .hero-cinematic-card.cinematic-parallax {
+      transform-style: preserve-3d;
+      transform:
+        translate3d(calc(var(--parallax-x, 0) * 20px), calc(var(--scroll-shift-y, 0px) + var(--parallax-y, 0) * -18px), 70px)
+        rotateX(calc(var(--parallax-y, 0) * -5deg))
+        rotateY(calc(var(--parallax-x, 0) * 7deg));
+    }
     .section-cinematic { top: 50%; transform: translateY(-50%); }
     .section-cinematic-card { width: min(34vw, 32rem); aspect-ratio: 16 / 10; }
+    .section-cinematic-card.cinematic-parallax,
+    .section-cinematic-center.cinematic-parallax {
+      transform:
+        translate3d(calc(var(--parallax-x, 0) * 16px), calc(-50% + var(--parallax-y, 0) * -14px), 48px)
+        rotateX(calc(var(--parallax-y, 0) * -4deg))
+        rotateY(calc(var(--parallax-x, 0) * 6deg));
+    }
     .section-cinematic-right { right: 5vw; }
     .section-cinematic-left { left: 5vw; }
     .section-cinematic-center { left: 50%; transform: translate(-50%, -50%); width: min(72vw, 56rem); aspect-ratio: 16 / 7; }
@@ -1745,12 +1782,34 @@ function getSectionCinematicPlacementClass(sectionNode, layer) {
   return "section-cinematic section-cinematic-card section-cinematic-right";
 }
 
+function setupPreviewParallax(wrapper, hostNode) {
+  if (!wrapper || !hostNode || wrapper.dataset.editorParallaxBound === "true") return;
+  wrapper.dataset.editorParallaxBound = "true";
+
+  const reset = () => {
+    wrapper.style.setProperty("--parallax-x", "0");
+    wrapper.style.setProperty("--parallax-y", "0");
+  };
+
+  hostNode.addEventListener("pointermove", (event) => {
+    const bounds = hostNode.getBoundingClientRect();
+    if (!bounds.width || !bounds.height) return;
+    const x = ((event.clientX - bounds.left) / bounds.width - 0.5) * 2;
+    const y = ((event.clientY - bounds.top) / bounds.height - 0.5) * 2;
+    wrapper.style.setProperty("--parallax-x", x.toFixed(3));
+    wrapper.style.setProperty("--parallax-y", y.toFixed(3));
+  });
+  hostNode.addEventListener("pointerleave", reset);
+  reset();
+}
+
 function renderPreviewCinematicLayer(frameDocument, layer, options = {}) {
   if (!layer?.enabled) return null;
   const wrapper = frameDocument.createElement("div");
   wrapper.className = options.type === "hero"
     ? `hero-cinematic ${layer.layout === "full-background" ? "hero-cinematic-full" : "hero-cinematic-card"}`
     : getSectionCinematicPlacementClass(options.sectionNode, layer);
+  if (layer.parallax) wrapper.classList.add("cinematic-parallax");
   if (options.index !== undefined) wrapper.dataset.cinematicLayer = String(options.index);
   const video = frameDocument.createElement("video");
   video.className = "cinematic-video";
@@ -1767,6 +1826,9 @@ function renderPreviewCinematicLayer(frameDocument, layer, options = {}) {
   video.appendChild(source);
   wrapper.appendChild(video);
   setupPreviewCinematicVideo(video);
+  if (layer.parallax) {
+    setupPreviewParallax(wrapper, options.type === "hero" ? options.hostNode : options.sectionNode);
+  }
   return wrapper;
 }
 
@@ -1776,7 +1838,7 @@ function applyCinematicPreview(frameDocument) {
   const heroNode = frameDocument.querySelector(".hero-standalone");
   if (heroNode) {
     heroNode.querySelectorAll(".hero-cinematic").forEach((node) => node.remove());
-    const heroLayer = renderPreviewCinematicLayer(frameDocument, cinematicDraft.hero, { type: "hero" });
+    const heroLayer = renderPreviewCinematicLayer(frameDocument, cinematicDraft.hero, { type: "hero", hostNode: heroNode });
     if (heroLayer) {
       heroNode.insertBefore(heroLayer, heroNode.firstChild);
     }
@@ -2044,6 +2106,7 @@ function buildCinematicLayersPayload() {
       layout: layer.layout,
       loopMode: layer.loopMode,
       speed: layer.speed,
+      parallax: Boolean(layer.parallax),
       sourceUrl: layer.file instanceof File ? (layer.sourceUrl || "") : (layer.sourceUrl || ""),
       uploadField,
     };
