@@ -74,6 +74,26 @@ let handleTimer = null;
 let siteSourceHtml = "";
 let siteSourcePreviewUrl = "";
 const previewObjectUrls = new Set();
+const inlineExperienceState = {
+  frameWindow: null,
+  guidedBootTimer: 0,
+  guidedResumeTimer: 0,
+  guidedRaf: 0,
+  guidedActive: false,
+  guidedDismissed: false,
+  guidedStartedAt: 0,
+  guidedPhase: "down",
+  guidedOrigin: 0,
+  guidedPauseUntil: 0,
+  lastKnownScrollY: 0,
+  guidedButton: null,
+  soundButton: null,
+  audioContext: null,
+  audioNodes: [],
+  audioPulseTimer: 0,
+  audioEnabled: false,
+  listenersBound: false,
+};
 
 function toApiUrl(path) {
   if (configuredApiBase) return `${configuredApiBase}${path}`;
@@ -1432,7 +1452,7 @@ function openExperienceModal() {
             <input type="checkbox" name="guided-enabled" ${experienceDraft.guidedScroll.enabled ? "checked" : ""} />
             <span>Guided Autoscroll</span>
           </label>
-          <p class="field-note">Use this for cinematic pass-through experiences after the first build. It applies to the published edited version rather than the inline editor preview.</p>
+          <p class="field-note">Use this for cinematic pass-through experiences. Apply Changes updates the editor preview, and publish carries the same settings into the next edited version.</p>
           <div class="field-grid two-col">
             <label><span>Start Delay (seconds)</span><input type="number" name="guided-delay" min="0" step="0.25" value="${escapeHtml((experienceDraft.guidedScroll.initialDelayMs / 1000).toFixed(2))}" /></label>
             <label><span>Resume Delay (seconds)</span><input type="number" name="guided-resume-delay" min="0.25" step="0.25" value="${escapeHtml((experienceDraft.guidedScroll.resumeDelayMs / 1000).toFixed(2))}" /></label>
@@ -1693,6 +1713,91 @@ function ensureCinematicPreviewStyles(frameDocument) {
   frameDocument.head.appendChild(style);
 }
 
+function ensureExperiencePreviewStyles(frameDocument) {
+  if (!frameDocument || frameDocument.getElementById("uw-editor-experience-preview-style")) return;
+  const style = frameDocument.createElement("style");
+  style.id = "uw-editor-experience-preview-style";
+  style.textContent = `
+    body.guided-mode-active { cursor: ns-resize; }
+    .experience-controls {
+      position: fixed;
+      right: 1.25rem;
+      bottom: 1.25rem;
+      z-index: 55;
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      justify-content: end;
+    }
+    .experience-button {
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 999px;
+      padding: 0.85rem 1.1rem;
+      color: #fff;
+      font: inherit;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.16), rgba(255,255,255,0.05)),
+        rgba(10,9,15,0.8);
+      backdrop-filter: blur(14px);
+      box-shadow: 0 18px 40px rgba(0,0,0,0.24);
+    }
+    .hero-standalone { perspective: 1600px; }
+    .hero-depth-grid { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+    .depth-orb, .depth-ring, .depth-beam { position: absolute; display: block; will-change: transform; }
+    .depth-orb { border-radius: 999px; filter: blur(8px); }
+    .depth-orb-a {
+      width: min(28vw, 22rem); height: min(28vw, 22rem); top: 10vh; left: 8vw;
+      background: radial-gradient(circle, rgba(246,107,162,0.22), rgba(246,107,162,0.02) 60%, transparent 72%);
+      transform: translate3d(calc(var(--depth-x, 0) * -18px), calc(var(--depth-y, 0) * -24px), 90px);
+    }
+    .depth-orb-b {
+      width: min(22vw, 18rem); height: min(22vw, 18rem); right: 10vw; bottom: 16vh;
+      background: radial-gradient(circle, rgba(244,177,77,0.18), rgba(244,177,77,0.02) 58%, transparent 72%);
+      transform: translate3d(calc(var(--depth-x, 0) * 24px), calc(var(--depth-y, 0) * 16px), 70px);
+    }
+    .depth-ring {
+      width: min(42vw, 38rem); height: min(42vw, 38rem); right: 18vw; top: 8vh;
+      border-radius: 999px; border: 1px solid rgba(255,255,255,0.12); box-shadow: inset 0 0 50px rgba(255,255,255,0.04);
+      transform: rotate(18deg) translate3d(calc(var(--depth-x, 0) * 12px), calc(var(--depth-y, 0) * -12px), 20px);
+    }
+    .depth-beam {
+      inset: 12vh auto auto 42vw; width: min(28vw, 24rem); height: 65vh;
+      background: linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0));
+      clip-path: polygon(38% 0, 64% 0, 100% 100%, 0 100%); opacity: 0.25;
+      transform: translate3d(calc(var(--depth-x, 0) * 20px), calc(var(--depth-y, 0) * -10px), 10px);
+    }
+    .hero-frame-glare {
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(circle at calc(52% + var(--depth-x, 0) * 16%), calc(28% + var(--depth-y, 0) * 14%), rgba(255,255,255,0.22), transparent 24%),
+        linear-gradient(120deg, rgba(255,255,255,0.06), transparent 40%);
+      mix-blend-mode: screen; pointer-events: none;
+    }
+    .hero-cinematic-card,
+    .hero-frame-stage {
+      transform-style: preserve-3d;
+      transform:
+        translate3d(calc(var(--depth-x, 0) * 20px), calc(var(--scroll-shift-y, 0px) + var(--depth-y, 0) * -18px), 70px)
+        rotateX(calc(var(--depth-y, 0) * -5deg))
+        rotateY(calc(var(--depth-x, 0) * 7deg));
+    }
+    @media (max-width: 900px) {
+      .experience-controls {
+        left: 0.9rem; right: 0.9rem; bottom: 0.9rem; justify-content: stretch;
+      }
+      .experience-button {
+        flex: 1 1 0; text-align: center; padding: 0.8rem 0.9rem; font-size: 0.72rem;
+      }
+      .hero-standalone { perspective: none; }
+      .hero-depth-grid { opacity: 0.75; }
+      .hero-frame-stage { transform: none; }
+    }
+  `;
+  frameDocument.head.appendChild(style);
+}
+
 function setupPreviewCinematicVideo(video) {
   if (!video || video.dataset.editorCinematicBound === "true") return;
   video.dataset.editorCinematicBound = "true";
@@ -1871,6 +1976,357 @@ function applyCinematicPreview(frameDocument) {
   });
 }
 
+function stopInlinePreviewAudio(frameWindow, button = inlineExperienceState.soundButton) {
+  if (inlineExperienceState.audioPulseTimer) frameWindow.clearInterval(inlineExperienceState.audioPulseTimer);
+  inlineExperienceState.audioPulseTimer = 0;
+  inlineExperienceState.audioNodes.forEach((node) => {
+    try { if (typeof node.stop === "function") node.stop(); } catch {}
+    try { if (typeof node.disconnect === "function") node.disconnect(); } catch {}
+  });
+  inlineExperienceState.audioNodes = [];
+  inlineExperienceState.audioEnabled = false;
+  if (button) button.textContent = "Enable Sound";
+}
+
+function updateInlineGuidedModeUi(frameDocument) {
+  if (inlineExperienceState.guidedButton) {
+    inlineExperienceState.guidedButton.textContent = inlineExperienceState.guidedActive
+      ? "Guided Mode: On"
+      : inlineExperienceState.guidedDismissed
+        ? "Resume Guided Mode"
+        : "Guided Mode: Off";
+  }
+  frameDocument.body.classList.toggle("guided-mode-active", inlineExperienceState.guidedActive);
+}
+
+function stopInlineGuidedMode(frameDocument, markDismissed = true) {
+  const frameWindow = frameDocument.defaultView;
+  inlineExperienceState.guidedActive = false;
+  if (markDismissed) inlineExperienceState.guidedDismissed = true;
+  if (inlineExperienceState.guidedRaf) frameWindow.cancelAnimationFrame(inlineExperienceState.guidedRaf);
+  inlineExperienceState.guidedRaf = 0;
+  const scroller = frameDocument.scrollingElement || frameDocument.documentElement;
+  inlineExperienceState.guidedOrigin = scroller.scrollTop;
+  inlineExperienceState.guidedPauseUntil = 0;
+  updateInlineGuidedModeUi(frameDocument);
+}
+
+function stepInlineGuidedMode(frameDocument) {
+  if (!inlineExperienceState.guidedActive) return;
+  const frameWindow = frameDocument.defaultView;
+  const settings = experienceDraft?.guidedScroll || {};
+  const scroller = frameDocument.scrollingElement || frameDocument.documentElement;
+  const now = frameWindow.performance.now();
+  if (inlineExperienceState.guidedPauseUntil && now < inlineExperienceState.guidedPauseUntil) {
+    inlineExperienceState.guidedRaf = frameWindow.requestAnimationFrame(() => stepInlineGuidedMode(frameDocument));
+    return;
+  }
+  if (inlineExperienceState.guidedPauseUntil && now >= inlineExperienceState.guidedPauseUntil) {
+    inlineExperienceState.guidedPauseUntil = 0;
+    inlineExperienceState.guidedPhase = "up";
+    inlineExperienceState.guidedOrigin = scroller.scrollTop;
+    inlineExperienceState.guidedStartedAt = 0;
+  }
+  if (!inlineExperienceState.guidedStartedAt) inlineExperienceState.guidedStartedAt = now;
+  const duration = inlineExperienceState.guidedPhase === "down"
+    ? Number(settings.downDurationMs || 112500)
+    : Number(settings.upDurationMs || 56250);
+  const progress = Math.min(1, (now - inlineExperienceState.guidedStartedAt) / duration);
+  const eased = 1 - Math.pow(1 - progress, 2.2);
+  const maxScroll = Math.max(0, scroller.scrollHeight - frameWindow.innerHeight);
+  const isNearBottom = scroller.scrollTop >= Math.max(0, maxScroll - 8);
+  if (inlineExperienceState.guidedPhase === "down" && isNearBottom) {
+    inlineExperienceState.guidedPauseUntil = now + Number(settings.endPauseMs || 3000);
+    scroller.scrollTop = maxScroll;
+    inlineExperienceState.guidedRaf = frameWindow.requestAnimationFrame(() => stepInlineGuidedMode(frameDocument));
+    return;
+  }
+  const target = inlineExperienceState.guidedPhase === "down" ? maxScroll : 0;
+  scroller.scrollTop = inlineExperienceState.guidedOrigin + (target - inlineExperienceState.guidedOrigin) * eased;
+  if (progress >= 1) {
+    if (inlineExperienceState.guidedPhase === "down") {
+      inlineExperienceState.guidedPauseUntil = now + Number(settings.endPauseMs || 3000);
+      inlineExperienceState.guidedOrigin = scroller.scrollTop;
+    } else {
+      stopInlineGuidedMode(frameDocument, false);
+      return;
+    }
+  }
+  inlineExperienceState.guidedRaf = frameWindow.requestAnimationFrame(() => stepInlineGuidedMode(frameDocument));
+}
+
+function startInlineGuidedMode(frameDocument) {
+  const settings = experienceDraft?.guidedScroll || {};
+  if (!settings.enabled || inlineExperienceState.guidedActive) return;
+  const frameWindow = frameDocument.defaultView;
+  if (inlineExperienceState.guidedResumeTimer) {
+    frameWindow.clearTimeout(inlineExperienceState.guidedResumeTimer);
+    inlineExperienceState.guidedResumeTimer = 0;
+  }
+  inlineExperienceState.guidedActive = true;
+  inlineExperienceState.guidedStartedAt = 0;
+  inlineExperienceState.guidedPauseUntil = 0;
+  const scroller = frameDocument.scrollingElement || frameDocument.documentElement;
+  inlineExperienceState.guidedOrigin = scroller.scrollTop;
+  inlineExperienceState.guidedPhase = scroller.scrollTop >= Math.max(0, scroller.scrollHeight - frameWindow.innerHeight - 8) ? "up" : "down";
+  updateInlineGuidedModeUi(frameDocument);
+  inlineExperienceState.guidedRaf = frameWindow.requestAnimationFrame(() => stepInlineGuidedMode(frameDocument));
+}
+
+function scheduleInlineGuidedResume(frameDocument) {
+  const settings = experienceDraft?.guidedScroll || {};
+  if (!settings.enabled) return;
+  const frameWindow = frameDocument.defaultView;
+  if (inlineExperienceState.guidedResumeTimer) frameWindow.clearTimeout(inlineExperienceState.guidedResumeTimer);
+  inlineExperienceState.guidedResumeTimer = frameWindow.setTimeout(() => {
+    if (!inlineExperienceState.guidedActive) {
+      inlineExperienceState.guidedDismissed = false;
+      startInlineGuidedMode(frameDocument);
+    }
+  }, Number(settings.resumeDelayMs || 2000));
+}
+
+function prepareManagedExperienceButton(frameDocument, controls, selector, dataAttribute, defaultLabel) {
+  let button = controls.querySelector(selector);
+  if (button && button.dataset.uwManaged !== "true") {
+    const clone = button.cloneNode(true);
+    button.replaceWith(clone);
+    button = clone;
+  }
+  if (!button) {
+    button = frameDocument.createElement("button");
+    button.type = "button";
+    button.className = "experience-button";
+    controls.appendChild(button);
+  }
+  button.dataset.uwManaged = "true";
+  button.setAttribute(dataAttribute, "true");
+  button.style.display = "";
+  if (!button.textContent.trim()) button.textContent = defaultLabel;
+  return button;
+}
+
+function bindInlineExperienceControls(frameDocument) {
+  const frameWindow = frameDocument.defaultView;
+  if (inlineExperienceState.frameWindow !== frameWindow) {
+    stopInlinePreviewAudio(inlineExperienceState.frameWindow || frameWindow, null);
+    inlineExperienceState.frameWindow = frameWindow;
+    inlineExperienceState.guidedBootTimer = 0;
+    inlineExperienceState.guidedResumeTimer = 0;
+    inlineExperienceState.guidedRaf = 0;
+    inlineExperienceState.guidedActive = false;
+    inlineExperienceState.guidedDismissed = false;
+    inlineExperienceState.guidedStartedAt = 0;
+    inlineExperienceState.guidedPhase = "down";
+    inlineExperienceState.guidedOrigin = 0;
+    inlineExperienceState.guidedPauseUntil = 0;
+    inlineExperienceState.lastKnownScrollY = 0;
+    inlineExperienceState.guidedButton = null;
+    inlineExperienceState.soundButton = null;
+    inlineExperienceState.audioContext = null;
+    inlineExperienceState.listenersBound = false;
+  }
+
+  if (!inlineExperienceState.listenersBound) {
+    const interrupt = () => {
+      if (inlineExperienceState.guidedActive) stopInlineGuidedMode(frameDocument, true);
+      scheduleInlineGuidedResume(frameDocument);
+    };
+    ["wheel", "touchstart", "keydown", "mousedown"].forEach((eventName) => {
+      frameWindow.addEventListener(eventName, interrupt, { passive: true });
+    });
+    frameWindow.addEventListener("scroll", () => {
+      const scroller = frameDocument.scrollingElement || frameDocument.documentElement;
+      const currentScrollY = scroller.scrollTop;
+      const delta = Math.abs(currentScrollY - inlineExperienceState.lastKnownScrollY);
+      inlineExperienceState.lastKnownScrollY = currentScrollY;
+      if (!inlineExperienceState.guidedActive && delta > 2) scheduleInlineGuidedResume(frameDocument);
+    }, { passive: true });
+    inlineExperienceState.listenersBound = true;
+  }
+
+  if (inlineExperienceState.guidedButton && inlineExperienceState.guidedButton.dataset.bound !== "true") {
+    inlineExperienceState.guidedButton.dataset.bound = "true";
+    inlineExperienceState.guidedButton.addEventListener("click", () => {
+      if (inlineExperienceState.guidedActive) {
+        stopInlineGuidedMode(frameDocument, true);
+        scheduleInlineGuidedResume(frameDocument);
+        return;
+      }
+      inlineExperienceState.guidedDismissed = false;
+      startInlineGuidedMode(frameDocument);
+    });
+  }
+
+  if (inlineExperienceState.soundButton && inlineExperienceState.soundButton.dataset.bound !== "true") {
+    inlineExperienceState.soundButton.dataset.bound = "true";
+    inlineExperienceState.soundButton.addEventListener("click", async () => {
+      const AudioContextClass = frameWindow.AudioContext || frameWindow.webkitAudioContext;
+      if (!AudioContextClass) {
+        inlineExperienceState.soundButton.textContent = "Sound Unavailable";
+        return;
+      }
+      if (inlineExperienceState.audioEnabled) {
+        stopInlinePreviewAudio(frameWindow);
+        return;
+      }
+      try {
+        if (!inlineExperienceState.audioContext) inlineExperienceState.audioContext = new AudioContextClass();
+        await inlineExperienceState.audioContext.resume();
+        const createVoice = (type, frequency, gainValue) => {
+          const oscillator = inlineExperienceState.audioContext.createOscillator();
+          const filter = inlineExperienceState.audioContext.createBiquadFilter();
+          const gain = inlineExperienceState.audioContext.createGain();
+          oscillator.type = type;
+          oscillator.frequency.value = frequency;
+          filter.type = "lowpass";
+          filter.frequency.value = 420;
+          filter.Q.value = 0.7;
+          gain.gain.value = gainValue;
+          oscillator.connect(filter);
+          filter.connect(gain);
+          gain.connect(inlineExperienceState.audioContext.destination);
+          oscillator.start();
+          inlineExperienceState.audioNodes.push(oscillator, filter, gain);
+          return { filter };
+        };
+        const bass = createVoice("triangle", 55, 0.018);
+        const pad = createVoice("sawtooth", 110, 0.008);
+        createVoice("sine", 220, 0.0035);
+        const lfo = inlineExperienceState.audioContext.createOscillator();
+        const lfoGain = inlineExperienceState.audioContext.createGain();
+        lfo.type = "sine";
+        lfo.frequency.value = 0.07;
+        lfoGain.gain.value = 110;
+        lfo.connect(lfoGain);
+        lfoGain.connect(bass.filter.frequency);
+        lfoGain.connect(pad.filter.frequency);
+        lfo.start();
+        inlineExperienceState.audioNodes.push(lfo, lfoGain);
+        const pulse = () => {
+          const pulseOsc = inlineExperienceState.audioContext.createOscillator();
+          const pulseGain = inlineExperienceState.audioContext.createGain();
+          pulseOsc.type = "sine";
+          pulseOsc.frequency.setValueAtTime(220, inlineExperienceState.audioContext.currentTime);
+          pulseOsc.frequency.exponentialRampToValueAtTime(110, inlineExperienceState.audioContext.currentTime + 1.8);
+          pulseGain.gain.setValueAtTime(0.0001, inlineExperienceState.audioContext.currentTime);
+          pulseGain.gain.exponentialRampToValueAtTime(0.018, inlineExperienceState.audioContext.currentTime + 0.2);
+          pulseGain.gain.exponentialRampToValueAtTime(0.0001, inlineExperienceState.audioContext.currentTime + 1.8);
+          pulseOsc.connect(pulseGain);
+          pulseGain.connect(inlineExperienceState.audioContext.destination);
+          pulseOsc.start();
+          pulseOsc.stop(inlineExperienceState.audioContext.currentTime + 2);
+        };
+        pulse();
+        inlineExperienceState.audioPulseTimer = frameWindow.setInterval(pulse, 6800);
+        inlineExperienceState.audioEnabled = true;
+        inlineExperienceState.soundButton.textContent = "Sound: On";
+      } catch {
+        inlineExperienceState.soundButton.textContent = "Sound Unavailable";
+      }
+    });
+  }
+}
+
+function applyExperiencePreview(frameDocument) {
+  const frameWindow = frameDocument.defaultView;
+  if (!frameWindow) return;
+  ensureExperiencePreviewStyles(frameDocument);
+  const settings = experienceDraft || ensureExperienceDraft();
+  let controls = frameDocument.querySelector(".experience-controls");
+
+  if (!controls && (settings.guidedScroll.enabled || settings.audio.enabled)) {
+    controls = frameDocument.createElement("div");
+    controls.className = "experience-controls";
+    frameDocument.body.appendChild(controls);
+  }
+
+  if (controls) {
+    if (settings.guidedScroll.enabled) {
+      inlineExperienceState.guidedButton = prepareManagedExperienceButton(
+        frameDocument,
+        controls,
+        "[data-guided-mode-btn], #guided-mode-btn",
+        "data-guided-mode-btn",
+        "Guided Mode: Off"
+      );
+    } else {
+      const button = controls.querySelector("[data-guided-mode-btn], #guided-mode-btn");
+      if (button) button.style.display = "none";
+      if (inlineExperienceState.guidedActive) stopInlineGuidedMode(frameDocument, false);
+      if (inlineExperienceState.guidedBootTimer) frameWindow.clearTimeout(inlineExperienceState.guidedBootTimer);
+      if (inlineExperienceState.guidedResumeTimer) frameWindow.clearTimeout(inlineExperienceState.guidedResumeTimer);
+      inlineExperienceState.guidedButton = null;
+      frameDocument.body.classList.remove("guided-mode-active");
+    }
+
+    if (settings.audio.enabled) {
+      inlineExperienceState.soundButton = prepareManagedExperienceButton(
+        frameDocument,
+        controls,
+        "[data-sound-toggle-btn], #sound-toggle-btn",
+        "data-sound-toggle-btn",
+        "Enable Sound"
+      );
+    } else {
+      const button = controls.querySelector("[data-sound-toggle-btn], #sound-toggle-btn");
+      if (button) button.style.display = "none";
+      stopInlinePreviewAudio(frameWindow, button || null);
+      inlineExperienceState.soundButton = null;
+    }
+  }
+
+  const heroNode = frameDocument.querySelector(".hero-standalone");
+  if (heroNode) {
+    if (settings.depthHero.enabled) {
+      let depthGrid = heroNode.querySelector(".hero-depth-grid");
+      if (!depthGrid) {
+        depthGrid = frameDocument.createElement("div");
+        depthGrid.className = "hero-depth-grid";
+        depthGrid.dataset.uwManaged = "true";
+        depthGrid.setAttribute("aria-hidden", "true");
+        depthGrid.innerHTML = '<span class="depth-orb depth-orb-a"></span><span class="depth-orb depth-orb-b"></span><span class="depth-ring"></span><span class="depth-beam"></span>';
+        heroNode.insertBefore(depthGrid, heroNode.firstChild);
+      }
+      const glareHost = heroNode.querySelector(".hero-cinematic-card") || heroNode.querySelector(".hero-frame-stage");
+      if (glareHost && !glareHost.querySelector(".hero-frame-glare")) {
+        const glare = frameDocument.createElement("div");
+        glare.className = "hero-frame-glare";
+        glare.dataset.uwManaged = "true";
+        glare.setAttribute("aria-hidden", "true");
+        glareHost.appendChild(glare);
+      }
+      if (heroNode.dataset.depthBound !== "true") {
+        heroNode.dataset.depthBound = "true";
+        heroNode.addEventListener("pointermove", (event) => {
+          const bounds = heroNode.getBoundingClientRect();
+          const x = ((event.clientX - bounds.left) / bounds.width - 0.5) * 2;
+          const y = ((event.clientY - bounds.top) / bounds.height - 0.5) * 2;
+          heroNode.style.setProperty("--depth-x", x.toFixed(3));
+          heroNode.style.setProperty("--depth-y", y.toFixed(3));
+        });
+        heroNode.addEventListener("pointerleave", () => {
+          heroNode.style.setProperty("--depth-x", "0");
+          heroNode.style.setProperty("--depth-y", "0");
+        });
+      }
+    } else {
+      heroNode.querySelectorAll(".hero-depth-grid[data-uw-managed='true'], .hero-frame-glare[data-uw-managed='true']").forEach((node) => node.remove());
+      heroNode.style.removeProperty("--depth-x");
+      heroNode.style.removeProperty("--depth-y");
+    }
+  }
+
+  bindInlineExperienceControls(frameDocument);
+  updateInlineGuidedModeUi(frameDocument);
+  if (settings.guidedScroll.enabled && inlineExperienceState.guidedButton) {
+    if (inlineExperienceState.guidedBootTimer) frameWindow.clearTimeout(inlineExperienceState.guidedBootTimer);
+    inlineExperienceState.guidedBootTimer = frameWindow.setTimeout(() => {
+      if (!inlineExperienceState.guidedDismissed) startInlineGuidedMode(frameDocument);
+    }, Number(settings.guidedScroll.initialDelayMs || 6000));
+  }
+}
+
 function applyPreview() {
   const frameWindow = siteFrame.contentWindow;
   const frameDocument = frameWindow?.document;
@@ -1934,6 +2390,7 @@ function applyPreview() {
   }
 
   applyCinematicPreview(frameDocument);
+  applyExperiencePreview(frameDocument);
 
   renderHandles();
 }
