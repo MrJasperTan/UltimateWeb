@@ -1394,6 +1394,17 @@ function renderMediaCard(title, media, kind) {
   `;
 }
 
+function getMediaModalVideoCard() {
+  if (mediaDraft?.videoFile instanceof File) {
+    return {
+      available: true,
+      filename: mediaDraft.videoFile.name,
+      url: buildMediaPreviewVideoUrl(),
+    };
+  }
+  return siteConfig?.media?.video || null;
+}
+
 function openHeroModal() {
   const hero = editableContent.hero;
   openModal({
@@ -1525,7 +1536,7 @@ function openMediaModal() {
       <div class="media-preview-grid">
         ${renderMediaCard("Start image", siteConfig.media?.startImage, "image")}
         ${renderMediaCard("End image", siteConfig.media?.endImage, "image")}
-        ${renderMediaCard("Video", siteConfig.media?.video, "video")}
+        ${renderMediaCard("Video", getMediaModalVideoCard(), "video")}
       </div>
       <div class="field-grid">
         ${createTextField("startPrompt", "Start Image Prompt", mediaDraft.startPrompt, 4)}
