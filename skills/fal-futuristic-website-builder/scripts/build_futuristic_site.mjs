@@ -573,6 +573,7 @@ function normalizeMediaPlayback(rawValue) {
     enabled: Boolean(raw.enabled),
     loopMode: normalizeLoopMode(raw.loopMode),
     speed: normalizePlaybackSpeed(raw.speed),
+    mobileFit: String(raw.mobileFit || "contain").trim().toLowerCase() === "cover" ? "cover" : "contain",
   };
 }
 
@@ -2041,7 +2042,7 @@ function renderMainMediaVideoMarkup(mediaPlayback) {
   if (!mediaPlayback?.enabled) return "";
   return `
     <div class="video-wrap">
-      <video id="main-stage-video" class="main-media-video" data-loop-mode="${escapeHtml(mediaPlayback.loopMode)}" data-playback-speed="${escapeHtml(mediaPlayback.speed)}" autoplay muted playsinline preload="auto">
+      <video id="main-stage-video" class="main-media-video" data-loop-mode="${escapeHtml(mediaPlayback.loopMode)}" data-playback-speed="${escapeHtml(mediaPlayback.speed)}" data-mobile-fit="${escapeHtml(mediaPlayback.mobileFit || "contain")}" autoplay muted playsinline preload="auto">
         <source src="media/transition.mp4" type="video/mp4" />
       </video>
     </div>`;
@@ -2880,6 +2881,9 @@ h1 {
 }
 
 @media (max-width: 900px) {
+  .main-media-video[data-mobile-fit="cover"] {
+    object-fit: cover;
+  }
   .experience-button {
     bottom: 0.9rem;
     width: 3rem;

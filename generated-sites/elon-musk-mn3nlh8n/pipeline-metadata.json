@@ -180,7 +180,7 @@
   "experienceUpgrades": {
     "guidedScroll": {
       "enabled": true,
-      "initialDelayMs": 2000,
+      "initialDelayMs": 3000,
       "downDurationMs": 112500,
       "upDurationMs": 56250,
       "endPauseMs": 3000,
@@ -199,15 +199,15 @@
     "endPrompt": "Same Elon Musk subject. Show a dynamic action or iconic pose that captures their essence, dramatic lighting with motion blur accents, dark atmospheric background, no text, no logos, editorial photography, ultra detailed.",
     "motionPrompt": "Cinematic portrait animation. Start from first frame. Smooth transition to the dynamic action pose. Elegant camera movement, dramatic lighting shifts, no sudden warping, no text, dark atmospheric background."
   },
-  "generatedAt": "2026-03-23T20:06:04.281Z",
+  "generatedAt": "2026-03-23T20:44:19.829Z",
   "usedExistingVideo": true,
-  "existingVideoPath": "/tmp/ultimateweb-upload-638SHw/mn3m89yv-space-x-loop.mp4",
+  "existingVideoPath": "/tmp/ultimateweb-upload-lydIVw/mn3nlh86-space-x-loop.mp4",
   "derivedStartImageFromVideo": true,
   "derivedEndImageFromVideo": true,
   "startImageUrl": null,
   "endImageUrl": null,
   "videoUrl": null,
-  "localVideo": "/home/thejaspertan/agents/Ultimateweb/generated-sites/elon-musk-mn3m89ze/media/transition.mp4",
+  "localVideo": "/home/thejaspertan/agents/Ultimateweb/generated-sites/elon-musk-mn3nlh8n/media/transition.mp4",
   "videoMeta": {
     "width": 1924,
     "height": 1076,
@@ -385,7 +385,7 @@
       "layout": "card",
       "loopMode": "loop",
       "speed": 1,
-      "parallax": false,
+      "parallax": true,
       "video": {
         "available": true,
         "filename": "cinematic-hero.mp4",
@@ -489,7 +489,7 @@
   "mediaPlayback": {
     "enabled": true,
     "loopMode": "loop",
-    "speed": 1
+    "speed": 0.75
   },
   "seo": {
     "title": "Elon Musk",

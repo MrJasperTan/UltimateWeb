@@ -1,5 +1,5 @@
-const EXPERIENCE_UPGRADES = {"guidedScroll":{"enabled":true,"initialDelayMs":2000,"downDurationMs":112500,"upDurationMs":56250,"endPauseMs":3000,"resumeDelayMs":2000},"audio":{"enabled":false},"depthHero":{"enabled":false}};
-const MEDIA_PLAYBACK = {"enabled":true,"loopMode":"loop","speed":1};
+const EXPERIENCE_UPGRADES = {"guidedScroll":{"enabled":true,"initialDelayMs":3000,"downDurationMs":112500,"upDurationMs":56250,"endPauseMs":3000,"resumeDelayMs":2000},"audio":{"enabled":false},"depthHero":{"enabled":false}};
+const MEDIA_PLAYBACK = {"enabled":true,"loopMode":"loop","speed":0.75};
 const FRAME_COUNT = 101;
 const FRAME_SPEED = 1.0;
 const FRAME_PATH = (index) => `frames/frame_${String(index + 1).padStart(4, "0")}.webp`;
@@ -31,6 +31,7 @@ let guidedModeActive = false;
 let guidedModeDismissed = false;
 let guidedModeStartedAt = 0;
 let guidedModePhase = "down";
+let guidedModeOrigin = 0;
 let guidedModePauseUntil = 0;
 let guidedResumeTimer = 0;
 let lastKnownScrollY = 0;
@@ -211,6 +212,7 @@ function stopGuidedMode(guidedModeButton, markDismissed = true) {
   if (markDismissed) guidedModeDismissed = true;
   if (guidedModeRaf) cancelAnimationFrame(guidedModeRaf);
   guidedModeRaf = 0;
+  guidedModeOrigin = window.scrollY;
   guidedModePauseUntil = 0;
   updateGuidedModeUi(guidedModeButton);
 }
@@ -224,6 +226,7 @@ function guidedModeStep() {
   if (guidedModePauseUntil && performance.now() >= guidedModePauseUntil) {
     guidedModePauseUntil = 0;
     guidedModePhase = "up";
+    guidedModeOrigin = window.scrollY;
     guidedModeStartedAt = 0;
   }
   if (!guidedModeStartedAt) guidedModeStartedAt = performance.now();
@@ -242,16 +245,19 @@ function guidedModeStep() {
     return;
   }
   const target = guidedModePhase === "down" ? maxScroll : 0;
-  const origin = guidedModePhase === "down" ? 0 : maxScroll;
-  lenis.scrollTo(origin + (target - origin) * eased, { immediate: true, force: true });
+  lenis.scrollTo(guidedModeOrigin + (target - guidedModeOrigin) * eased, { immediate: true, force: true });
   if (progress >= 1) {
     if (guidedModePhase === "down") {
       guidedModePhase = "up";
+      guidedModeOrigin = window.scrollY;
       guidedModeStartedAt = 0;
       guidedModeRaf = requestAnimationFrame(guidedModeStep);
       return;
     }
-    stopGuidedMode(window.__uwGuidedModeButton, false);
+    guidedModePhase = "down";
+    guidedModeOrigin = window.scrollY;
+    guidedModeStartedAt = 0;
+    guidedModeRaf = requestAnimationFrame(guidedModeStep);
     return;
   }
   guidedModeRaf = requestAnimationFrame(guidedModeStep);
@@ -266,6 +272,7 @@ function startGuidedMode(guidedModeButton) {
   guidedModeActive = true;
   guidedModeStartedAt = 0;
   guidedModePauseUntil = 0;
+  guidedModeOrigin = window.scrollY;
   guidedModePhase = window.scrollY >= Math.max(0, document.documentElement.scrollHeight - window.innerHeight - 8) ? "up" : "down";
   window.__uwGuidedModeButton = guidedModeButton || null;
   updateGuidedModeUi(guidedModeButton);

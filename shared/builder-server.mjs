@@ -489,6 +489,7 @@ function normalizeMediaPlayback(raw) {
     enabled: Boolean(playback.enabled),
     loopMode: String(playback.loopMode || "loop").trim() === "boomerang" ? "boomerang" : "loop",
     speed: Math.min(2.5, Math.max(0.25, Number(playback.speed || 1) || 1)),
+    mobileFit: String(playback.mobileFit || "contain").trim() === "cover" ? "cover" : "contain",
   };
 }
 
@@ -1575,7 +1576,7 @@ export function startBuilderServer({ appDir, publicDir }) {
     video.style.width = "100%";
     video.style.height = "100%";
     video.style.display = "block";
-    video.style.objectFit = "contain";
+    video.style.objectFit = window.innerWidth <= 900 && String(playback.mobileFit || "contain") === "cover" ? "cover" : "contain";
     video.style.background = "#0a0a0a";
     const source = document.createElement("source");
     source.src = playbackUrl;

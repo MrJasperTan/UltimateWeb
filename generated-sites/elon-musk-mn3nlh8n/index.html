@@ -4,10 +4,56 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Elon Musk</title>
+  <meta name="description" content="Elon was born to Errol and Maye Musk. His mother was born in Canada and had a career as a dietician and model. She holds two master&#39;s degrees. She attended..." />
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="theme-color" content="#f4b14d" />
+  <meta name="keywords" content="Elon Musk, person, conversion" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Elon Musk" />
+  <meta property="og:description" content="Elon was born to Errol and Maye Musk. His mother was born in Canada and had a career as a dietician and model. She holds two master&#39;s degrees. She attended..." />
+  <meta property="og:site_name" content="Elon Musk" />
+  <meta property="og:locale" content="en_US" />
+  
+  
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Elon Musk" />
+  <meta name="twitter:description" content="Elon was born to Errol and Maye Musk. His mother was born in Canada and had a career as a dietician and model. She holds two master&#39;s degrees. She attended..." />
+  
+  
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=DM+Serif+Display:ital@0;1&family=Manrope:wght@400;500;700;800&family=Oswald:wght@500;700&family=Syne:wght@500;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=20260319immersive" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="stylesheet" href="css/style.css" />
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": "#webpage-elon-musk",
+      "name": "Elon Musk",
+      "description": "Elon was born to Errol and Maye Musk. His mother was born in Canada and had a career as a dietician and model. She holds two master's degrees. She attended...",
+      "isPartOf": {
+        "@id": "#website-elon-musk"
+      },
+      "about": {
+        "@id": "#primaryentity-elon-musk"
+      }
+    },
+    {
+      "@type": "WebSite",
+      "@id": "#website-elon-musk",
+      "name": "Elon Musk",
+      "description": "Elon was born to Errol and Maye Musk. His mother was born in Canada and had a career as a dietician and model. She holds two master's degrees. She attended..."
+    },
+    {
+      "@type": "Person",
+      "@id": "#primaryentity-elon-musk",
+      "name": "Elon Musk",
+      "description": "Elon was born to Errol and Maye Musk. His mother was born in Canada and had a career as a dietician and model. She holds two master's degrees. She attended..."
+    }
+  ]
+}</script>
 </head>
 <body>
   <div id="loader">
@@ -16,41 +62,35 @@
     <span id="loader-percent">0%</span>
   </div>
 
-  <div class="experience-controls">
-    <button id="guided-mode-btn" class="experience-button" type="button">Guided Mode: On</button>
-    <button id="sound-toggle-btn" class="experience-button" type="button">Enable Sound</button>
-  </div>
-
   <header class="site-header">
-    <span class="brand">Elon Musk</span>
+    <div class="brand"><span class="brand-text">Elon Musk</span></div>
     <a href="#cta">Discover</a>
   </header>
 
-  <section class="hero-standalone">
-    <div class="hero-depth-grid" aria-hidden="true">
-      <span class="depth-orb depth-orb-a"></span>
-      <span class="depth-orb depth-orb-b"></span>
-      <span class="depth-ring"></span>
-      <span class="depth-beam"></span>
-    </div>
-    <div class="hero-frame-stage">
-      <video id="hero-video" autoplay muted loop playsinline>
-        <source src="media/transition.mp4" type="video/mp4" />
+  <div class="experience-controls" data-experience-controls="true"></div>
+
+  <section class="hero-standalone" data-editor-hero="true">
+
+    <div class="hero-cinematic hero-cinematic-card cinematic-parallax" data-cinematic-parallax="true">
+
+      <video class="cinematic-video" data-cinematic-video="true" data-loop-mode="loop" data-playback-speed="1" autoplay muted playsinline preload="auto">
+        <source src="media/cinematic-hero.mp4" type="video/mp4" />
       </video>
-      <div class="hero-frame-glare" aria-hidden="true"></div>
     </div>
-    <div class="hero-copy-stack">
-      <p class="hero-kicker">IDENTITY. PROOF. IMPACT.</p>
-      <h1>ELON MUSK</h1>
-      <p class="hero-sub">Elon was born to Errol and Maye Musk. His mother was born in Canada and had a career as a dietician and model. She holds two master&#39;s degrees. She attended the University of The Or...</p>
-      <p class="hero-trust">8 live sources informed the hero, proof, and spec sections.</p>
-    </div>
+    <p class="hero-kicker">IDENTITY. PROOF. IMPACT.</p>
+    <h1>ELON MUSK</h1>
+    <p class="hero-sub">Elon was born to Errol and Maye Musk. His mother was born in Canada and had a career as a dietician and model. She holds two master&#39;s degrees. She attended the University of The Or...</p>
+    <p class="hero-trust">8 live sources informed the hero, proof, and spec sections.</p>
   </section>
 
-  <div class="video-stage">
-    <video id="background-video" autoplay muted loop playsinline>
-      <source src="media/space-x-loop.mp4" type="video/mp4" />
-    </video>
+  <div class="media-stage">
+    <div class="canvas-wrap is-active"><canvas id="canvas"></canvas></div>
+
+    <div class="video-wrap">
+      <video id="main-stage-video" class="main-media-video" data-loop-mode="loop" data-playback-speed="0.75" autoplay muted playsinline preload="auto">
+        <source src="media/transition.mp4" type="video/mp4" />
+      </video>
+    </div>
   </div>
   <div id="dark-overlay"></div>
 
@@ -60,7 +100,8 @@
 
   <main id="scroll-container" style="--scroll-length:1560vh;">
 
-    <section class="scroll-section section-copy align-center" data-enter="10" data-leave="21.25" data-animation="fade-up">
+    <section class="scroll-section section-copy align-center" data-enter="10" data-leave="23.18" data-animation="fade-up" data-editor-section="0" data-editor-kind="copy">
+
       <div class="section-inner">
         <p class="section-label">001 / Hook</p>
         <h2 class="section-heading">Some people don’t follow the path. They become it.</h2>
@@ -69,7 +110,8 @@
       </div>
     </section>
 
-    <section class="scroll-section section-copy align-left" data-enter="21.25" data-leave="32.5" data-animation="slide-left">
+    <section class="scroll-section section-copy align-left" data-enter="23.18" data-leave="35.31" data-animation="slide-left" data-editor-section="1" data-editor-kind="copy">
+
       <div class="section-inner">
         <p class="section-label">002 / Value</p>
         <h2 class="section-heading">Where It All Began</h2>
@@ -78,16 +120,18 @@
       </div>
     </section>
 
-    <section class="scroll-section section-copy align-right" data-enter="32.5" data-leave="43.75" data-animation="slide-right">
+    <section class="scroll-section section-copy align-right" data-enter="35.31" data-leave="44.51" data-animation="slide-right" data-editor-section="2" data-editor-kind="copy">
+
       <div class="section-inner">
         <p class="section-label">003 / Differentiation</p>
         <h2 class="section-heading">Peak Achievement</h2>
-        <p class="section-body">Sep 11, 2025 ... Elon Musk unveils Tesla&#39;s AI5 chip, a &#39;monster&#39; with up to a 40x performance leap. Discover how this new hardware will revolutionize FSD, ...</p>
+        <p class="section-body">Sep 11, 2025 ... Elon Musk unveils Tesla&#39;s AI5 chip, a &#39;monster&#39; with up to a 40x performance leap. Discover how this new hardware will revolutionize FSD, ...</p>
         
       </div>
     </section>
 
-    <section class="scroll-section section-stats align-center" data-enter="43.75" data-leave="55" data-animation="stagger-up">
+    <section class="scroll-section section-stats align-center" data-enter="44.51" data-leave="53.38" data-animation="stagger-up" data-editor-section="3" data-editor-kind="stats">
+
       <div class="section-inner section-inner-wide">
         <p class="section-label">004 / Proof</p>
         <h2 class="section-heading">Measured Confidence</h2>
@@ -111,7 +155,8 @@
       </div>
     </section>
 
-    <section class="scroll-section section-cards align-left" data-enter="55" data-leave="66.25" data-animation="clip-reveal">
+    <section class="scroll-section section-cards align-left" data-enter="53.38" data-leave="68.56" data-animation="clip-reveal" data-editor-section="4" data-editor-kind="cards">
+
       <div class="section-inner section-inner-wide">
         <p class="section-label">005 / Trust</p>
         <h2 class="section-heading">Research-Backed Highlights</h2>
@@ -129,15 +174,12 @@
             <span class="stat-label">Proof point 03</span>
             <p class="card-body">Elon was born to Errol and Maye Musk. His mother was born in Canada and had a career as a dietician and model. She holds two master&#39;s deg...</p>
           </article>
-          <article class="stat info-card">
-            <span class="stat-label">Proof point 04</span>
-            <p class="card-body">Oct 3, 2025 ... Elon Musk has publicly stated that a Tesla phone isn&#39;t in the ... While these specifications are just speculation, they c...</p>
-          </article>
         </div>
       </div>
     </section>
 
-    <section class="scroll-section section-cards align-right" data-enter="66.25" data-leave="77.5" data-animation="stagger-up">
+    <section class="scroll-section section-cards align-right" data-enter="68.56" data-leave="75.79" data-animation="stagger-up" data-editor-section="5" data-editor-kind="cards">
+
       <div class="section-inner section-inner-wide">
         <p class="section-label">006 / Decision</p>
         <h2 class="section-heading">What Makes It Distinct</h2>
@@ -159,7 +201,8 @@
       </div>
     </section>
 
-    <section class="scroll-section section-faq align-left" data-enter="77.5" data-leave="88.75" data-animation="fade-up">
+    <section class="scroll-section section-faq align-left" data-enter="75.79" data-leave="90.26" data-animation="fade-up" data-editor-section="6" data-editor-kind="faq">
+
       <div class="section-inner section-inner-wide">
         <p class="section-label">007 / Questions</p>
         <h2 class="section-heading">What Visitors Need To Know</h2>
@@ -173,11 +216,16 @@
             <span class="stat-label">How should a visitor move through the page?</span>
             <p class="card-body">Start with identity, move into milestone proof, and end with a clear invitation to explore the full story.</p>
           </article>
+          <article class="stat info-card">
+            <span class="stat-label">What should happen at the end of the page?</span>
+            <p class="card-body">The final section should convert attention into the clearest next step for the topic.</p>
+          </article>
         </div>
       </div>
     </section>
 
-    <section class="scroll-section section-cta align-left" data-enter="88.75" data-leave="100" data-animation="fade-up" id="cta" data-persist="true">
+    <section class="scroll-section section-cta align-left" data-enter="90.26" data-leave="100" data-animation="fade-up" data-editor-section="7" data-editor-kind="cta" id="cta" data-persist="true">
+
       <div class="section-inner">
         <p class="section-label">008 / Explore</p>
         <h2 class="section-heading">Discover Elon Musk</h2>
@@ -190,6 +238,6 @@
   <script src="https://cdn.jsdelivr.net/npm/lenis@1/dist/lenis.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/gsap@3/dist/gsap.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/gsap@3/dist/ScrollTrigger.min.js"></script>
-  <script src="js/app.js?v=20260319immersive"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>
