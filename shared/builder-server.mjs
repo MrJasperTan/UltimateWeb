@@ -303,11 +303,11 @@ function pickUploadedFile(files, preferredFieldName, matcher) {
 }
 
 function isUploadedImage(file) {
-  return /\.(png|jpe?g|webp|gif|bmp|svg|avif)$/i.test(String(file?.filename || ""));
+  return /\.(png|jpe?g|webp|gif|bmp|svg|avif)$/i.test(String(file?.filename || file?.path || ""));
 }
 
 function isUploadedVideo(file) {
-  return /\.(mp4|mov|webm|m4v|avi|mkv)$/i.test(String(file?.filename || ""));
+  return /\.(mp4|mov|webm|m4v|avi|mkv)$/i.test(String(file?.filename || file?.path || ""));
 }
 
 function splitBuffer(buffer, separator) {
@@ -369,7 +369,7 @@ function parseMultipartBody(request) {
 
           const headerText = part.subarray(0, headerEnd).toString("utf8");
           const content = part.subarray(headerEnd + 4);
-          const dispositionMatch = headerText.match(/content-disposition:[^\r\n]*name="([^"]+)"/i);
+          const dispositionMatch = headerText.match(/content-disposition:[^\r\n]*;\s*name="([^"]+)"/i);
           if (!dispositionMatch) continue;
 
           const fieldName = dispositionMatch[1];
@@ -830,10 +830,10 @@ export function startBuilderServer({ appDir, publicDir }) {
     const uploadedEndImage = pickUploadedFile(files, "endImage", isUploadedImage);
     const uploadedVideo = pickUploadedFile(files, "video", isUploadedVideo);
     const existingMedia = resolveEditSourceMedia(sourceSlug);
-    const hasReplacementVideo = Boolean(uploadedVideo?.path);
-    const startImage = uploadedStartImage?.path || (!hasReplacementVideo ? existingMedia?.startImage : null) || null;
-    const endImage = uploadedEndImage?.path || (!hasReplacementVideo ? existingMedia?.endImage : null) || null;
-    const previewVideoPath = uploadedVideo?.path || existingMedia?.videoPath || null;
+    const hasReplacementVideo = Boolean(uploadedVideo);
+    const startImage = uploadedStartImage || (!hasReplacementVideo ? existingMedia?.startImage : null) || null;
+    const endImage = uploadedEndImage || (!hasReplacementVideo ? existingMedia?.endImage : null) || null;
+    const previewVideoPath = uploadedVideo || existingMedia?.videoPath || null;
     if (!previewVideoPath) {
       throw new Error("A draft preview build requires either an uploaded video or an existing video on the source site.");
     }
