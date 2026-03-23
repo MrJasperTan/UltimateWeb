@@ -594,7 +594,8 @@ function buildStandalonePreviewRuntimeScript(previewData) {
     const settings = draft.experienceUpgrades?.guidedScroll || {};
     if (!button || button.dataset.bound === "true" || !settings.enabled) return;
     button.dataset.bound = "true";
-    const interrupt = () => {
+    const interrupt = (event) => {
+      if (event?.target instanceof Node && button.contains(event.target)) return;
       if (guidedModeActive) stopGuidedMode(button, true);
       scheduleGuidedResume(button);
     };
@@ -608,8 +609,11 @@ function buildStandalonePreviewRuntimeScript(previewData) {
     }, { passive: true });
     button.addEventListener("click", () => {
       if (guidedModeActive) {
+        if (guidedResumeTimer) {
+          clearTimeout(guidedResumeTimer);
+          guidedResumeTimer = 0;
+        }
         stopGuidedMode(button, true);
-        scheduleGuidedResume(button);
         return;
       }
       guidedModeDismissed = false;
@@ -2172,7 +2176,8 @@ function bindInlineExperienceControls(frameDocument) {
   }
 
   if (!inlineExperienceState.listenersBound) {
-    const interrupt = () => {
+    const interrupt = (event) => {
+      if (event?.target instanceof frameWindow.Node && inlineExperienceState.guidedButton?.contains(event.target)) return;
       if (inlineExperienceState.guidedActive) stopInlineGuidedMode(frameDocument, true);
       scheduleInlineGuidedResume(frameDocument);
     };
@@ -2193,8 +2198,11 @@ function bindInlineExperienceControls(frameDocument) {
     inlineExperienceState.guidedButton.dataset.bound = "true";
     inlineExperienceState.guidedButton.addEventListener("click", () => {
       if (inlineExperienceState.guidedActive) {
+        if (inlineExperienceState.guidedResumeTimer) {
+          frameWindow.clearTimeout(inlineExperienceState.guidedResumeTimer);
+          inlineExperienceState.guidedResumeTimer = 0;
+        }
         stopInlineGuidedMode(frameDocument, true);
-        scheduleInlineGuidedResume(frameDocument);
         return;
       }
       inlineExperienceState.guidedDismissed = false;

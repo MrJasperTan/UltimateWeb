@@ -1168,7 +1168,8 @@ export function startBuilderServer({ appDir, publicDir }) {
     const settings = draft.experienceUpgrades?.guidedScroll || {};
     if (!button || button.dataset.bound === "true" || !settings.enabled) return;
     button.dataset.bound = "true";
-    const interrupt = () => {
+    const interrupt = (event) => {
+      if (event?.target instanceof Node && button.contains(event.target)) return;
       if (guidedModeActive) stopGuidedMode(button, true);
       scheduleGuidedResume(button);
     };
@@ -1182,8 +1183,11 @@ export function startBuilderServer({ appDir, publicDir }) {
     }, { passive: true });
     button.addEventListener("click", () => {
       if (guidedModeActive) {
+        if (guidedResumeTimer) {
+          clearTimeout(guidedResumeTimer);
+          guidedResumeTimer = 0;
+        }
         stopGuidedMode(button, true);
-        scheduleGuidedResume(button);
         return;
       }
       guidedModeDismissed = false;

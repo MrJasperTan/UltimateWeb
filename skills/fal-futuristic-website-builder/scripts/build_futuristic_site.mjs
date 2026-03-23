@@ -3143,7 +3143,8 @@ function scheduleGuidedResume(guidedModeButton) {
 function bindGuidedMode(guidedModeButton) {
   if (!guidedModeButton || guidedModeButton.dataset.bound === "true") return;
   guidedModeButton.dataset.bound = "true";
-  const interrupt = () => {
+  const interrupt = (event) => {
+    if (event?.target instanceof Node && guidedModeButton.contains(event.target)) return;
     if (guidedModeActive) stopGuidedMode(guidedModeButton, true);
     scheduleGuidedResume(guidedModeButton);
   };
@@ -3158,8 +3159,11 @@ function bindGuidedMode(guidedModeButton) {
   }, { passive: true });
   guidedModeButton.addEventListener("click", () => {
     if (guidedModeActive) {
+      if (guidedResumeTimer) {
+        window.clearTimeout(guidedResumeTimer);
+        guidedResumeTimer = 0;
+      }
       stopGuidedMode(guidedModeButton, true);
-      scheduleGuidedResume(guidedModeButton);
       return;
     }
     guidedModeDismissed = false;
