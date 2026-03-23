@@ -849,6 +849,66 @@ function buildStandalonePreviewRuntimeScript(previewData) {
     }
   }
 
+  function applyMediaPlayback() {
+    const mediaStage = document.querySelector(".media-stage");
+    if (!mediaStage) return;
+    const playback = draft.mediaPlayback || {};
+    const canvasWrap = mediaStage.querySelector(".canvas-wrap");
+    const playbackUrl = String(playback.url || "").trim() || "media/transition.mp4";
+    const shouldUseVideo = Boolean(playback.enabled && playbackUrl);
+    let videoWrap = mediaStage.querySelector("[data-draft-main-video='true']");
+
+    if (!shouldUseVideo) {
+      if (videoWrap) videoWrap.remove();
+      mediaStage.classList.remove("is-video-playback");
+      if (canvasWrap) {
+        canvasWrap.style.opacity = "1";
+        canvasWrap.style.visibility = "";
+      }
+      return;
+    }
+
+    mediaStage.classList.add("is-video-playback");
+    if (!videoWrap) {
+      videoWrap = document.createElement("div");
+      videoWrap.setAttribute("data-draft-main-video", "true");
+      videoWrap.style.position = "absolute";
+      videoWrap.style.inset = "0";
+      videoWrap.style.display = "flex";
+      videoWrap.style.alignItems = "center";
+      videoWrap.style.justifyContent = "center";
+      videoWrap.style.background = "#0a0a0a";
+      videoWrap.style.pointerEvents = "none";
+      mediaStage.appendChild(videoWrap);
+    }
+
+    videoWrap.innerHTML = "";
+    const video = document.createElement("video");
+    video.dataset.loopMode = playback.loopMode || "loop";
+    video.dataset.playbackSpeed = String(playback.speed || 1);
+    video.autoplay = true;
+    video.muted = true;
+    video.playsInline = true;
+    video.preload = "auto";
+    video.style.width = "100%";
+    video.style.height = "100%";
+    video.style.display = "block";
+    video.style.objectFit = "contain";
+    video.style.background = "#0a0a0a";
+    const source = document.createElement("source");
+    source.src = playbackUrl;
+    source.type = /\.webm$/i.test(playbackUrl) ? "video/webm" : /\.ogg$/i.test(playbackUrl) ? "video/ogg" : "video/mp4";
+    video.appendChild(source);
+    videoWrap.appendChild(video);
+    setupVideo(video);
+    video.load();
+
+    if (canvasWrap) {
+      canvasWrap.style.opacity = "0";
+      canvasWrap.style.visibility = "hidden";
+    }
+  }
+
   function getSectionPlacementClass(sectionNode, layer) {
     if (layer.layout === "full-background") return "section-cinematic section-cinematic-full";
     if (sectionNode.classList.contains("align-right")) return "section-cinematic section-cinematic-card section-cinematic-left";
@@ -960,6 +1020,7 @@ function buildStandalonePreviewRuntimeScript(previewData) {
     applySeo();
     applyContent();
     applyCinematic();
+    applyMediaPlayback();
     applyExperience();
   }
 
@@ -2570,6 +2631,7 @@ function syncMainMediaPreview(frameDocument) {
   video.appendChild(source);
   videoWrap.appendChild(video);
   setupPreviewCinematicVideo(video);
+  video.load();
 
   if (canvasWrap) {
     canvasWrap.style.opacity = "0";
@@ -2778,6 +2840,7 @@ function buildMediaPlaybackPayload() {
     enabled: Boolean(mediaDraft?.mediaPlayback?.enabled),
     loopMode: String(mediaDraft?.mediaPlayback?.loopMode || "loop") === "boomerang" ? "boomerang" : "loop",
     speed: Math.min(2.5, Math.max(0.25, Number(mediaDraft?.mediaPlayback?.speed || 1) || 1)),
+    url: buildMediaPreviewVideoUrl() || "",
   };
 }
 
