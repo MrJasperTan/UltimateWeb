@@ -1463,7 +1463,6 @@ function getMediaModalVideoCard() {
 
 function openHeroModal() {
   const hero = editableContent.hero;
-  const playback = mediaDraft?.mediaPlayback || ensureMediaPlayback();
   openModal({
     type: "hero",
     title: "Hero",
@@ -1473,15 +1472,6 @@ function openHeroModal() {
         ${createTextField("title", "Title", hero.title, 2)}
         ${createTextField("sub", "Subtitle", hero.sub, 4)}
         ${createTextField("trustLine", "Trust Line", hero.trustLine, 3)}
-      </div>
-      <div class="stack-card">
-        <div class="field-row compact">
-          ${createSelectField("mediaPlayback-mobileFit", "Mobile Main Video", playback.mobileFit, [
-            { value: "contain", label: "Contain" },
-            { value: "cover", label: "Cover Screen" },
-          ])}
-        </div>
-        <p class="field-note">When Autoplay Full Video is enabled, choose whether the main video letterboxes on mobile or fills the screen by cropping.</p>
       </div>
     `,
   });
@@ -1627,6 +1617,10 @@ function openMediaModal() {
             { value: "loop", label: "Loop" },
             { value: "boomerang", label: "Boomerang" },
           ])}
+          ${createSelectField("mediaPlayback-mobileFit", "Mobile Fit", playback.mobileFit, [
+            { value: "contain", label: "Contain" },
+            { value: "cover", label: "Cover Screen" },
+          ])}
           <label>
             <span>Speed</span>
             <input type="number" name="mediaPlayback-speed" min="0.25" max="2.5" step="0.1" value="${escapeHtml(playback.speed || 1)}" />
@@ -1733,10 +1727,6 @@ async function applyModalChanges() {
     editableContent.hero.title = String(formData.get("title") || "").trim();
     editableContent.hero.sub = String(formData.get("sub") || "").trim();
     editableContent.hero.trustLine = String(formData.get("trustLine") || "").trim();
-    mediaDraft.mediaPlayback = {
-      ...(mediaDraft?.mediaPlayback || ensureMediaPlayback()),
-      mobileFit: String(formData.get("mediaPlayback-mobileFit") || "contain").trim() === "cover" ? "cover" : "contain",
-    };
   }
 
   if (activeModal.type === "marquee") {
@@ -1788,6 +1778,7 @@ async function applyModalChanges() {
       enabled: formData.get("mediaPlayback-enabled") === "on",
       loopMode: String(formData.get("mediaPlayback-loopMode") || "loop").trim() === "boomerang" ? "boomerang" : "loop",
       speed: Math.min(2.5, Math.max(0.25, Number(formData.get("mediaPlayback-speed") || 1) || 1)),
+      mobileFit: String(formData.get("mediaPlayback-mobileFit") || "contain").trim() === "cover" ? "cover" : "contain",
     };
     setStatus(
       mediaDraft.mediaPlayback.enabled ? "Media stage set to full-video playback." : "Media stage set to frame-scrolling playback.",
