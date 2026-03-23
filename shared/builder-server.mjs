@@ -811,6 +811,99 @@ export function startBuilderServer({ appDir, publicDir }) {
     };
   }
 
+  async function runDraftPreviewBuild({
+    userId,
+    sourceSlug,
+    previewRoot,
+    siteConfig,
+    contentOverrides,
+    rawCinematicLayers,
+    experienceUpgrades,
+    mediaPlayback,
+    files = {},
+    startPrompt,
+    endPrompt,
+    videoPrompt,
+    publicSiteUrl,
+  }) {
+    const uploadedStartImage = pickUploadedFile(files, "startImage", isUploadedImage);
+    const uploadedEndImage = pickUploadedFile(files, "endImage", isUploadedImage);
+    const uploadedVideo = pickUploadedFile(files, "video", isUploadedVideo);
+    const existingMedia = resolveEditSourceMedia(sourceSlug);
+    const hasReplacementVideo = Boolean(uploadedVideo?.path);
+    const startImage = uploadedStartImage?.path || (!hasReplacementVideo ? existingMedia?.startImage : null) || null;
+    const endImage = uploadedEndImage?.path || (!hasReplacementVideo ? existingMedia?.endImage : null) || null;
+    const previewVideoPath = uploadedVideo?.path || existingMedia?.videoPath || null;
+    if (!previewVideoPath) {
+      throw new Error("A draft preview build requires either an uploaded video or an existing video on the source site.");
+    }
+
+    const cinematicLayers = await hydrateCinematicLayersForBuild(userId, rawCinematicLayers, files);
+    const args = [
+      pipelineScript,
+      "--topic",
+      String(siteConfig.topic || siteConfig.title || sourceSlug).trim(),
+      "--slug",
+      sourceSlug,
+      "--out-dir",
+      previewRoot,
+      "--page-mode",
+      normalizePageMode(siteConfig.pageMode),
+      "--video-path",
+      previewVideoPath,
+      "--edit-source-slug",
+      sourceSlug,
+      "--content-overrides",
+      JSON.stringify(contentOverrides || siteConfig.editableContent || {}),
+      "--experience-upgrades",
+      JSON.stringify(experienceUpgrades || siteConfig.experienceUpgrades || {}),
+      "--media-playback",
+      JSON.stringify(mediaPlayback || siteConfig.mediaPlayback || {}),
+    ];
+
+    if (startImage) args.push("--start-image", startImage);
+    if (endImage) args.push("--end-image", endImage);
+    if (siteConfig.existingWebsite) args.push("--source-url", siteConfig.existingWebsite);
+    if (publicSiteUrl) args.push("--site-url", publicSiteUrl);
+    if (startPrompt || siteConfig.startPrompt) args.push("--start-prompt", startPrompt || siteConfig.startPrompt);
+    if (endPrompt || siteConfig.endPrompt) args.push("--end-prompt", endPrompt || siteConfig.endPrompt);
+    if (videoPrompt || siteConfig.videoPrompt) args.push("--motion-prompt", videoPrompt || siteConfig.videoPrompt);
+    if (cinematicLayers) args.push("--cinematic-layers", JSON.stringify(cinematicLayers));
+
+    for (const color of parseColorList(siteConfig.colors)) {
+      args.push("--color", color);
+    }
+
+    const child = spawn("node", args, {
+      cwd: rootDir,
+      env: { ...process.env, FAL_KEY: process.env.FAL_KEY || "" },
+    });
+
+    let logs = "";
+    await new Promise((resolvePromise, rejectPromise) => {
+      child.stdout.on("data", (chunk) => {
+        logs += String(chunk || "");
+      });
+      child.stderr.on("data", (chunk) => {
+        logs += String(chunk || "");
+      });
+      child.on("error", rejectPromise);
+      child.on("close", (code) => {
+        if (code === 0) {
+          resolvePromise();
+          return;
+        }
+        rejectPromise(new Error(logs.trim() || `Draft preview build failed with exit code ${code}`));
+      });
+    });
+
+    const previewSiteDir = join(previewRoot, sourceSlug);
+    if (!existsSync(join(previewSiteDir, "index.html"))) {
+      throw new Error("Draft preview build finished without producing an index.html file.");
+    }
+    return previewSiteDir;
+  }
+
   function buildDraftPreviewRuntimeScript(previewData) {
     const serializedData = JSON.stringify(previewData).replace(/</g, "\\u003c");
     return `
@@ -2369,6 +2462,12 @@ export function startBuilderServer({ appDir, publicDir }) {
         }
 
         const publicSiteUrl = cleanOptionalString(body.fields.siteUrl ?? siteConfig.publicSiteUrl);
+        const uploadedStartImage = pickUploadedFile(body.files, "startImage", isUploadedImage) || cleanOptionalString(body.fields.startImage);
+        const uploadedEndImage = pickUploadedFile(body.files, "endImage", isUploadedImage) || cleanOptionalString(body.fields.endImage);
+        const uploadedVideo = pickUploadedFile(body.files, "video", isUploadedVideo) || cleanOptionalString(body.fields.video);
+        const startPrompt = cleanOptionalString(body.fields.startPrompt ?? siteConfig.startPrompt);
+        const endPrompt = cleanOptionalString(body.fields.endPrompt ?? siteConfig.endPrompt);
+        const videoPrompt = cleanOptionalString(body.fields.videoPrompt ?? siteConfig.videoPrompt);
         const contentOverrides = cleanOptionalString(body.fields.contentOverrides)
           ? JSON.parse(String(body.fields.contentOverrides))
           : siteConfig.editableContent;
@@ -2381,6 +2480,37 @@ export function startBuilderServer({ appDir, publicDir }) {
         const mediaPlayback = cleanOptionalString(body.fields.mediaPlayback)
           ? normalizeMediaPlayback(JSON.parse(String(body.fields.mediaPlayback)))
           : normalizeMediaPlayback(siteConfig.mediaPlayback);
+        const previewRoot = body.uploadDir || mkdtempSync(join(tmpdir(), "ultimateweb-preview-"));
+        const hasDraftMediaUploads = Boolean(
+          (uploadedStartImage && typeof uploadedStartImage === "object" && uploadedStartImage.path)
+          || (uploadedEndImage && typeof uploadedEndImage === "object" && uploadedEndImage.path)
+          || (uploadedVideo && typeof uploadedVideo === "object" && uploadedVideo.path)
+        );
+
+        if (hasDraftMediaUploads) {
+          const previewSiteDir = await runDraftPreviewBuild({
+            userId: session.user.id,
+            sourceSlug: slug,
+            previewRoot,
+            siteConfig,
+            contentOverrides,
+            rawCinematicLayers,
+            experienceUpgrades,
+            mediaPlayback,
+            files: body.files,
+            startPrompt,
+            endPrompt,
+            videoPrompt,
+            publicSiteUrl,
+          });
+          const previewId = registerDraftPreview(session.user.id, previewRoot, previewSiteDir);
+          sendJson(response, 200, {
+            previewId,
+            previewUrl: `/draft-previews/${previewId}/index.html`,
+          });
+          return;
+        }
+
         const previewId = randomUUID();
         const cinematicLayers = await resolvePreviewCinematicLayers(session.user.id, rawCinematicLayers, body.files, previewId);
         const previewHtml = renderDraftPreviewHtml(slug, {
@@ -2391,7 +2521,6 @@ export function startBuilderServer({ appDir, publicDir }) {
           experienceUpgrades,
           mediaPlayback,
         });
-        const previewRoot = body.uploadDir || mkdtempSync(join(tmpdir(), "ultimateweb-preview-"));
         draftPreviews.set(previewId, {
           userId: session.user.id,
           rootDir: previewRoot,
@@ -2568,7 +2697,11 @@ export function startBuilderServer({ appDir, publicDir }) {
 
       const requestedPath = rest.length ? rest.join("/") : "index.html";
       if (requestedPath === "index.html" || !requestedPath) {
-        sendHtml(response, 200, preview.html || "");
+        if (preview.html) {
+          sendHtml(response, 200, preview.html);
+          return;
+        }
+        serveFile(response, join(preview.siteDir, "index.html"));
         return;
       }
       if (requestedPath.startsWith("assets/")) {

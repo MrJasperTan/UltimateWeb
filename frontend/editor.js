@@ -1646,7 +1646,7 @@ function openCinematicModal() {
   });
 }
 
-function applyModalChanges() {
+async function applyModalChanges() {
   if (!activeModal) return;
   const formData = new FormData();
   modalBody.querySelectorAll("input, textarea, select").forEach((field) => {
@@ -1764,6 +1764,11 @@ function applyModalChanges() {
     experienceDraft.audio.enabled = formData.get("audio-enabled") === "on";
     experienceDraft.depthHero.enabled = formData.get("depth-enabled") === "on";
     setStatus("Experience upgrade settings updated.", "These settings are applied when you publish the next edited version.");
+  }
+
+  if (activeModal.type === "media" && hasDraftMediaOverrides()) {
+    setStatus("Refreshing draft preview...", "Building temporary media assets for the editor preview.");
+    await refreshDraftPreviewFrame();
   }
 
   applyPreview();
@@ -2880,6 +2885,59 @@ function buildDraftPayload() {
   return payload;
 }
 
+function buildDraftPreviewPayload() {
+  const payload = new FormData();
+  payload.append("siteUrl", seoDraft.publicSiteUrl || "");
+  payload.append("startPrompt", mediaDraft.startPrompt || "");
+  payload.append("endPrompt", mediaDraft.endPrompt || "");
+  payload.append("videoPrompt", mediaDraft.videoPrompt || "");
+  payload.append("contentOverrides", JSON.stringify(editableContent));
+  payload.append("cinematicLayers", JSON.stringify(buildCinematicLayersPayload()));
+  payload.append("experienceUpgrades", JSON.stringify(experienceDraft));
+  payload.append("mediaPlayback", JSON.stringify(buildMediaPlaybackPayload()));
+  if (mediaDraft.startImageFile) payload.append("startImage", mediaDraft.startImageFile);
+  if (mediaDraft.endImageFile) payload.append("endImage", mediaDraft.endImageFile);
+  if (mediaDraft.videoFile) payload.append("video", mediaDraft.videoFile);
+  if (cinematicDraft.hero.file) payload.append("cinematic-hero-video", cinematicDraft.hero.file);
+  cinematicDraft.sections.forEach((layer, index) => {
+    if (layer.file) payload.append(`cinematic-section-${index}-video`, layer.file);
+  });
+  return payload;
+}
+
+async function requestDraftPreview() {
+  const response = await apiFetch(`/api/sites/${encodeURIComponent(siteConfig.slug)}/preview`, {
+    method: "POST",
+    body: buildDraftPreviewPayload(),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.error || "Failed to prepare draft preview");
+  }
+  return data;
+}
+
+async function loadPreviewIntoFrame(previewPath) {
+  const previewUrl = toPublicAssetUrl(previewPath);
+  if (!previewUrl) {
+    throw new Error("The site preview URL is missing.");
+  }
+  siteSourcePreviewUrl = previewUrl;
+  siteSourceHtml = await fetchText(previewUrl);
+  siteFrame.removeAttribute("srcdoc");
+  siteFrame.src = previewUrl;
+}
+
+function hasDraftMediaOverrides() {
+  return Boolean(mediaDraft?.startImageFile || mediaDraft?.endImageFile || mediaDraft?.videoFile);
+}
+
+async function refreshDraftPreviewFrame() {
+  const draftPreview = await requestDraftPreview();
+  await loadPreviewIntoFrame(draftPreview.previewUrl);
+  return draftPreview;
+}
+
 function openDraftPreviewWindow() {
   const previewWindow = window.open("", "_blank");
   if (!previewWindow) return null;
@@ -2961,7 +3019,13 @@ async function openFullPreview() {
   const previewWindow = openDraftPreviewWindow();
   fullPreviewButton.disabled = true;
   setStatus("Preparing full preview...", "Opening the current live preview state in a standalone tab.");
-  openLocalFullPreview(previewWindow);
+  const draftPreview = await requestDraftPreview();
+  const targetWindow = previewWindow || window.open("", "_blank");
+  if (!targetWindow) {
+    throw new Error("The preview tab was blocked.");
+  }
+  targetWindow.location.replace(toPublicAssetUrl(draftPreview.previewUrl));
+  setStatus("Full preview ready.", "Opened a standalone temporary preview from the current unsaved draft.");
 }
 
 async function loadSite() {
@@ -2991,14 +3055,7 @@ async function loadSite() {
   setStatus("Preview ready.", "Tap a circle on the site to edit its content.");
   fullPreviewButton.disabled = false;
 
-  const previewUrl = getSitePreviewUrl(siteConfig);
-  if (!previewUrl) {
-    throw new Error("The site preview URL is missing.");
-  }
-  const previewHtml = await fetchText(previewUrl);
-  siteSourceHtml = previewHtml;
-  siteSourcePreviewUrl = previewUrl;
-  siteFrame.srcdoc = buildPreviewSrcdoc(previewHtml, previewUrl);
+  await loadPreviewIntoFrame(getSitePreviewUrl(siteConfig));
 }
 
 siteFrame.addEventListener("load", () => {
@@ -3014,7 +3071,13 @@ siteFrame.addEventListener("load", () => {
 window.addEventListener("resize", renderHandles);
 modalCloseButton.addEventListener("click", closeModal);
 modalCancelButton.addEventListener("click", closeModal);
-modalSaveButton.addEventListener("click", applyModalChanges);
+modalSaveButton.addEventListener("click", async () => {
+  try {
+    await applyModalChanges();
+  } catch (error) {
+    setStatus(`Could not apply changes: ${error.message}`);
+  }
+});
 modalBackdrop.addEventListener("click", (event) => {
   if (event.target === modalBackdrop) closeModal();
 });
