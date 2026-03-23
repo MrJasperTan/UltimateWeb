@@ -2277,8 +2277,9 @@ export function startBuilderServer({ appDir, publicDir }) {
           ? resolveEditSourceMedia(editSourceSlug)
           : null;
         const cinematicLayers = await hydrateCinematicLayersForBuild(session.user.id, rawCinematicLayers, body.files);
-        const startImage = uploadedStartImage || existingMedia?.startImage || null;
-        const endImage = uploadedEndImage || existingMedia?.endImage || null;
+        const hasReplacementVideo = Boolean(uploadedVideo);
+        const startImage = uploadedStartImage || (!hasReplacementVideo ? existingMedia?.startImage : null) || null;
+        const endImage = uploadedEndImage || (!hasReplacementVideo ? existingMedia?.endImage : null) || null;
         const video = uploadedVideo || existingMedia?.videoPath || null;
 
         logBackend(
