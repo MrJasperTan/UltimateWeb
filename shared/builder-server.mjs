@@ -2486,11 +2486,7 @@ export function startBuilderServer({ appDir, publicDir }) {
           ? normalizeMediaPlayback(JSON.parse(String(body.fields.mediaPlayback)))
           : normalizeMediaPlayback(siteConfig.mediaPlayback);
         const previewRoot = body.uploadDir || mkdtempSync(join(tmpdir(), "ultimateweb-preview-"));
-        const hasDraftMediaUploads = Boolean(
-          (uploadedStartImage && typeof uploadedStartImage === "object" && uploadedStartImage.path)
-          || (uploadedEndImage && typeof uploadedEndImage === "object" && uploadedEndImage.path)
-          || (uploadedVideo && typeof uploadedVideo === "object" && uploadedVideo.path)
-        );
+        const hasDraftMediaUploads = Boolean(uploadedStartImage || uploadedEndImage || uploadedVideo);
         logBackend(
           `POST /api/sites/${slug}/preview user=${session.user.id} ` +
           `draftMedia=${hasDraftMediaUploads} files=${JSON.stringify({
