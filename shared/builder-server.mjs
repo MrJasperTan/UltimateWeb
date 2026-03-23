@@ -837,6 +837,10 @@ export function startBuilderServer({ appDir, publicDir }) {
     if (!previewVideoPath) {
       throw new Error("A draft preview build requires either an uploaded video or an existing video on the source site.");
     }
+    logBackend(
+      `draft-preview-build source=${sourceSlug} video=${previewVideoPath} ` +
+      `startImage=${startImage || "derive"} endImage=${endImage || "derive"} previewRoot=${previewRoot}`
+    );
 
     const cinematicLayers = await hydrateCinematicLayersForBuild(userId, rawCinematicLayers, files);
     const args = [
@@ -901,6 +905,7 @@ export function startBuilderServer({ appDir, publicDir }) {
     if (!existsSync(join(previewSiteDir, "index.html"))) {
       throw new Error("Draft preview build finished without producing an index.html file.");
     }
+    logBackend(`draft-preview-build-complete source=${sourceSlug} previewSiteDir=${previewSiteDir}`);
     return previewSiteDir;
   }
 
@@ -2485,6 +2490,15 @@ export function startBuilderServer({ appDir, publicDir }) {
           (uploadedStartImage && typeof uploadedStartImage === "object" && uploadedStartImage.path)
           || (uploadedEndImage && typeof uploadedEndImage === "object" && uploadedEndImage.path)
           || (uploadedVideo && typeof uploadedVideo === "object" && uploadedVideo.path)
+        );
+        logBackend(
+          `POST /api/sites/${slug}/preview user=${session.user.id} ` +
+          `draftMedia=${hasDraftMediaUploads} files=${JSON.stringify({
+            keys: Object.keys(body.files || {}),
+            startImage: body.files.startImage?.filename || null,
+            endImage: body.files.endImage?.filename || null,
+            video: body.files.video?.filename || null,
+          })}`
         );
 
         if (hasDraftMediaUploads) {

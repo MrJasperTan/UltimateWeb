@@ -68,6 +68,7 @@ let mediaDraft = null;
 let cinematicDraft = null;
 let experienceDraft = null;
 let seoDraft = null;
+let draftPreviewState = null;
 let activeModal = null;
 let pollTimer = null;
 let handleTimer = null;
@@ -1188,6 +1189,10 @@ function resetSeoDraft() {
   };
 }
 
+function resetDraftPreviewState() {
+  draftPreviewState = null;
+}
+
 function extractSectionsFromPreview(frameDocument) {
   return Array.from(frameDocument.querySelectorAll(".scroll-section"))
     .filter((node) => node.id !== "cta")
@@ -1394,7 +1399,51 @@ function renderMediaCard(title, media, kind) {
   `;
 }
 
+function getActiveDraftPreviewBasePath() {
+  const previewUrl = String(draftPreviewState?.previewUrl || "").trim();
+  const match = previewUrl.match(/(\/draft-previews\/[^/]+)\//);
+  return match ? match[1] : "";
+}
+
+function buildDraftPreviewAssetUrl(relativePath) {
+  const basePath = getActiveDraftPreviewBasePath();
+  if (!basePath || !relativePath) return "";
+  return `${basePath}/${String(relativePath).replace(/^\/+/, "")}`;
+}
+
+function getMediaModalStartImageCard() {
+  const draftUrl = buildDraftPreviewAssetUrl("media/start-frame.webp");
+  if (draftUrl) {
+    return {
+      available: true,
+      filename: "start-frame.webp",
+      url: draftUrl,
+    };
+  }
+  return siteConfig?.media?.startImage || null;
+}
+
+function getMediaModalEndImageCard() {
+  const draftUrl = buildDraftPreviewAssetUrl("media/end-frame.webp");
+  if (draftUrl) {
+    return {
+      available: true,
+      filename: "end-frame.webp",
+      url: draftUrl,
+    };
+  }
+  return siteConfig?.media?.endImage || null;
+}
+
 function getMediaModalVideoCard() {
+  const draftUrl = buildDraftPreviewAssetUrl("media/transition.mp4");
+  if (draftUrl) {
+    return {
+      available: true,
+      filename: "transition.mp4",
+      url: draftUrl,
+    };
+  }
   if (mediaDraft?.videoFile instanceof File) {
     return {
       available: true,
@@ -1534,8 +1583,8 @@ function openMediaModal() {
     title: "Start, End, and Video Media",
     body: `
       <div class="media-preview-grid">
-        ${renderMediaCard("Start image", siteConfig.media?.startImage, "image")}
-        ${renderMediaCard("End image", siteConfig.media?.endImage, "image")}
+        ${renderMediaCard("Start image", getMediaModalStartImageCard(), "image")}
+        ${renderMediaCard("End image", getMediaModalEndImageCard(), "image")}
         ${renderMediaCard("Video", getMediaModalVideoCard(), "video")}
       </div>
       <div class="field-grid">
@@ -2922,6 +2971,9 @@ async function loadPreviewIntoFrame(previewPath) {
   if (!previewUrl) {
     throw new Error("The site preview URL is missing.");
   }
+  draftPreviewState = previewUrl.includes("/draft-previews/")
+    ? { previewUrl }
+    : null;
   siteSourcePreviewUrl = previewUrl;
   siteSourceHtml = await fetchText(previewUrl);
   siteFrame.removeAttribute("srcdoc");
@@ -3048,6 +3100,7 @@ async function loadSite() {
   resetCinematicDraft();
   resetExperienceDraft();
   resetSeoDraft();
+  resetDraftPreviewState();
   renderExperienceUpsells();
 
   editorTitle.textContent = editableContent.hero.title || siteConfig.title;
