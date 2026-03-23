@@ -63,6 +63,7 @@ Optional:
   --edit-source-slug Source site slug when creating a new version
   --cinematic-layers JSON string with hero/section video layer settings
   --experience-upgrades JSON string with guided scroll, audio, and depth settings
+  --media-playback JSON string controlling frame-scroll vs autoplay video hero playback
   --start-prompt     Override first-frame prompt
   --end-prompt       Override last-frame prompt
   --motion-prompt    Override video motion prompt
@@ -564,6 +565,15 @@ function normalizePlaybackSpeed(value) {
   const speed = Number(value);
   if (!Number.isFinite(speed)) return 1;
   return Math.min(2.5, Math.max(0.25, Number(speed.toFixed(2))));
+}
+
+function normalizeMediaPlayback(rawValue) {
+  const raw = rawValue && typeof rawValue === "object" ? rawValue : {};
+  return {
+    enabled: Boolean(raw.enabled),
+    loopMode: normalizeLoopMode(raw.loopMode),
+    speed: normalizePlaybackSpeed(raw.speed),
+  };
 }
 
 function guessVideoExtension(value) {
@@ -2027,6 +2037,16 @@ ${renderCinematicVideoMarkup(layer)}
     </div>`;
 }
 
+function renderMainMediaVideoMarkup(mediaPlayback) {
+  if (!mediaPlayback?.enabled) return "";
+  return `
+    <div class="video-wrap">
+      <video id="main-stage-video" class="main-media-video" data-loop-mode="${escapeHtml(mediaPlayback.loopMode)}" data-playback-speed="${escapeHtml(mediaPlayback.speed)}" autoplay muted playsinline preload="auto">
+        <source src="media/transition.mp4" type="video/mp4" />
+      </video>
+    </div>`;
+}
+
 function renderSectionCinematicMarkup(layer, section, index) {
   if (!layer?.enabled) return "";
   const layoutClass = layer.layout === "full-background" ? "section-cinematic-full" : "section-cinematic-card";
@@ -2130,6 +2150,7 @@ function writeScaffoldFiles({
   siteUrl = null,
   cinematicLayers = null,
   experienceUpgrades = null,
+  mediaPlayback = null,
 }) {
   const businessProfile = buildBusinessProfile(topic, brand, sourceContext, research);
   const profile = applyContentOverrides(buildContentProfile(businessProfile, pageMode), contentOverrides);
@@ -2192,8 +2213,10 @@ function writeScaffoldFiles({
     sections: Array.isArray(cinematicLayers?.sections) ? cinematicLayers.sections : [],
   };
   const normalizedExperienceUpgrades = normalizeExperienceUpgrades(experienceUpgrades);
+  const normalizedMediaPlayback = normalizeMediaPlayback(mediaPlayback);
   const hasExperienceControls = normalizedExperienceUpgrades.guidedScroll.enabled || normalizedExperienceUpgrades.audio.enabled;
   const serializedExperienceUpgrades = JSON.stringify(normalizedExperienceUpgrades).replace(/</g, "\\u003c");
+  const serializedMediaPlayback = JSON.stringify(normalizedMediaPlayback).replace(/</g, "\\u003c");
   const sectionsHtml = renderedSections
     .map((section, index) =>
       renderSectionMarkup(
@@ -2261,6 +2284,7 @@ ${renderHeroCinematicMarkup(normalizedCinematicLayers.hero)}
 
   <div class="media-stage">
     <div class="canvas-wrap is-active"><canvas id="canvas"></canvas></div>
+${renderMainMediaVideoMarkup(normalizedMediaPlayback)}
   </div>
   <div id="dark-overlay"></div>
 
@@ -2635,6 +2659,15 @@ h1 {
 
 .media-stage,
 .canvas-wrap,
+#dark-overlay,
+.video-wrap {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+.media-stage,
+.canvas-wrap,
 #dark-overlay {
   position: fixed;
   inset: 0;
@@ -2642,7 +2675,8 @@ h1 {
 }
 
 .media-stage,
-.canvas-wrap {
+.canvas-wrap,
+.video-wrap {
   z-index: 5;
 }
 
@@ -2664,6 +2698,30 @@ h1 {
 
 .canvas-wrap {
   opacity: 1;
+}
+
+.video-wrap {
+  opacity: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0a0a0a;
+}
+
+.media-stage.is-video-playback .canvas-wrap {
+  opacity: 0;
+}
+
+.media-stage.is-video-playback .video-wrap {
+  opacity: 1;
+}
+
+.main-media-video {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+  background: #0a0a0a;
 }
 
 .marquee-wrap {
@@ -2879,6 +2937,7 @@ h1 {
 `;
 
   const js = `const EXPERIENCE_UPGRADES = ${serializedExperienceUpgrades};
+const MEDIA_PLAYBACK = ${serializedMediaPlayback};
 const FRAME_COUNT = ${frameCount};
 const FRAME_SPEED = 1.0;
 const FRAME_PATH = (index) => \`frames/frame_\${String(index + 1).padStart(4, "0")}.${frameExtension}\`;
@@ -2892,6 +2951,8 @@ const loaderPercent = document.getElementById("loader-percent");
 const scrollContainer = document.getElementById("scroll-container");
 const mediaStage = document.querySelector(".media-stage");
 const canvasWrap = document.querySelector(".canvas-wrap");
+const videoWrap = document.querySelector(".video-wrap");
+const mainStageVideo = document.getElementById("main-stage-video");
 const hero = document.querySelector(".hero-standalone");
 const darkOverlay = document.getElementById("dark-overlay");
 const cinematicVideos = Array.from(document.querySelectorAll("[data-cinematic-video]"));
@@ -3011,6 +3072,26 @@ function activateFallback() {
 }
 
 function setupMedia() {
+  if (MEDIA_PLAYBACK.enabled && mainStageVideo) {
+    mediaStage.classList.add("is-video-playback");
+    setupLoopingVideo(
+      mainStageVideo,
+      String(MEDIA_PLAYBACK.loopMode || "loop"),
+      Number(MEDIA_PLAYBACK.speed || 1)
+    );
+    setLoaderProgress(45, "45%");
+    if (mainStageVideo.readyState >= 2) {
+      fallbackReady = true;
+      finishLoader();
+    } else {
+      mainStageVideo.addEventListener("loadeddata", () => {
+        fallbackReady = true;
+        finishLoader();
+      }, { once: true });
+    }
+    return;
+  }
+
   setLoaderProgress(8, "8%");
   ensureFrame(0);
   ensureFrameWindow(0);
@@ -3425,6 +3506,7 @@ function placeSections() {
 }
 
 function setupFrameBinding() {
+  if (MEDIA_PLAYBACK.enabled) return;
   ScrollTrigger.create({
     trigger: scrollContainer,
     start: "top top",
@@ -3585,7 +3667,7 @@ function setupCinematicVideos() {
 
 window.addEventListener("resize", () => {
   resizeCanvas();
-  drawFallbackFrame(currentFrame);
+  if (!MEDIA_PLAYBACK.enabled) drawFallbackFrame(currentFrame);
 });
 
 resizeCanvas();
@@ -3618,6 +3700,7 @@ setupCinematicParallax();
     editableContent,
     cinematicLayers: normalizedCinematicLayers,
     experienceUpgrades: normalizedExperienceUpgrades,
+    mediaPlayback: normalizedMediaPlayback,
     seo: {
       title: seoTitle,
       description: seoDescription,
@@ -3891,6 +3974,9 @@ async function main() {
   const rawExperienceUpgrades = cleanOptionalString(options["experience-upgrades"])
     ? JSON.parse(String(options["experience-upgrades"]))
     : null;
+  const rawMediaPlayback = cleanOptionalString(options["media-playback"])
+    ? JSON.parse(String(options["media-playback"]))
+    : null;
   const startPrompt = applyChangeRequest(String(options["start-prompt"] || defaults.startPrompt), changeRequest);
   const endPrompt = applyChangeRequest(String(options["end-prompt"] || defaults.endPrompt), changeRequest);
   const motionPrompt = applyChangeRequest(String(options["motion-prompt"] || defaults.motionPrompt), changeRequest);
@@ -3939,13 +4025,15 @@ async function main() {
       metadata.existingVideoUrl = providedVideoUrl;
       console.log(`Using existing video URL: ${providedVideoUrl}`);
     } else {
-      videoPath = resolve(String(options["video-path"]));
-      if (!existsSync(videoPath)) {
-        throw new Error(`--video-path not found: ${videoPath}`);
+      const providedVideoPath = resolve(String(options["video-path"]));
+      if (!existsSync(providedVideoPath)) {
+        throw new Error(`--video-path not found: ${providedVideoPath}`);
       }
+      videoPath = outputVideoPath;
+      await copyLocalFileToOutput(providedVideoPath, outputVideoPath);
       metadata.usedExistingVideo = true;
-      metadata.existingVideoPath = videoPath;
-      console.log(`Using existing video: ${videoPath}`);
+      metadata.existingVideoPath = providedVideoPath;
+      console.log(`Using existing video: ${providedVideoPath}`);
     }
 
     if (!providedStartImage || !providedEndImage) {
@@ -4088,6 +4176,7 @@ async function main() {
     siteUrl,
     cinematicLayers,
     experienceUpgrades: rawExperienceUpgrades,
+    mediaPlayback: rawMediaPlayback,
   });
 
   metadata.startImageUrl = startImageUrl;
@@ -4104,6 +4193,7 @@ async function main() {
   metadata.editableContent = scaffold.editableContent;
   metadata.cinematicLayers = scaffold.cinematicLayers;
   metadata.experienceUpgrades = scaffold.experienceUpgrades;
+  metadata.mediaPlayback = scaffold.mediaPlayback;
   metadata.seo = scaffold.seo;
   metadata.sourceContext = sourceContext;
   metadata.research = research || {

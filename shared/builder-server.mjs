@@ -483,6 +483,15 @@ function normalizeExperienceUpgrades(raw) {
   };
 }
 
+function normalizeMediaPlayback(raw) {
+  const playback = raw && typeof raw === "object" ? raw : {};
+  return {
+    enabled: Boolean(playback.enabled),
+    loopMode: String(playback.loopMode || "loop").trim() === "boomerang" ? "boomerang" : "loop",
+    speed: Math.min(2.5, Math.max(0.25, Number(playback.speed || 1) || 1)),
+  };
+}
+
 function parseExperienceUpgradesFromSite(siteRoot) {
   const htmlPath = join(siteRoot, "index.html");
   if (!existsSync(htmlPath) || !statSync(htmlPath).isFile()) return null;
@@ -1623,6 +1632,7 @@ export function startBuilderServer({ appDir, publicDir }) {
     const editableContent = metadata.editableContent || parseEditableContentFromSite(siteRoot, metadata);
     const rawExperienceUpgrades = metadata.experienceUpgrades || parseExperienceUpgradesFromSite(siteRoot);
     const experienceUpgrades = rawExperienceUpgrades ? normalizeExperienceUpgrades(rawExperienceUpgrades) : null;
+    const mediaPlayback = normalizeMediaPlayback(metadata.mediaPlayback);
     const cinematicLayers = metadata.cinematicLayers
       ? {
           hero: metadata.cinematicLayers.hero
@@ -1666,6 +1676,7 @@ export function startBuilderServer({ appDir, publicDir }) {
       seo: metadata.seo || null,
       cinematicLayers,
       experienceUpgrades,
+      mediaPlayback,
       editableContent,
       media: {
         startImage: currentMedia?.startImage
@@ -1892,6 +1903,7 @@ export function startBuilderServer({ appDir, publicDir }) {
       ["--content-overrides", options.contentOverrides ? JSON.stringify(options.contentOverrides) : null],
       ["--cinematic-layers", options.cinematicLayers ? JSON.stringify(options.cinematicLayers) : null],
       ["--experience-upgrades", options.experienceUpgrades ? JSON.stringify(options.experienceUpgrades) : null],
+      ["--media-playback", options.mediaPlayback ? JSON.stringify(options.mediaPlayback) : null],
     ];
 
     for (const [flag, value] of optionalArgs) {
@@ -2188,6 +2200,9 @@ export function startBuilderServer({ appDir, publicDir }) {
         const experienceUpgrades = cleanOptionalString(body.fields.experienceUpgrades)
           ? JSON.parse(String(body.fields.experienceUpgrades))
           : null;
+        const mediaPlayback = cleanOptionalString(body.fields.mediaPlayback)
+          ? normalizeMediaPlayback(JSON.parse(String(body.fields.mediaPlayback)))
+          : normalizeMediaPlayback(null);
         const colors = parseColorList(body.fields.colors);
         if (editSourceSlug) {
           const editableSite = await findGeneratedSiteRecord(session.user.id, editSourceSlug);
@@ -2246,6 +2261,7 @@ export function startBuilderServer({ appDir, publicDir }) {
           contentOverrides,
           cinematicLayers,
           experienceUpgrades,
+          mediaPlayback,
         });
         sendJson(response, 202, {
           id: job.id,
@@ -2300,6 +2316,9 @@ export function startBuilderServer({ appDir, publicDir }) {
         const experienceUpgrades = cleanOptionalString(body.fields.experienceUpgrades)
           ? JSON.parse(String(body.fields.experienceUpgrades))
           : siteConfig.experienceUpgrades;
+        const mediaPlayback = cleanOptionalString(body.fields.mediaPlayback)
+          ? normalizeMediaPlayback(JSON.parse(String(body.fields.mediaPlayback)))
+          : normalizeMediaPlayback(siteConfig.mediaPlayback);
         const previewId = randomUUID();
         const cinematicLayers = await resolvePreviewCinematicLayers(session.user.id, rawCinematicLayers, body.files, previewId);
         const previewHtml = renderDraftPreviewHtml(slug, {
@@ -2308,6 +2327,7 @@ export function startBuilderServer({ appDir, publicDir }) {
           editableContent: contentOverrides,
           cinematicLayers,
           experienceUpgrades,
+          mediaPlayback,
         });
         const previewRoot = body.uploadDir || mkdtempSync(join(tmpdir(), "ultimateweb-preview-"));
         draftPreviews.set(previewId, {

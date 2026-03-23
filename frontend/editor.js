@@ -1069,6 +1069,14 @@ function ensureCinematicLayers(rawLayers, sections) {
   };
 }
 
+function ensureMediaPlayback(rawPlayback) {
+  return {
+    enabled: Boolean(rawPlayback?.enabled),
+    loopMode: String(rawPlayback?.loopMode || "loop").trim() === "boomerang" ? "boomerang" : "loop",
+    speed: Math.min(2.5, Math.max(0.25, Number(rawPlayback?.speed || 1) || 1)),
+  };
+}
+
 function resetMediaDraft() {
   mediaDraft = {
     startPrompt: siteConfig?.startPrompt || "",
@@ -1077,6 +1085,8 @@ function resetMediaDraft() {
     startImageFile: null,
     endImageFile: null,
     videoFile: null,
+    videoPreviewObjectUrl: "",
+    mediaPlayback: ensureMediaPlayback(siteConfig?.mediaPlayback),
   };
 }
 
@@ -1186,11 +1196,30 @@ function buildPreviewVideoUrl(layer) {
   return toPublicAssetUrl(layer?.sourceUrl || "");
 }
 
+function buildMediaPreviewVideoUrl() {
+  if (!mediaDraft) return toPublicAssetUrl(siteConfig?.media?.video?.url || "");
+  if (mediaDraft.videoFile instanceof File) {
+    if (!mediaDraft.videoPreviewObjectUrl) {
+      mediaDraft.videoPreviewObjectUrl = URL.createObjectURL(mediaDraft.videoFile);
+      previewObjectUrls.add(mediaDraft.videoPreviewObjectUrl);
+    }
+    return mediaDraft.videoPreviewObjectUrl;
+  }
+  return toPublicAssetUrl(siteConfig?.media?.video?.url || "");
+}
+
 function revokeLayerPreviewUrl(layer) {
   if (!layer?.previewObjectUrl) return;
   URL.revokeObjectURL(layer.previewObjectUrl);
   previewObjectUrls.delete(layer.previewObjectUrl);
   layer.previewObjectUrl = "";
+}
+
+function revokeMediaPreviewUrl() {
+  if (!mediaDraft?.videoPreviewObjectUrl) return;
+  URL.revokeObjectURL(mediaDraft.videoPreviewObjectUrl);
+  previewObjectUrls.delete(mediaDraft.videoPreviewObjectUrl);
+  mediaDraft.videoPreviewObjectUrl = "";
 }
 
 function releaseAllPreviewUrls() {
@@ -1427,6 +1456,7 @@ function openCtaModal() {
 }
 
 function openMediaModal() {
+  const playback = mediaDraft?.mediaPlayback || ensureMediaPlayback();
   openModal({
     type: "media",
     title: "Start, End, and Video Media",
@@ -1447,6 +1477,23 @@ function openMediaModal() {
       </div>
       <div class="field-grid">
         ${createFileField("video", "Replace Video", "Leave empty to keep the current video.")}
+      </div>
+      <div class="stack-card">
+        <label class="field-toggle">
+          <input type="checkbox" name="mediaPlayback-enabled" ${playback.enabled ? "checked" : ""} />
+          <span>Autoplay Full Video</span>
+        </label>
+        <p class="field-note">Default behavior keeps the frame-scrolling hero. Turn this on to play the full video in the media stage instead.</p>
+        <div class="field-row compact">
+          ${createSelectField("mediaPlayback-loopMode", "Playback", playback.loopMode, [
+            { value: "loop", label: "Loop" },
+            { value: "boomerang", label: "Boomerang" },
+          ])}
+          <label>
+            <span>Speed</span>
+            <input type="number" name="mediaPlayback-speed" min="0.25" max="2.5" step="0.1" value="${escapeHtml(playback.speed || 1)}" />
+          </label>
+        </div>
       </div>
     `,
   });
@@ -1589,7 +1636,20 @@ function applyModalChanges() {
     mediaDraft.videoPrompt = String(formData.get("videoPrompt") || "").trim();
     mediaDraft.startImageFile = formData.get("startImage") instanceof File ? formData.get("startImage") : null;
     mediaDraft.endImageFile = formData.get("endImage") instanceof File ? formData.get("endImage") : null;
-    mediaDraft.videoFile = formData.get("video") instanceof File ? formData.get("video") : null;
+    const nextVideoFile = formData.get("video");
+    if (nextVideoFile instanceof File && nextVideoFile.size > 0) {
+      revokeMediaPreviewUrl();
+      mediaDraft.videoFile = nextVideoFile;
+    }
+    mediaDraft.mediaPlayback = {
+      enabled: formData.get("mediaPlayback-enabled") === "on",
+      loopMode: String(formData.get("mediaPlayback-loopMode") || "loop").trim() === "boomerang" ? "boomerang" : "loop",
+      speed: Math.min(2.5, Math.max(0.25, Number(formData.get("mediaPlayback-speed") || 1) || 1)),
+    };
+    setStatus(
+      mediaDraft.mediaPlayback.enabled ? "Media stage set to full-video playback." : "Media stage set to frame-scrolling playback.",
+      "Publish to carry the selected media playback mode into the next version."
+    );
   }
 
   if (activeModal.type === "cinematic") {
@@ -2451,9 +2511,70 @@ function applyPreview() {
   }
 
   applyCinematicPreview(frameDocument);
+  syncMainMediaPreview(frameDocument);
   applyExperiencePreview(frameDocument);
 
   renderHandles();
+}
+
+function syncMainMediaPreview(frameDocument) {
+  const mediaStage = frameDocument.querySelector(".media-stage");
+  if (!mediaStage) return;
+
+  const canvasWrap = mediaStage.querySelector(".canvas-wrap");
+  const playback = mediaDraft?.mediaPlayback || ensureMediaPlayback();
+  const videoUrl = buildMediaPreviewVideoUrl();
+  const shouldUseVideoPlayback = Boolean(playback.enabled && videoUrl);
+  let videoWrap = mediaStage.querySelector("[data-editor-main-video-wrap='true']");
+
+  if (!shouldUseVideoPlayback) {
+    videoWrap?.remove();
+    if (canvasWrap) {
+      canvasWrap.style.opacity = "1";
+      canvasWrap.style.visibility = "";
+    }
+    mediaStage.classList.remove("is-video-playback");
+    return;
+  }
+
+  mediaStage.classList.add("is-video-playback");
+  if (!videoWrap) {
+    videoWrap = frameDocument.createElement("div");
+    videoWrap.dataset.editorMainVideoWrap = "true";
+    videoWrap.style.position = "absolute";
+    videoWrap.style.inset = "0";
+    videoWrap.style.display = "flex";
+    videoWrap.style.alignItems = "center";
+    videoWrap.style.justifyContent = "center";
+    videoWrap.style.background = "#0a0a0a";
+    videoWrap.style.pointerEvents = "none";
+    mediaStage.appendChild(videoWrap);
+  }
+
+  videoWrap.innerHTML = "";
+  const video = frameDocument.createElement("video");
+  video.dataset.loopMode = playback.loopMode || "loop";
+  video.dataset.playbackSpeed = String(playback.speed || 1);
+  video.autoplay = true;
+  video.muted = true;
+  video.playsInline = true;
+  video.preload = "auto";
+  video.style.width = "100%";
+  video.style.height = "100%";
+  video.style.display = "block";
+  video.style.objectFit = "contain";
+  video.style.background = "#0a0a0a";
+  const source = frameDocument.createElement("source");
+  source.src = videoUrl;
+  source.type = /\.webm$/i.test(videoUrl) ? "video/webm" : /\.ogg$/i.test(videoUrl) ? "video/ogg" : "video/mp4";
+  video.appendChild(source);
+  videoWrap.appendChild(video);
+  setupPreviewCinematicVideo(video);
+
+  if (canvasWrap) {
+    canvasWrap.style.opacity = "0";
+    canvasWrap.style.visibility = "hidden";
+  }
 }
 
 function getHandleDescriptors() {
@@ -2652,6 +2773,14 @@ function buildCinematicLayersPayload() {
   };
 }
 
+function buildMediaPlaybackPayload() {
+  return {
+    enabled: Boolean(mediaDraft?.mediaPlayback?.enabled),
+    loopMode: String(mediaDraft?.mediaPlayback?.loopMode || "loop") === "boomerang" ? "boomerang" : "loop",
+    speed: Math.min(2.5, Math.max(0.25, Number(mediaDraft?.mediaPlayback?.speed || 1) || 1)),
+  };
+}
+
 function buildDraftPayload() {
   const payload = new FormData();
   payload.append("topic", siteConfig.topic || editableContent.hero.title || siteConfig.title);
@@ -2666,6 +2795,7 @@ function buildDraftPayload() {
   payload.append("contentOverrides", JSON.stringify(editableContent));
   payload.append("cinematicLayers", JSON.stringify(buildCinematicLayersPayload()));
   payload.append("experienceUpgrades", JSON.stringify(experienceDraft));
+  payload.append("mediaPlayback", JSON.stringify(buildMediaPlaybackPayload()));
   if (mediaDraft.startImageFile) payload.append("startImage", mediaDraft.startImageFile);
   if (mediaDraft.endImageFile) payload.append("endImage", mediaDraft.endImageFile);
   if (mediaDraft.videoFile) payload.append("video", mediaDraft.videoFile);
@@ -2699,6 +2829,7 @@ function buildLocalFullPreviewHtml() {
       editableContent,
       cinematicLayers: buildStandalonePreviewCinematicLayers(),
       experienceUpgrades: experienceDraft,
+      mediaPlayback: buildMediaPlaybackPayload(),
     });
   }
 
@@ -2713,6 +2844,7 @@ function buildLocalFullPreviewHtml() {
     editableContent,
     cinematicLayers: buildStandalonePreviewCinematicLayers(),
     experienceUpgrades: experienceDraft,
+    mediaPlayback: buildMediaPlaybackPayload(),
   });
 }
 
