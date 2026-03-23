@@ -1235,8 +1235,9 @@ export function startBuilderServer({ appDir, publicDir }) {
         guidedModePauseUntil = now + Number(settings.endPauseMs || 3000);
         guidedModeOrigin = scroller.scrollTop;
       } else {
-        stopGuidedMode(button, false);
-        return;
+        guidedModePhase = "down";
+        guidedModeOrigin = scroller.scrollTop;
+        guidedModeStartedAt = 0;
       }
     }
     guidedModeRaf = requestAnimationFrame(() => guidedModeStep(button));

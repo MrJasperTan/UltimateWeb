@@ -555,8 +555,9 @@ function buildStandalonePreviewRuntimeScript(previewData) {
         guidedModePauseUntil = now + Number(settings.endPauseMs || 3000);
         guidedModeOrigin = scroller.scrollTop;
       } else {
-        stopGuidedMode(button, false);
-        return;
+        guidedModePhase = "down";
+        guidedModeOrigin = scroller.scrollTop;
+        guidedModeStartedAt = 0;
       }
     }
     guidedModeRaf = requestAnimationFrame(() => guidedModeStep(button));
@@ -2274,8 +2275,9 @@ function stepInlineGuidedMode(frameDocument) {
       inlineExperienceState.guidedPauseUntil = now + Number(settings.endPauseMs || 3000);
       inlineExperienceState.guidedOrigin = scroller.scrollTop;
     } else {
-      stopInlineGuidedMode(frameDocument, false);
-      return;
+      inlineExperienceState.guidedPhase = "down";
+      inlineExperienceState.guidedOrigin = scroller.scrollTop;
+      inlineExperienceState.guidedStartedAt = 0;
     }
   }
   inlineExperienceState.guidedRaf = frameWindow.requestAnimationFrame(() => stepInlineGuidedMode(frameDocument));
