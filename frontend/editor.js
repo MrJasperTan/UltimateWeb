@@ -3013,6 +3013,77 @@ function openDraftPreviewWindow() {
   return previewWindow;
 }
 
+function injectStaticSectionFallbackGuard(html) {
+  const guardScript = `
+<script>
+(() => {
+  const FALLBACK_STYLE_ID = "uw-static-preview-fallback";
+
+  function ensureFallbackStyle() {
+    if (document.getElementById(FALLBACK_STYLE_ID)) return;
+    const style = document.createElement("style");
+    style.id = FALLBACK_STYLE_ID;
+    style.textContent = \`
+      html, body { min-height: 100%; overflow-x: hidden; }
+      body { overflow-y: auto !important; }
+      #loader,
+      .media-stage,
+      .canvas-wrap,
+      #dark-overlay { display: none !important; }
+      #scroll-container {
+        height: auto !important;
+        display: grid !important;
+        gap: 0 !important;
+        padding-bottom: 4rem !important;
+      }
+      .marquee-wrap {
+        position: relative !important;
+        top: auto !important;
+        left: auto !important;
+        opacity: 1 !important;
+        margin: 0 0 2rem !important;
+      }
+      .scroll-section {
+        position: relative !important;
+        top: auto !important;
+        opacity: 1 !important;
+        transform: none !important;
+        padding-block: clamp(2rem, 6vw, 5rem) !important;
+      }
+    \`;
+    document.head.appendChild(style);
+  }
+
+  function shouldApplyFallback() {
+    const sections = Array.from(document.querySelectorAll(".scroll-section"));
+    if (!sections.length) return false;
+    const visibleSections = sections.filter((section) => {
+      const computed = window.getComputedStyle(section);
+      return computed.display !== "none" && computed.visibility !== "hidden" && Number(computed.opacity || 0) > 0.05;
+    });
+    if (visibleSections.length > 0) return false;
+    const loader = document.getElementById("loader");
+    const loaderVisible = loader && window.getComputedStyle(loader).display !== "none" && window.getComputedStyle(loader).opacity !== "0";
+    return loaderVisible || sections.every((section) => window.getComputedStyle(section).position === "absolute");
+  }
+
+  function checkAndApplyFallback() {
+    if (shouldApplyFallback()) ensureFallbackStyle();
+  }
+
+  window.addEventListener("load", () => {
+    window.setTimeout(checkAndApplyFallback, 400);
+    window.setTimeout(checkAndApplyFallback, 1200);
+    window.setTimeout(checkAndApplyFallback, 2500);
+  }, { once: true });
+})();
+</script>`;
+  if (/<\/body>/i.test(html)) {
+    return html.replace(/<\/body>/i, `${guardScript}</body>`);
+  }
+  return `${html}${guardScript}`;
+}
+
 function buildLocalFullPreviewHtml() {
   const liveFrameDocument = siteFrame.contentWindow?.document;
   if (liveFrameDocument?.documentElement) {
@@ -3026,7 +3097,7 @@ function buildLocalFullPreviewHtml() {
     if (livePreviewUrl) {
       sanitizedHtml = buildPreviewSrcdoc(sanitizedHtml, livePreviewUrl);
     }
-    return sanitizedHtml;
+    return injectStaticSectionFallbackGuard(sanitizedHtml);
   }
 
   if (!siteSourceHtml || !siteSourcePreviewUrl) {
@@ -3034,14 +3105,14 @@ function buildLocalFullPreviewHtml() {
   }
 
   const previewHtml = buildPreviewSrcdoc(siteSourceHtml, siteSourcePreviewUrl);
-  return injectStandalonePreviewRuntime(previewHtml, {
+  return injectStaticSectionFallbackGuard(injectStandalonePreviewRuntime(previewHtml, {
     title: String(editableContent?.hero?.title || siteConfig?.title || "").trim(),
     publicSiteUrl: String(seoDraft?.publicSiteUrl || "").trim(),
     editableContent,
     cinematicLayers: buildStandalonePreviewCinematicLayers(),
     experienceUpgrades: experienceDraft,
     mediaPlayback: buildMediaPlaybackPayload(),
-  });
+  }));
 }
 
 function openLocalFullPreview(previewWindow) {
