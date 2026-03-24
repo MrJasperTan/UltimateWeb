@@ -1,0 +1,566 @@
+{
+  "topic": "Elon Musk",
+  "brand": "Elon Musk",
+  "businessProfile": {
+    "topic": "Elon Musk",
+    "brand": "Elon Musk",
+    "category": "person",
+    "sourceContext": {
+      "url": null,
+      "title": null,
+      "description": null,
+      "pageText": null,
+      "palette": [],
+      "imageUrls": [],
+      "logoUrl": null
+    },
+    "research": null,
+    "logoUrl": null,
+    "referenceMedia": [],
+    "palette": [],
+    "locationSignal": null
+  },
+  "sourceUrl": null,
+  "siteUrl": null,
+  "pageMode": "conversion",
+  "models": {
+    "startModel": "fal-ai/nano-banana-2",
+    "endModel": "fal-ai/nano-banana-2/edit",
+    "videoModel": "fal-ai/kling-video/v3/pro/image-to-video"
+  },
+  "paletteOverride": [],
+  "changeRequest": null,
+  "editSourceSlug": "elon-musk-mms9ohn0",
+  "contentOverrides": {
+    "hero": {
+      "kicker": "IDENTITY. PROOF. IMPACT.",
+      "title": "ELON MUSK",
+      "sub": "Elon was born to Errol and Maye Musk. His mother was born in Canada and had a career as a dietician and model. She holds two master's degrees. She attended the University of The Or...",
+      "trustLine": "8 live sources informed the hero, proof, and spec sections."
+    },
+    "marqueeText": "REDEFINE POSSIBLE",
+    "sections": [
+      {
+        "kind": "copy",
+        "label": "001 / Hook",
+        "heading": "Some people don’t follow the path. They become it.",
+        "body": "Elon was born to Errol and Maye Musk. His mother was born in Canada and had a career as a dietician and model. She holds two master's degrees. She attended the University of The Orange Free State in South Africa and majo...",
+        "button": "",
+        "stats": [],
+        "cards": [],
+        "items": []
+      },
+      {
+        "kind": "copy",
+        "label": "002 / Value",
+        "heading": "Where It All Began",
+        "body": "At age twelve, Elon sold his BASIC-based game Blastar to PC and Office Technology magazine for approximately $500 (equivalent to $1,600 in 2025). Musk attended Waterkloof House Preparatory School, Bryanston High School, and then Pretoria Boys High School, where he graduated.",
+        "button": "",
+        "stats": [],
+        "cards": [],
+        "items": []
+      },
+      {
+        "kind": "copy",
+        "label": "003 / Differentiation",
+        "heading": "Peak Achievement",
+        "body": "Sep 11, 2025 ... Elon Musk unveils Tesla's AI5 chip, a 'monster' with up to a 40x performance leap. Discover how this new hardware will revolutionize FSD, ...",
+        "button": "",
+        "stats": [],
+        "cards": [],
+        "items": []
+      },
+      {
+        "kind": "stats",
+        "label": "004 / Proof",
+        "heading": "Measured Confidence",
+        "body": "",
+        "button": "",
+        "stats": [
+          {
+            "value": "12",
+            "decimals": "0",
+            "suffix": "+",
+            "label": "Major achievements"
+          },
+          {
+            "value": "1",
+            "decimals": "0",
+            "suffix": "era",
+            "label": "Defining run"
+          },
+          {
+            "value": "24",
+            "decimals": "0",
+            "suffix": "moments",
+            "label": "Signature story beats"
+          }
+        ],
+        "cards": [],
+        "items": []
+      },
+      {
+        "kind": "cards",
+        "label": "005 / Trust",
+        "heading": "Research-Backed Highlights",
+        "body": "",
+        "button": "",
+        "stats": [],
+        "cards": [
+          {
+            "title": "Verified signal",
+            "body": "At age twelve, Elon sold his BASIC-based game Blastar to PC and Office Technology magazine for approximately $500 (equivalent to $1,600 i..."
+          },
+          {
+            "title": "Proof point 02",
+            "body": "Sep 11, 2025 ... Elon Musk unveils Tesla's AI5 chip, a 'monster' with up to a 40x performance leap. Discover how this new hardware will r..."
+          },
+          {
+            "title": "Proof point 03",
+            "body": "Elon was born to Errol and Maye Musk. His mother was born in Canada and had a career as a dietician and model. She holds two master's deg..."
+          },
+          {
+            "title": "Proof point 04",
+            "body": "Oct 3, 2025 ... Elon Musk has publicly stated that a Tesla phone isn't in the ... While these specifications are just speculation, they c..."
+          }
+        ],
+        "items": []
+      },
+      {
+        "kind": "cards",
+        "label": "006 / Decision",
+        "heading": "What Makes It Distinct",
+        "body": "",
+        "button": "",
+        "stats": [],
+        "cards": [
+          {
+            "title": "Major achievements",
+            "body": "12 +"
+          },
+          {
+            "title": "Defining run",
+            "body": "1 era"
+          },
+          {
+            "title": "Signature story beats",
+            "body": "24 moments"
+          }
+        ],
+        "items": []
+      },
+      {
+        "kind": "faq",
+        "label": "007 / Questions",
+        "heading": "What Visitors Need To Know",
+        "body": "",
+        "button": "",
+        "stats": [],
+        "cards": [],
+        "items": [
+          {
+            "question": "What makes Elon Musk distinct?",
+            "answer": "Elon Musk should be defined by measurable achievements, narrative arc, and cultural resonance rather than generic praise."
+          },
+          {
+            "question": "How should a visitor move through the page?",
+            "answer": "Start with identity, move into milestone proof, and end with a clear invitation to explore the full story."
+          }
+        ]
+      }
+    ],
+    "cta": {
+      "label": "008 / Explore",
+      "heading": "Discover Elon Musk",
+      "body": "Move from headline milestones into the deeper story, philosophy, and defining moments behind Elon Musk.",
+      "button": "Explore Story",
+      "headerCta": "Discover"
+    }
+  },
+  "experienceUpgrades": {
+    "guidedScroll": {
+      "enabled": true,
+      "initialDelayMs": 3000,
+      "downDurationMs": 112500,
+      "upDurationMs": 56250,
+      "endPauseMs": 3000,
+      "resumeDelayMs": 2000
+    },
+    "audio": {
+      "enabled": false
+    },
+    "depthHero": {
+      "enabled": false
+    }
+  },
+  "videoDurationSeconds": "5",
+  "prompts": {
+    "startPrompt": "Cinematic portrait of Elon Musk, dramatic studio lighting, dark moody background, editorial photography style, sharp focus on face and expression, no text, no logos, ultra detailed",
+    "endPrompt": "Same Elon Musk subject. Show a dynamic action or iconic pose that captures their essence, dramatic lighting with motion blur accents, dark atmospheric background, no text, no logos, editorial photography, ultra detailed.",
+    "motionPrompt": "Cinematic portrait animation. Start from first frame. Smooth transition to the dynamic action pose. Elegant camera movement, dramatic lighting shifts, no sudden warping, no text, dark atmospheric background."
+  },
+  "generatedAt": "2026-03-23T20:44:19.829Z",
+  "usedExistingVideo": true,
+  "existingVideoPath": "/tmp/ultimateweb-upload-lydIVw/mn3nlh86-space-x-loop.mp4",
+  "derivedStartImageFromVideo": true,
+  "derivedEndImageFromVideo": true,
+  "startImageUrl": null,
+  "endImageUrl": null,
+  "videoUrl": null,
+  "localVideo": "/home/thejaspertan/agents/Ultimateweb/generated-sites/elon-musk-mn3p4qac/media/transition.mp4",
+  "videoMeta": {
+    "width": 1924,
+    "height": 1076,
+    "duration": 5.041667,
+    "fps": 24
+  },
+  "frameExtraction": {
+    "fps": 20,
+    "width": 1920
+  },
+  "frameCount": 101,
+  "frameExtension": "webp",
+  "category": "person",
+  "sectionKinds": [
+    "copy",
+    "copy",
+    "copy",
+    "stats",
+    "cards",
+    "cards",
+    "faq",
+    "cta"
+  ],
+  "trustLine": "8 live sources informed the hero, proof, and spec sections.",
+  "editableContent": {
+    "hero": {
+      "kicker": "IDENTITY. PROOF. IMPACT.",
+      "title": "ELON MUSK",
+      "sub": "Elon was born to Errol and Maye Musk. His mother was born in Canada and had a career as a dietician and model. She holds two master's degrees. She attended the University of The Or...",
+      "trustLine": "8 live sources informed the hero, proof, and spec sections."
+    },
+    "marqueeText": "REDEFINE POSSIBLE",
+    "sections": [
+      {
+        "kind": "copy",
+        "label": "001 / Hook",
+        "heading": "Some people don’t follow the path. They become it.",
+        "body": "Elon was born to Errol and Maye Musk. His mother was born in Canada and had a career as a dietician and model. She holds two master's degrees. She attended the University of The Orange Free State in South Africa and majo...",
+        "button": "",
+        "stats": [],
+        "cards": [],
+        "items": []
+      },
+      {
+        "kind": "copy",
+        "label": "002 / Value",
+        "heading": "Where It All Began",
+        "body": "At age twelve, Elon sold his BASIC-based game Blastar to PC and Office Technology magazine for approximately $500 (equivalent to $1,600 in 2025). Musk attended Waterkloof House Preparatory School, Bryanston High School, and then Pretoria Boys High School, where he graduated.",
+        "button": "",
+        "stats": [],
+        "cards": [],
+        "items": []
+      },
+      {
+        "kind": "copy",
+        "label": "003 / Differentiation",
+        "heading": "Peak Achievement",
+        "body": "Sep 11, 2025 ... Elon Musk unveils Tesla's AI5 chip, a 'monster' with up to a 40x performance leap. Discover how this new hardware will revolutionize FSD, ...",
+        "button": "",
+        "stats": [],
+        "cards": [],
+        "items": []
+      },
+      {
+        "kind": "stats",
+        "label": "004 / Proof",
+        "heading": "Measured Confidence",
+        "body": "",
+        "button": "",
+        "stats": [
+          {
+            "value": "12",
+            "decimals": "0",
+            "suffix": "+",
+            "label": "Major achievements"
+          },
+          {
+            "value": "1",
+            "decimals": "0",
+            "suffix": "era",
+            "label": "Defining run"
+          },
+          {
+            "value": "24",
+            "decimals": "0",
+            "suffix": "moments",
+            "label": "Signature story beats"
+          }
+        ],
+        "cards": [],
+        "items": []
+      },
+      {
+        "kind": "cards",
+        "label": "005 / Trust",
+        "heading": "Research-Backed Highlights",
+        "body": "",
+        "button": "",
+        "stats": [],
+        "cards": [
+          {
+            "title": "Verified signal",
+            "body": "At age twelve, Elon sold his BASIC-based game Blastar to PC and Office Technology magazine for approximately $500 (equivalent to $1,600 i..."
+          },
+          {
+            "title": "Proof point 02",
+            "body": "Sep 11, 2025 ... Elon Musk unveils Tesla's AI5 chip, a 'monster' with up to a 40x performance leap. Discover how this new hardware will r..."
+          },
+          {
+            "title": "Proof point 03",
+            "body": "Elon was born to Errol and Maye Musk. His mother was born in Canada and had a career as a dietician and model. She holds two master's deg..."
+          }
+        ],
+        "items": []
+      },
+      {
+        "kind": "cards",
+        "label": "006 / Decision",
+        "heading": "What Makes It Distinct",
+        "body": "",
+        "button": "",
+        "stats": [],
+        "cards": [
+          {
+            "title": "Major achievements",
+            "body": "12 +"
+          },
+          {
+            "title": "Defining run",
+            "body": "1 era"
+          },
+          {
+            "title": "Signature story beats",
+            "body": "24 moments"
+          }
+        ],
+        "items": []
+      },
+      {
+        "kind": "faq",
+        "label": "007 / Questions",
+        "heading": "What Visitors Need To Know",
+        "body": "",
+        "button": "",
+        "stats": [],
+        "cards": [],
+        "items": [
+          {
+            "question": "What makes Elon Musk distinct?",
+            "answer": "Elon Musk should be defined by measurable achievements, narrative arc, and cultural resonance rather than generic praise."
+          },
+          {
+            "question": "How should a visitor move through the page?",
+            "answer": "Start with identity, move into milestone proof, and end with a clear invitation to explore the full story."
+          },
+          {
+            "question": "What should happen at the end of the page?",
+            "answer": "The final section should convert attention into the clearest next step for the topic."
+          }
+        ]
+      }
+    ],
+    "cta": {
+      "label": "008 / Explore",
+      "heading": "Discover Elon Musk",
+      "body": "Move from headline milestones into the deeper story, philosophy, and defining moments behind Elon Musk.",
+      "button": "Explore Story",
+      "headerCta": "Discover"
+    }
+  },
+  "cinematicLayers": {
+    "hero": {
+      "enabled": true,
+      "label": "Hero",
+      "layout": "card",
+      "loopMode": "loop",
+      "speed": 1,
+      "parallax": true,
+      "video": {
+        "available": true,
+        "filename": "cinematic-hero.mp4",
+        "url": "media/cinematic-hero.mp4"
+      }
+    },
+    "sections": [
+      {
+        "enabled": false,
+        "label": "001 / Hook",
+        "layout": "card",
+        "loopMode": "loop",
+        "speed": 1,
+        "parallax": false,
+        "video": {
+          "available": false,
+          "filename": null,
+          "url": null
+        }
+      },
+      {
+        "enabled": false,
+        "label": "002 / Value",
+        "layout": "card",
+        "loopMode": "loop",
+        "speed": 1,
+        "parallax": false,
+        "video": {
+          "available": false,
+          "filename": null,
+          "url": null
+        }
+      },
+      {
+        "enabled": false,
+        "label": "003 / Differentiation",
+        "layout": "card",
+        "loopMode": "loop",
+        "speed": 1,
+        "parallax": false,
+        "video": {
+          "available": false,
+          "filename": null,
+          "url": null
+        }
+      },
+      {
+        "enabled": false,
+        "label": "004 / Proof",
+        "layout": "card",
+        "loopMode": "loop",
+        "speed": 1,
+        "parallax": false,
+        "video": {
+          "available": false,
+          "filename": null,
+          "url": null
+        }
+      },
+      {
+        "enabled": false,
+        "label": "005 / Trust",
+        "layout": "card",
+        "loopMode": "loop",
+        "speed": 1,
+        "parallax": false,
+        "video": {
+          "available": false,
+          "filename": null,
+          "url": null
+        }
+      },
+      {
+        "enabled": false,
+        "label": "006 / Decision",
+        "layout": "card",
+        "loopMode": "loop",
+        "speed": 1,
+        "parallax": false,
+        "video": {
+          "available": false,
+          "filename": null,
+          "url": null
+        }
+      },
+      {
+        "enabled": false,
+        "label": "007 / Questions",
+        "layout": "card",
+        "loopMode": "loop",
+        "speed": 1,
+        "parallax": false,
+        "video": {
+          "available": false,
+          "filename": null,
+          "url": null
+        }
+      }
+    ]
+  },
+  "mediaPlayback": {
+    "enabled": true,
+    "loopMode": "loop",
+    "speed": 0.75
+  },
+  "seo": {
+    "title": "Elon Musk",
+    "description": "Elon was born to Errol and Maye Musk. His mother was born in Canada and had a career as a dietician and model. She holds two master's degrees. She attended...",
+    "keywords": [
+      "Elon Musk",
+      "person",
+      "conversion"
+    ],
+    "canonicalUrl": null,
+    "ogImageUrl": null,
+    "robotsDirectives": "noindex, nofollow",
+    "structuredData": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebPage",
+          "@id": "#webpage-elon-musk",
+          "name": "Elon Musk",
+          "description": "Elon was born to Errol and Maye Musk. His mother was born in Canada and had a career as a dietician and model. She holds two master's degrees. She attended...",
+          "isPartOf": {
+            "@id": "#website-elon-musk"
+          },
+          "about": {
+            "@id": "#primaryentity-elon-musk"
+          }
+        },
+        {
+          "@type": "WebSite",
+          "@id": "#website-elon-musk",
+          "name": "Elon Musk",
+          "description": "Elon was born to Errol and Maye Musk. His mother was born in Canada and had a career as a dietician and model. She holds two master's degrees. She attended..."
+        },
+        {
+          "@type": "Person",
+          "@id": "#primaryentity-elon-musk",
+          "name": "Elon Musk",
+          "description": "Elon was born to Errol and Maye Musk. His mother was born in Canada and had a career as a dietician and model. She holds two master's degrees. She attended..."
+        }
+      ]
+    },
+    "hasPublicUrl": false,
+    "pageUrl": null,
+    "sitemapUrl": null,
+    "robotsPath": "robots.txt",
+    "sitemapPath": null
+  },
+  "sourceContext": {
+    "url": null,
+    "title": null,
+    "description": null,
+    "pageText": null,
+    "palette": [],
+    "imageUrls": [],
+    "logoUrl": null
+  },
+  "research": {
+    "category": "person",
+    "summary": null,
+    "facts": [],
+    "proofPoints": [],
+    "faqCandidates": [],
+    "sources": [],
+    "coverage": {
+      "snippetCount": 0,
+      "attributeCount": 0,
+      "sourceCount": 0,
+      "factCount": 0
+    },
+    "confidence": "low",
+    "inferredFallbackUsed": true,
+    "researchedFields": []
+  }
+}
