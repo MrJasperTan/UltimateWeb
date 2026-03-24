@@ -1026,17 +1026,129 @@ function buildRobotsDirectives(siteUrl) {
   return "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1";
 }
 
-function buildFaviconSvg({ brand, accentColor, backgroundColor }) {
-  const letter = escapeHtml((normalizeWhitespace(brand).charAt(0) || "U").toUpperCase());
-  const bg = escapeHtml(backgroundColor || "#05070a");
-  const accent = escapeHtml(accentColor || "#f4b14d");
-  return `<?xml version="1.0" encoding="UTF-8"?>
+function buildBrandMonogram(brand) {
+  const normalized = normalizeWhitespace(String(brand || ""));
+  const words = normalized.split(/\s+/).filter(Boolean);
+  const letters = words.slice(0, 2).map((word) => word.charAt(0).toUpperCase()).join("");
+  if (letters) return letters;
+  return (normalized.charAt(0) || "U").toUpperCase();
+}
+
+function mixHexColor(hex, amount = 0) {
+  const normalized = String(hex || "").trim().replace(/^#/, "");
+  if (!/^[0-9a-f]{6}$/i.test(normalized)) return "#7c5cff";
+  const parts = normalized.match(/.{2}/g).map((part) => Number.parseInt(part, 16));
+  const mixed = parts.map((value) => Math.max(0, Math.min(255, Math.round(value + (255 - value) * amount))));
+  return `#${mixed.map((value) => value.toString(16).padStart(2, "0")).join("")}`;
+}
+
+function darkenHexColor(hex, amount = 0) {
+  const normalized = String(hex || "").trim().replace(/^#/, "");
+  if (!/^[0-9a-f]{6}$/i.test(normalized)) return "#05070a";
+  const parts = normalized.match(/.{2}/g).map((part) => Number.parseInt(part, 16));
+  const mixed = parts.map((value) => Math.max(0, Math.min(255, Math.round(value * (1 - amount)))));
+  return `#${mixed.map((value) => value.toString(16).padStart(2, "0")).join("")}`;
+}
+
+function hashString(input) {
+  let hash = 0;
+  for (const char of String(input || "")) {
+    hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  }
+  return hash;
+}
+
+function buildFaviconSvg({ brand, accentColor, backgroundColor, imageDataUri = "" }) {
+  const normalizedImageDataUri = normalizeWhitespace(imageDataUri);
+  if (normalizedImageDataUri) {
+    return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="${escapeHtml(brand)} favicon">
-  <rect width="96" height="96" rx="24" fill="${bg}" />
-  <circle cx="48" cy="48" r="30" fill="${accent}" opacity="0.18" />
-  <text x="48" y="58" text-anchor="middle" font-family="Arial, sans-serif" font-size="40" font-weight="700" fill="#ffffff">${letter}</text>
+  <defs>
+    <clipPath id="frame">
+      <rect width="96" height="96" rx="24" ry="24" />
+    </clipPath>
+    <linearGradient id="shade" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.08" />
+      <stop offset="100%" stop-color="#05070a" stop-opacity="0.24" />
+    </linearGradient>
+  </defs>
+  <g clip-path="url(#frame)">
+    <rect width="96" height="96" fill="#05070a" />
+    <image href="${escapeHtml(normalizedImageDataUri)}" x="0" y="0" width="96" height="96" preserveAspectRatio="xMidYMid slice" />
+    <rect width="96" height="96" fill="url(#shade)" />
+  </g>
+  <rect x="2" y="2" width="92" height="92" rx="22" ry="22" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="2" />
 </svg>
 `;
+  }
+  const monogram = escapeHtml(buildBrandMonogram(brand));
+  const bgBase = backgroundColor || "#05070a";
+  const accentBase = accentColor || "#f4b14d";
+  const brandHash = hashString(brand);
+  const bg = escapeHtml(darkenHexColor(bgBase, 0.12));
+  const panel = escapeHtml(mixHexColor(bgBase, 0.1));
+  const accent = escapeHtml(accentBase);
+  const accentSoft = escapeHtml(mixHexColor(accentBase, 0.28));
+  const accentDeep = escapeHtml(darkenHexColor(accentBase, 0.24));
+  const tilt = ((brandHash % 18) - 9).toFixed(2);
+  const orbit = 18 + (brandHash % 8);
+  const burstX = 22 + (brandHash % 12);
+  const burstY = 18 + ((brandHash >> 3) % 16);
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="${escapeHtml(brand)} favicon">
+  <defs>
+    <linearGradient id="bg" x1="8%" y1="6%" x2="92%" y2="94%">
+      <stop offset="0%" stop-color="${panel}" />
+      <stop offset="100%" stop-color="${bg}" />
+    </linearGradient>
+    <linearGradient id="accent" x1="18%" y1="18%" x2="84%" y2="84%">
+      <stop offset="0%" stop-color="${accentSoft}" />
+      <stop offset="100%" stop-color="${accentDeep}" />
+    </linearGradient>
+    <radialGradient id="glow" cx="${burstX}%" cy="${burstY}%" r="78%">
+      <stop offset="0%" stop-color="${accentSoft}" stop-opacity="0.72" />
+      <stop offset="100%" stop-color="${accent}" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+  <rect width="96" height="96" rx="24" fill="url(#bg)" />
+  <rect x="8" y="8" width="80" height="80" rx="20" fill="none" stroke="rgba(255,255,255,0.14)" opacity="0.4" />
+  <circle cx="48" cy="48" r="30" fill="url(#glow)" opacity="0.75" />
+  <g transform="translate(48 48) rotate(${tilt})">
+    <rect x="-21" y="-21" width="42" height="42" rx="13" fill="url(#accent)" />
+    <circle cx="0" cy="0" r="${orbit}" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="2" opacity="0.65" />
+    <path d="M -25 2 C -13 -8, 12 -8, 25 4" fill="none" stroke="rgba(255,255,255,0.16)" stroke-width="3" stroke-linecap="round" />
+  </g>
+  <text x="48" y="58" text-anchor="middle" font-family="Arial, sans-serif" font-size="${monogram.length > 1 ? 28 : 38}" font-weight="700" letter-spacing="0.08em" fill="#ffffff">${monogram}</text>
+</svg>
+`;
+}
+
+function buildSiteManifest({ brand, themeColor, backgroundColor }) {
+  return JSON.stringify(
+    {
+      name: normalizeWhitespace(brand) || "UltimateWeb Site",
+      short_name: clipText(normalizeWhitespace(brand) || "UltimateWeb", 24),
+      icons: [
+        {
+          src: "favicon.svg",
+          sizes: "any",
+          type: "image/svg+xml",
+          purpose: "any",
+        },
+        {
+          src: "apple-touch-icon.svg",
+          sizes: "180x180",
+          type: "image/svg+xml",
+          purpose: "any",
+        },
+      ],
+      theme_color: themeColor || "#05070a",
+      background_color: backgroundColor || "#05070a",
+      display: "standalone",
+    },
+    null,
+    2
+  ) + "\n";
 }
 
 function inferSchemaType(category, topic) {
@@ -2191,6 +2303,18 @@ function writeScaffoldFiles({
     brand,
     accentColor: themeColor,
     backgroundColor: profile.theme.bg,
+    imageDataUri: imagePathToDataUri(startPath),
+  });
+  const appleTouchIconSvg = buildFaviconSvg({
+    brand,
+    accentColor: themeColor,
+    backgroundColor: profile.theme.bg,
+    imageDataUri: imagePathToDataUri(startPath),
+  });
+  const siteManifest = buildSiteManifest({
+    brand,
+    themeColor,
+    backgroundColor: profile.theme.bg,
   });
   const logoMarkup = sourceContext?.logoUrl
     ? `<div class="brand-lockup"><img class="brand-logo" src="${escapeHtml(sourceContext.logoUrl)}" alt="${safeBrand} logo" /><span class="brand-text">${safeBrand}</span></div>`
@@ -2258,6 +2382,9 @@ function writeScaffoldFiles({
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=DM+Serif+Display:ital@0;1&family=Manrope:wght@400;500;700;800&family=Oswald:wght@500;700&family=Syne:wght@500;700;800&display=swap" rel="stylesheet" />
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="shortcut icon" href="favicon.svg" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.svg" />
+  <link rel="manifest" href="site.webmanifest" />
   <link rel="stylesheet" href="css/style.css" />
   <script type="application/ld+json">${escapeJsonForHtml(structuredData)}</script>
 </head>
@@ -3701,6 +3828,8 @@ setupCinematicParallax();
 
   writeFileSync(join(siteDir, "index.html"), html);
   writeFileSync(join(siteDir, "favicon.svg"), faviconSvg);
+  writeFileSync(join(siteDir, "apple-touch-icon.svg"), appleTouchIconSvg);
+  writeFileSync(join(siteDir, "site.webmanifest"), siteManifest);
   writeFileSync(join(siteDir, "css/style.css"), css);
   writeFileSync(join(siteDir, "js/app.js"), js);
   return {
