@@ -3022,7 +3022,9 @@ function buildLocalFullPreviewHtml() {
     const sanitizedHtml = `${doctype}\n${liveFrameDocument.documentElement.outerHTML}`
       .replace(/\sdata-bound="true"/g, "")
       .replace(/\sdata-bound='true'/g, "");
-    return injectStandalonePreviewRuntime(sanitizedHtml, {
+    const livePreviewUrl = siteFrame.contentWindow?.location?.href || siteSourcePreviewUrl || "";
+    const previewHtml = livePreviewUrl ? buildPreviewSrcdoc(sanitizedHtml, livePreviewUrl) : sanitizedHtml;
+    return injectStandalonePreviewRuntime(previewHtml, {
       title: String(editableContent?.hero?.title || siteConfig?.title || "").trim(),
       publicSiteUrl: String(seoDraft?.publicSiteUrl || "").trim(),
       editableContent,
