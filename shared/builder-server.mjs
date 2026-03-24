@@ -302,6 +302,13 @@ function pickUploadedFile(files, preferredFieldName, matcher) {
   return null;
 }
 
+function pickExactUploadedFile(files, fieldName, matcher) {
+  const file = files?.[fieldName];
+  if (!file?.path) return null;
+  if (matcher && !matcher(file)) return null;
+  return file.path;
+}
+
 function isUploadedImage(file) {
   return /\.(png|jpe?g|webp|gif|bmp|svg|avif)$/i.test(String(file?.filename || file?.path || ""));
 }
@@ -2344,9 +2351,9 @@ export function startBuilderServer({ appDir, publicDir }) {
         const pageMode = normalizePageMode(body.fields.pageMode);
         const existingWebsite = cleanOptionalString(body.fields.existingWebsite);
         const publicSiteUrl = cleanOptionalString(body.fields.siteUrl);
-        const uploadedStartImage = pickUploadedFile(body.files, "startImage", isUploadedImage) || cleanOptionalString(body.fields.startImage);
-        const uploadedEndImage = pickUploadedFile(body.files, "endImage", isUploadedImage) || cleanOptionalString(body.fields.endImage);
-        const uploadedVideo = pickUploadedFile(body.files, "video", isUploadedVideo) || cleanOptionalString(body.fields.video);
+        const uploadedStartImage = pickExactUploadedFile(body.files, "startImage", isUploadedImage) || cleanOptionalString(body.fields.startImage);
+        const uploadedEndImage = pickExactUploadedFile(body.files, "endImage", isUploadedImage) || cleanOptionalString(body.fields.endImage);
+        const uploadedVideo = pickExactUploadedFile(body.files, "video", isUploadedVideo) || cleanOptionalString(body.fields.video);
         const startPrompt = cleanOptionalString(body.fields.startPrompt);
         const endPrompt = cleanOptionalString(body.fields.endPrompt);
         const videoPrompt = cleanOptionalString(body.fields.videoPrompt);
@@ -2469,9 +2476,9 @@ export function startBuilderServer({ appDir, publicDir }) {
         }
 
         const publicSiteUrl = cleanOptionalString(body.fields.siteUrl ?? siteConfig.publicSiteUrl);
-        const uploadedStartImage = pickUploadedFile(body.files, "startImage", isUploadedImage) || cleanOptionalString(body.fields.startImage);
-        const uploadedEndImage = pickUploadedFile(body.files, "endImage", isUploadedImage) || cleanOptionalString(body.fields.endImage);
-        const uploadedVideo = pickUploadedFile(body.files, "video", isUploadedVideo) || cleanOptionalString(body.fields.video);
+        const uploadedStartImage = pickExactUploadedFile(body.files, "startImage", isUploadedImage) || cleanOptionalString(body.fields.startImage);
+        const uploadedEndImage = pickExactUploadedFile(body.files, "endImage", isUploadedImage) || cleanOptionalString(body.fields.endImage);
+        const uploadedVideo = pickExactUploadedFile(body.files, "video", isUploadedVideo) || cleanOptionalString(body.fields.video);
         const startPrompt = cleanOptionalString(body.fields.startPrompt ?? siteConfig.startPrompt);
         const endPrompt = cleanOptionalString(body.fields.endPrompt ?? siteConfig.endPrompt);
         const videoPrompt = cleanOptionalString(body.fields.videoPrompt ?? siteConfig.videoPrompt);
