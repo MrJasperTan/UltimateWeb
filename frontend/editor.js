@@ -3061,6 +3061,11 @@ function openLocalFullPreview(previewWindow) {
   setStatus("Full preview ready.", "Opened a standalone local preview from the current unsaved draft.");
 }
 
+function hasUploadedCinematicDraftMedia() {
+  if (cinematicDraft?.hero?.file instanceof File) return true;
+  return Array.isArray(cinematicDraft?.sections) && cinematicDraft.sections.some((layer) => layer?.file instanceof File);
+}
+
 async function publishEdits() {
   if (!siteConfig) return;
   publishButton.disabled = true;
@@ -3086,6 +3091,10 @@ async function openFullPreview() {
   const previewWindow = openDraftPreviewWindow();
   fullPreviewButton.disabled = true;
   setStatus("Preparing full preview...", "Opening the current live preview state in a standalone tab.");
+  if (hasUploadedCinematicDraftMedia()) {
+    openLocalFullPreview(previewWindow);
+    return;
+  }
   const draftPreview = await requestDraftPreview();
   const targetWindow = previewWindow || window.open("", "_blank");
   if (!targetWindow) {
