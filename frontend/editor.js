@@ -3014,6 +3014,21 @@ function openDraftPreviewWindow() {
 }
 
 function buildLocalFullPreviewHtml() {
+  const liveFrameDocument = siteFrame.contentWindow?.document;
+  if (liveFrameDocument?.documentElement) {
+    const doctype = liveFrameDocument.doctype
+      ? `<!DOCTYPE ${liveFrameDocument.doctype.name}>`
+      : "<!doctype html>";
+    let sanitizedHtml = `${doctype}\n${liveFrameDocument.documentElement.outerHTML}`
+      .replace(/\sdata-bound="true"/g, "")
+      .replace(/\sdata-bound='true'/g, "");
+    const livePreviewUrl = siteFrame.contentWindow?.location?.href || siteSourcePreviewUrl || "";
+    if (livePreviewUrl) {
+      sanitizedHtml = buildPreviewSrcdoc(sanitizedHtml, livePreviewUrl);
+    }
+    return sanitizedHtml;
+  }
+
   if (!siteSourceHtml || !siteSourcePreviewUrl) {
     throw new Error("The inline preview is not ready yet.");
   }
