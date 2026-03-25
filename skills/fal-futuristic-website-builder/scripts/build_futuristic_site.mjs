@@ -577,6 +577,10 @@ function normalizeMediaPlayback(rawValue) {
   };
 }
 
+function shouldBuildScrollFrames(mediaPlayback) {
+  return !normalizeMediaPlayback(mediaPlayback).enabled;
+}
+
 function guessVideoExtension(value) {
   const raw = String(value || "");
   try {
@@ -3893,6 +3897,28 @@ function runFrameExtraction(videoPath, framesDir) {
   return { metadata, settings, frameCount: frameFiles.length, frameExtension };
 }
 
+function reuseFramesFromExistingSite(sourceSlug, framesDir, frameExtension = "webp") {
+  const slug = cleanOptionalString(sourceSlug);
+  if (!slug) return null;
+
+  const sourceFramesDir = join(ROOT_DIR, "generated-sites", slug, "frames");
+  if (!existsSync(sourceFramesDir)) return null;
+
+  const frameRegex = new RegExp(`^frame_\\d+\\.${frameExtension}$`);
+  const frameFiles = readdirSync(sourceFramesDir).filter((name) => frameRegex.test(name)).sort();
+  if (frameFiles.length < 40) return null;
+
+  for (const fileName of frameFiles) {
+    writeFileSync(join(framesDir, fileName), readFileSync(join(sourceFramesDir, fileName)));
+  }
+
+  return {
+    settings: null,
+    frameCount: frameFiles.length,
+    frameExtension,
+  };
+}
+
 function buildPromptContext(businessProfile) {
   const sourceContext = businessProfile?.sourceContext;
   const details = [];
@@ -4117,6 +4143,8 @@ async function main() {
   const rawMediaPlayback = cleanOptionalString(options["media-playback"])
     ? JSON.parse(String(options["media-playback"]))
     : null;
+  const shouldExtractFrames = shouldBuildScrollFrames(rawMediaPlayback);
+  const editSourceSlug = cleanOptionalString(options["edit-source-slug"]);
   const startPrompt = applyChangeRequest(String(options["start-prompt"] || defaults.startPrompt), changeRequest);
   const endPrompt = applyChangeRequest(String(options["end-prompt"] || defaults.endPrompt), changeRequest);
   const motionPrompt = applyChangeRequest(String(options["motion-prompt"] || defaults.motionPrompt), changeRequest);
@@ -4131,7 +4159,7 @@ async function main() {
     models: { startModel, endModel, videoModel },
     paletteOverride,
     changeRequest,
-    editSourceSlug: cleanOptionalString(options["edit-source-slug"]),
+    editSourceSlug,
     contentOverrides,
     experienceUpgrades: rawExperienceUpgrades,
     videoDurationSeconds: normalizedDuration,
@@ -4176,7 +4204,7 @@ async function main() {
       console.log(`Using existing video: ${providedVideoPath}`);
     }
 
-    if (!providedStartImage || !providedEndImage) {
+    if (shouldExtractFrames && (!providedStartImage || !providedEndImage)) {
       console.log("Deriving edge frames from provided video...");
       extractVideoEdgeFrames(
         videoPath,
@@ -4297,8 +4325,29 @@ async function main() {
     await downloadToFile(videoUrl, videoPath);
   }
 
-  console.log("Extracting frames...");
-  const extraction = runFrameExtraction(videoPath, framesDir);
+  const extraction = shouldExtractFrames
+    ? (() => {
+        const reusedFrames = options["video-path"] && editSourceSlug
+          ? reuseFramesFromExistingSite(editSourceSlug, framesDir)
+          : null;
+        if (reusedFrames) {
+          console.log(`Reusing existing frames from ${editSourceSlug}...`);
+          return {
+            metadata: readVideoMetadata(videoPath),
+            settings: reusedFrames.settings,
+            frameCount: reusedFrames.frameCount,
+            frameExtension: reusedFrames.frameExtension,
+          };
+        }
+        console.log("Extracting frames...");
+        return runFrameExtraction(videoPath, framesDir);
+      })()
+    : {
+        metadata: readVideoMetadata(videoPath),
+        settings: null,
+        frameCount: 0,
+        frameExtension: "webp",
+      };
 
   const cinematicLayers = await materializeCinematicLayers(rawCinematicLayers, mediaDir, previewProfile.sections.length);
 

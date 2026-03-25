@@ -871,6 +871,7 @@ export function startBuilderServer({ appDir, publicDir }) {
       JSON.stringify(experienceUpgrades || siteConfig.experienceUpgrades || {}),
       "--media-playback",
       JSON.stringify(mediaPlayback || siteConfig.mediaPlayback || {}),
+      "--no-research",
     ];
 
     if (startImage) args.push("--start-image", startImage);
@@ -2079,6 +2080,10 @@ export function startBuilderServer({ appDir, publicDir }) {
       args.push(flag, value);
     }
 
+    if (options.skipResearch) {
+      args.push("--no-research");
+    }
+
     for (const color of options.colors || []) {
       args.push("--color", color);
     }
@@ -2431,6 +2436,7 @@ export function startBuilderServer({ appDir, publicDir }) {
           cinematicLayers,
           experienceUpgrades,
           mediaPlayback,
+          skipResearch: Boolean(editSourceSlug),
         });
         sendJson(response, 202, {
           id: job.id,
