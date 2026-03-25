@@ -2272,6 +2272,8 @@ function writeScaffoldFiles({
   const businessProfile = buildBusinessProfile(topic, brand, sourceContext, research);
   const profile = applyContentOverrides(buildContentProfile(businessProfile, pageMode), contentOverrides);
   const editableContent = buildEditableContent(profile);
+  const startImagePath = join(siteDir, "media", "start-frame.webp");
+  const faviconImageDataUri = existsSync(startImagePath) ? imagePathToDataUri(startImagePath) : "";
   const headline = escapeHtml(String(profile.heroTitle || topic).toUpperCase());
   const safeTopic = escapeHtml(topic);
   const safeBrand = escapeHtml(brand);
@@ -2307,13 +2309,13 @@ function writeScaffoldFiles({
     brand,
     accentColor: themeColor,
     backgroundColor: profile.theme.bg,
-    imageDataUri: imagePathToDataUri(startPath),
+    imageDataUri: faviconImageDataUri,
   });
   const appleTouchIconSvg = buildFaviconSvg({
     brand,
     accentColor: themeColor,
     backgroundColor: profile.theme.bg,
-    imageDataUri: imagePathToDataUri(startPath),
+    imageDataUri: faviconImageDataUri,
   });
   const siteManifest = buildSiteManifest({
     brand,
