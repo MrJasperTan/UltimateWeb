@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="Elon Musk favicon">
+  <defs>
+    <linearGradient id="bg" x1="8%" y1="6%" x2="92%" y2="94%">
+      <stop offset="0%" stop-color="#232227" />
+      <stop offset="100%" stop-color="#09080d" />
+    </linearGradient>
+    <linearGradient id="accent" x1="18%" y1="18%" x2="84%" y2="84%">
+      <stop offset="0%" stop-color="#f7c77f" />
+      <stop offset="100%" stop-color="#b9873b" />
+    </linearGradient>
+    <radialGradient id="glow" cx="32%" cy="21%" r="78%">
+      <stop offset="0%" stop-color="#f7c77f" stop-opacity="0.72" />
+      <stop offset="100%" stop-color="#f4b14d" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+  <rect width="96" height="96" rx="24" fill="url(#bg)" />
+  <rect x="8" y="8" width="80" height="80" rx="20" fill="none" stroke="rgba(255,255,255,0.14)" opacity="0.4" />
+  <circle cx="48" cy="48" r="30" fill="url(#glow)" opacity="0.75" />
+  <g transform="translate(48 48) rotate(7.00)">
+    <rect x="-21" y="-21" width="42" height="42" rx="13" fill="url(#accent)" />
+    <circle cx="0" cy="0" r="20" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="2" opacity="0.65" />
+    <path d="M -25 2 C -13 -8, 12 -8, 25 4" fill="none" stroke="rgba(255,255,255,0.16)" stroke-width="3" stroke-linecap="round" />
+  </g>
+  <text x="48" y="58" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" font-weight="700" letter-spacing="0.08em" fill="#ffffff">EM</text>
+</svg>

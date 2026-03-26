@@ -1,0 +1,553 @@
+{
+  "topic": "the JASPER TAN",
+  "brand": "Jasper Tan - The Systems Architect | AI, Automation &amp; Business Strategy",
+  "businessProfile": {
+    "topic": "the JASPER TAN",
+    "brand": "Jasper Tan - The Systems Architect | AI, Automation &amp; Business Strategy",
+    "category": "person",
+    "sourceContext": {
+      "url": "https://www.thejaspertan.com/",
+      "title": "Jasper Tan - The Systems Architect | AI, Automation &amp; Business Strategy",
+      "description": "Former Marine, MBA, and AI innovator. 10+ AI applications built, 150% profit increases delivered. Systems-building expertise for the future.",
+      "pageText": "Jasper Tan - The Systems Architect | AI, Automation & Business Strategy",
+      "palette": [],
+      "imageUrls": [],
+      "logoUrl": null
+    },
+    "research": {
+      "topic": "the JASPER TAN",
+      "snippets": [
+        "Former Marine, MBA, and AI innovator. 10+ AI applications built, 150% profit increases delivered. Systems-building expertise for the future.",
+        "I obtained my PhD in Electrical & Computer Engineering from Rice University as a KKI Enhancement fellow and D2K fellow, where I researched computational imaging, computer vision, and machine learning (ML). More specifically, I worked on (a) integrating deep learning with novel types of imaging ...",
+        "From SEO to personalization, localization to campaign creation, Jasper provides the building blocks for every marketer to create, automate, and scale with confidence.",
+        "Jasper breaks with a smooth surface and is used for ornamentation or as a gemstone. It can be highly polished and is used for items such as vases, seals, and snuff boxes.",
+        "Nov 10, 2025 · Jasper Stone is one of the most ancient and spiritually powerful gemstones, revered for its grounding, protective, and nurturing energies. Known as the “Supreme Nurturer,” Jasper brings …"
+      ],
+      "attributes": {},
+      "sources": [
+        {
+          "url": "https://www.thejaspertan.com/",
+          "title": "Jasper Tan - The Systems Architect | AI, Automation &amp; Business Strategy",
+          "source": "source-site"
+        },
+        {
+          "url": "https://tanjasper.github.io/",
+          "title": "Jasper Tan - Jasper Tan",
+          "source": "brave"
+        },
+        {
+          "url": "https://www.jasper.ai/",
+          "title": "Put AI agents to work for marketing | Jasper",
+          "source": "bing"
+        },
+        {
+          "url": "https://en.wikipedia.org/wiki/Jasper",
+          "title": "Jasper - Wikipedia",
+          "source": "bing"
+        },
+        {
+          "url": "https://thejaspertan.com/",
+          "title": "theJasperTan aka theJTE aka JASPER TAN aka the Jasper Tan experience",
+          "source": "brave"
+        },
+        {
+          "url": "https://gemstonescraft.com/jasper-stones/",
+          "title": "Jasper Stones Meaning, Types, and Healing Powers Explained",
+          "source": "bing"
+        }
+      ],
+      "category": "person",
+      "summary": "Former Marine, MBA, and AI innovator. 10+ AI applications built, 150% profit increases delivered. Systems-building expertise for the future.",
+      "facts": [],
+      "proofPoints": [
+        "Former Marine, MBA, and AI innovator. 10+ AI applications built, 150% profit increases delivered. Systems-building expertise for the future.",
+        "I obtained my PhD in Electrical & Computer Engineering from Rice University as a KKI Enhancement fellow and D2K fellow, where I researche...",
+        "From SEO to personalization, localization to campaign creation, Jasper provides the building blocks for every marketer to create, automat...",
+        "Jasper breaks with a smooth surface and is used for ornamentation or as a gemstone. It can be highly polished and is used for items such..."
+      ],
+      "faqCandidates": [
+        {
+          "question": "What makes the JASPER TAN distinct?",
+          "answer": "the JASPER TAN should be defined by measurable achievements, narrative arc, and cultural resonance rather than generic praise."
+        },
+        {
+          "question": "How should a visitor move through the page?",
+          "answer": "Start with identity, move into milestone proof, and end with a clear invitation to explore the full story."
+        }
+      ],
+      "researchedFields": [],
+      "inferredFallbackUsed": true,
+      "confidence": "medium",
+      "coverage": {
+        "snippetCount": 5,
+        "attributeCount": 0,
+        "sourceCount": 6,
+        "factCount": 0
+      }
+    },
+    "logoUrl": null,
+    "referenceMedia": [],
+    "palette": [],
+    "locationSignal": "Jasper Tan - The Systems Architect | AI, Automation &amp; Business Strategy"
+  },
+  "sourceUrl": "https://www.thejaspertan.com/",
+  "siteUrl": null,
+  "pageMode": "conversion",
+  "models": {
+    "startModel": "fal-ai/nano-banana-2",
+    "endModel": "fal-ai/nano-banana-2/edit",
+    "videoModel": "fal-ai/kling-video/v3/pro/image-to-video"
+  },
+  "paletteOverride": [],
+  "changeRequest": null,
+  "editSourceSlug": null,
+  "contentOverrides": null,
+  "experienceUpgrades": {
+    "guidedScroll": {
+      "enabled": false,
+      "initialDelayMs": 6000,
+      "downDurationMs": 112500,
+      "upDurationMs": 56250,
+      "endPauseMs": 3000,
+      "resumeDelayMs": 2000
+    },
+    "audio": {
+      "enabled": false
+    },
+    "depthHero": {
+      "enabled": false
+    }
+  },
+  "videoDurationSeconds": "5",
+  "prompts": {
+    "startPrompt": "Cinematic portrait of the JASPER TAN, dramatic studio lighting, dark moody background, editorial photography style, sharp focus on face and expression, no text, no logos, ultra detailed, brand reference Jasper Tan - The Systems Architect | AI, Automation &amp; Business Strategy, site cues Former Marine, MBA, and AI innovator. 10+ AI applications built, 150% profit increases delivered. Systems-building expertise for the future.",
+    "endPrompt": "Same the JASPER TAN subject. Show a dynamic action or iconic pose that captures their essence, dramatic lighting with motion blur accents, dark atmospheric background, no text, no logos, editorial photography, ultra detailed, brand reference Jasper Tan - The Systems Architect | AI, Automation &amp; Business Strategy, site cues Former Marine, MBA, and AI innovator. 10+ AI applications built, 150% profit increases delivered. Systems-building expertise for the future..",
+    "motionPrompt": "Cinematic portrait animation. Start from first frame. Smooth transition to the dynamic action pose. Elegant camera movement, dramatic lighting shifts, no sudden warping, no text, dark atmospheric background, brand reference Jasper Tan - The Systems Architect | AI, Automation &amp; Business Strategy, site cues Former Marine, MBA, and AI innovator. 10+ AI applications built, 150% profit increases delivered. Systems-building expertise for the future.."
+  },
+  "generatedAt": "2026-03-25T22:27:28.013Z",
+  "startImageUrl": "https://v3b.fal.media/files/b/0a93a354/QBgKKlpc064GVVYktRtzV_0l1X7IFx.png",
+  "endImageUrl": "https://v3b.fal.media/files/b/0a93a357/6WkRHWM1-HOrKcldqf206_iOIDrzJu.png",
+  "videoUrl": "https://v3b.fal.media/files/b/0a93a364/HtZHg3xwhFPqxSKgV4dHy_output.mp4",
+  "localVideo": "/home/thejaspertan/agents/Ultimateweb/generated-sites/the-jasper-tan-mn6m5p8k/media/transition.mp4",
+  "videoMeta": {
+    "width": 1924,
+    "height": 1076,
+    "duration": 5.041667,
+    "fps": 24
+  },
+  "frameExtraction": {
+    "fps": 20,
+    "width": 1920
+  },
+  "frameCount": 101,
+  "frameExtension": "webp",
+  "category": "person",
+  "sectionKinds": [
+    "copy",
+    "copy",
+    "copy",
+    "stats",
+    "cards",
+    "cards",
+    "faq",
+    "cta"
+  ],
+  "trustLine": "6 live sources plus the source site informed the hero, proof, and spec sections.",
+  "editableContent": {
+    "hero": {
+      "kicker": "IDENTITY. PROOF. IMPACT.",
+      "title": "the JASPER TAN",
+      "sub": "Nov 10, 2025 · Jasper Stone is one of the most ancient and spiritually powerful gemstones, revered for its grounding, protective, and nurturing energies. Known as the “Supreme Nurturer,” Jasper brings …",
+      "trustLine": "6 live sources plus the source site informed the hero, proof, and spec sections."
+    },
+    "marqueeText": "REDEFINE POSSIBLE",
+    "sections": [
+      {
+        "kind": "copy",
+        "label": "001 / Hook",
+        "heading": "Some people don’t follow the path. They become it.",
+        "body": "Nov 10, 2025 · Jasper Stone is one of the most ancient and spiritually powerful gemstones, revered for its grounding, protective, and nurturing energies. Known as the “Supreme Nurturer,” Jasper brings …",
+        "button": "",
+        "stats": [],
+        "cards": [],
+        "items": []
+      },
+      {
+        "kind": "copy",
+        "label": "002 / Value",
+        "heading": "Where It All Began",
+        "body": "Former Marine, MBA, and AI innovator. 10+ AI applications built, 150% profit increases delivered. Systems-building expertise for the future.",
+        "button": "",
+        "stats": [],
+        "cards": [],
+        "items": []
+      },
+      {
+        "kind": "copy",
+        "label": "003 / Differentiation",
+        "heading": "Peak Achievement",
+        "body": "I obtained my PhD in Electrical & Computer Engineering from Rice University as a KKI Enhancement fellow and D2K fellow, where I researched computational imaging, computer vision, and machine learning (ML). More specifically, I worked on (a) integrating deep learning with novel types of imaging ...",
+        "button": "",
+        "stats": [],
+        "cards": [],
+        "items": []
+      },
+      {
+        "kind": "stats",
+        "label": "004 / Proof",
+        "heading": "Measured Confidence",
+        "body": "",
+        "button": "",
+        "stats": [
+          {
+            "value": "12",
+            "decimals": "0",
+            "suffix": "+",
+            "label": "Major achievements"
+          },
+          {
+            "value": "1",
+            "decimals": "0",
+            "suffix": "era",
+            "label": "Defining run"
+          },
+          {
+            "value": "24",
+            "decimals": "0",
+            "suffix": "moments",
+            "label": "Signature story beats"
+          }
+        ],
+        "cards": [],
+        "items": []
+      },
+      {
+        "kind": "cards",
+        "label": "005 / Trust",
+        "heading": "Research-Backed Highlights",
+        "body": "",
+        "button": "",
+        "stats": [],
+        "cards": [
+          {
+            "title": "Verified signal",
+            "body": "Former Marine, MBA, and AI innovator. 10+ AI applications built, 150% profit increases delivered. Systems-building expertise for the future."
+          },
+          {
+            "title": "Proof point 02",
+            "body": "I obtained my PhD in Electrical & Computer Engineering from Rice University as a KKI Enhancement fellow and D2K fellow, where I researche..."
+          },
+          {
+            "title": "Proof point 03",
+            "body": "From SEO to personalization, localization to campaign creation, Jasper provides the building blocks for every marketer to create, automat..."
+          },
+          {
+            "title": "Proof point 04",
+            "body": "Jasper breaks with a smooth surface and is used for ornamentation or as a gemstone. It can be highly polished and is used for items such..."
+          }
+        ],
+        "items": []
+      },
+      {
+        "kind": "cards",
+        "label": "006 / Decision",
+        "heading": "What Makes It Distinct",
+        "body": "",
+        "button": "",
+        "stats": [],
+        "cards": [
+          {
+            "title": "Major achievements",
+            "body": "12 +"
+          },
+          {
+            "title": "Defining run",
+            "body": "1 era"
+          },
+          {
+            "title": "Signature story beats",
+            "body": "24 moments"
+          }
+        ],
+        "items": []
+      },
+      {
+        "kind": "faq",
+        "label": "007 / Questions",
+        "heading": "What Visitors Need To Know",
+        "body": "",
+        "button": "",
+        "stats": [],
+        "cards": [],
+        "items": [
+          {
+            "question": "What makes the JASPER TAN distinct?",
+            "answer": "the JASPER TAN should be defined by measurable achievements, narrative arc, and cultural resonance rather than generic praise."
+          },
+          {
+            "question": "How should a visitor move through the page?",
+            "answer": "Start with identity, move into milestone proof, and end with a clear invitation to explore the full story."
+          }
+        ]
+      }
+    ],
+    "cta": {
+      "label": "008 / Explore",
+      "heading": "Discover Jasper Tan - The Systems Architect | AI, Automation &amp; Business Strategy",
+      "body": "Move from headline milestones into the deeper story, philosophy, and defining moments behind the JASPER TAN.",
+      "button": "Explore Story",
+      "headerCta": "Discover"
+    }
+  },
+  "cinematicLayers": {
+    "hero": {
+      "enabled": false,
+      "label": "Hero",
+      "layout": "card",
+      "loopMode": "loop",
+      "speed": 1,
+      "parallax": false,
+      "video": {
+        "available": false,
+        "filename": null,
+        "url": null
+      }
+    },
+    "sections": [
+      {
+        "enabled": false,
+        "label": "Section 1",
+        "layout": "card",
+        "loopMode": "loop",
+        "speed": 1,
+        "parallax": false,
+        "video": {
+          "available": false,
+          "filename": null,
+          "url": null
+        }
+      },
+      {
+        "enabled": false,
+        "label": "Section 2",
+        "layout": "card",
+        "loopMode": "loop",
+        "speed": 1,
+        "parallax": false,
+        "video": {
+          "available": false,
+          "filename": null,
+          "url": null
+        }
+      },
+      {
+        "enabled": false,
+        "label": "Section 3",
+        "layout": "card",
+        "loopMode": "loop",
+        "speed": 1,
+        "parallax": false,
+        "video": {
+          "available": false,
+          "filename": null,
+          "url": null
+        }
+      },
+      {
+        "enabled": false,
+        "label": "Section 4",
+        "layout": "card",
+        "loopMode": "loop",
+        "speed": 1,
+        "parallax": false,
+        "video": {
+          "available": false,
+          "filename": null,
+          "url": null
+        }
+      },
+      {
+        "enabled": false,
+        "label": "Section 5",
+        "layout": "card",
+        "loopMode": "loop",
+        "speed": 1,
+        "parallax": false,
+        "video": {
+          "available": false,
+          "filename": null,
+          "url": null
+        }
+      },
+      {
+        "enabled": false,
+        "label": "Section 6",
+        "layout": "card",
+        "loopMode": "loop",
+        "speed": 1,
+        "parallax": false,
+        "video": {
+          "available": false,
+          "filename": null,
+          "url": null
+        }
+      },
+      {
+        "enabled": false,
+        "label": "Section 7",
+        "layout": "card",
+        "loopMode": "loop",
+        "speed": 1,
+        "parallax": false,
+        "video": {
+          "available": false,
+          "filename": null,
+          "url": null
+        }
+      }
+    ]
+  },
+  "mediaPlayback": {
+    "enabled": false,
+    "loopMode": "loop",
+    "speed": 1,
+    "mobileFit": "contain"
+  },
+  "seo": {
+    "title": "the JASPER TAN | Jasper Tan - The Systems Architect | AI, Automation &amp; Business Strategy",
+    "description": "Nov 10, 2025 · Jasper Stone is one of the most ancient and spiritually powerful gemstones, revered for its grounding, protective, and nurturing energies. K...",
+    "keywords": [
+      "the JASPER TAN",
+      "Jasper Tan - The Systems Architect | AI, Automation &amp; Business Strategy",
+      "person",
+      "conversion"
+    ],
+    "canonicalUrl": null,
+    "ogImageUrl": null,
+    "robotsDirectives": "noindex, nofollow",
+    "structuredData": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebPage",
+          "@id": "#webpage-the-jasper-tan",
+          "name": "the JASPER TAN | Jasper Tan - The Systems Architect | AI, Automation &amp; Business Strategy",
+          "description": "Nov 10, 2025 · Jasper Stone is one of the most ancient and spiritually powerful gemstones, revered for its grounding, protective, and nurturing energies. K...",
+          "isPartOf": {
+            "@id": "#website-the-jasper-tan"
+          },
+          "about": {
+            "@id": "#primaryentity-the-jasper-tan"
+          }
+        },
+        {
+          "@type": "WebSite",
+          "@id": "#website-the-jasper-tan",
+          "name": "Jasper Tan - The Systems Architect | AI, Automation &amp; Business Strategy",
+          "description": "Nov 10, 2025 · Jasper Stone is one of the most ancient and spiritually powerful gemstones, revered for its grounding, protective, and nurturing energies. K..."
+        },
+        {
+          "@type": "Person",
+          "@id": "#primaryentity-the-jasper-tan",
+          "name": "the JASPER TAN",
+          "description": "Nov 10, 2025 · Jasper Stone is one of the most ancient and spiritually powerful gemstones, revered for its grounding, protective, and nurturing energies. K...",
+          "url": "https://www.thejaspertan.com/",
+          "sameAs": [
+            "https://www.thejaspertan.com/",
+            "https://tanjasper.github.io/",
+            "https://www.jasper.ai/",
+            "https://en.wikipedia.org/wiki/Jasper",
+            "https://thejaspertan.com/",
+            "https://gemstonescraft.com/jasper-stones/"
+          ],
+          "mainEntityOfPage": "https://www.thejaspertan.com/"
+        }
+      ]
+    },
+    "hasPublicUrl": false,
+    "pageUrl": null,
+    "sitemapUrl": null,
+    "robotsPath": "robots.txt",
+    "sitemapPath": null
+  },
+  "sourceContext": {
+    "url": "https://www.thejaspertan.com/",
+    "title": "Jasper Tan - The Systems Architect | AI, Automation &amp; Business Strategy",
+    "description": "Former Marine, MBA, and AI innovator. 10+ AI applications built, 150% profit increases delivered. Systems-building expertise for the future.",
+    "pageText": "Jasper Tan - The Systems Architect | AI, Automation & Business Strategy",
+    "palette": [],
+    "imageUrls": [],
+    "logoUrl": null
+  },
+  "research": {
+    "topic": "the JASPER TAN",
+    "snippets": [
+      "Former Marine, MBA, and AI innovator. 10+ AI applications built, 150% profit increases delivered. Systems-building expertise for the future.",
+      "I obtained my PhD in Electrical & Computer Engineering from Rice University as a KKI Enhancement fellow and D2K fellow, where I researched computational imaging, computer vision, and machine learning (ML). More specifically, I worked on (a) integrating deep learning with novel types of imaging ...",
+      "From SEO to personalization, localization to campaign creation, Jasper provides the building blocks for every marketer to create, automate, and scale with confidence.",
+      "Jasper breaks with a smooth surface and is used for ornamentation or as a gemstone. It can be highly polished and is used for items such as vases, seals, and snuff boxes.",
+      "Nov 10, 2025 · Jasper Stone is one of the most ancient and spiritually powerful gemstones, revered for its grounding, protective, and nurturing energies. Known as the “Supreme Nurturer,” Jasper brings …"
+    ],
+    "attributes": {},
+    "sources": [
+      {
+        "url": "https://www.thejaspertan.com/",
+        "title": "Jasper Tan - The Systems Architect | AI, Automation &amp; Business Strategy",
+        "source": "source-site"
+      },
+      {
+        "url": "https://tanjasper.github.io/",
+        "title": "Jasper Tan - Jasper Tan",
+        "source": "brave"
+      },
+      {
+        "url": "https://www.jasper.ai/",
+        "title": "Put AI agents to work for marketing | Jasper",
+        "source": "bing"
+      },
+      {
+        "url": "https://en.wikipedia.org/wiki/Jasper",
+        "title": "Jasper - Wikipedia",
+        "source": "bing"
+      },
+      {
+        "url": "https://thejaspertan.com/",
+        "title": "theJasperTan aka theJTE aka JASPER TAN aka the Jasper Tan experience",
+        "source": "brave"
+      },
+      {
+        "url": "https://gemstonescraft.com/jasper-stones/",
+        "title": "Jasper Stones Meaning, Types, and Healing Powers Explained",
+        "source": "bing"
+      }
+    ],
+    "category": "person",
+    "summary": "Former Marine, MBA, and AI innovator. 10+ AI applications built, 150% profit increases delivered. Systems-building expertise for the future.",
+    "facts": [],
+    "proofPoints": [
+      "Former Marine, MBA, and AI innovator. 10+ AI applications built, 150% profit increases delivered. Systems-building expertise for the future.",
+      "I obtained my PhD in Electrical & Computer Engineering from Rice University as a KKI Enhancement fellow and D2K fellow, where I researche...",
+      "From SEO to personalization, localization to campaign creation, Jasper provides the building blocks for every marketer to create, automat...",
+      "Jasper breaks with a smooth surface and is used for ornamentation or as a gemstone. It can be highly polished and is used for items such..."
+    ],
+    "faqCandidates": [
+      {
+        "question": "What makes the JASPER TAN distinct?",
+        "answer": "the JASPER TAN should be defined by measurable achievements, narrative arc, and cultural resonance rather than generic praise."
+      },
+      {
+        "question": "How should a visitor move through the page?",
+        "answer": "Start with identity, move into milestone proof, and end with a clear invitation to explore the full story."
+      }
+    ],
+    "researchedFields": [],
+    "inferredFallbackUsed": true,
+    "confidence": "medium",
+    "coverage": {
+      "snippetCount": 5,
+      "attributeCount": 0,
+      "sourceCount": 6,
+      "factCount": 0
+    }
+  }
+}

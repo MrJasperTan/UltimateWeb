@@ -1,0 +1,21 @@
+{
+  "name": "Jasper Tan",
+  "short_name": "Jasper Tan",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "apple-touch-icon.svg",
+      "sizes": "180x180",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "theme_color": "#f4b14d",
+  "background_color": "#0a090f",
+  "display": "standalone"
+}

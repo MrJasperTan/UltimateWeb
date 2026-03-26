@@ -1,0 +1,424 @@
+{
+  "topic": "Jasper Tan",
+  "brand": "Jasper Tan",
+  "businessProfile": {
+    "topic": "Jasper Tan",
+    "brand": "Jasper Tan",
+    "category": "person",
+    "sourceContext": {
+      "url": "https://www.thejaspertan.com/",
+      "title": null,
+      "description": null,
+      "pageText": null,
+      "palette": [],
+      "imageUrls": [],
+      "logoUrl": null
+    },
+    "research": null,
+    "logoUrl": null,
+    "referenceMedia": [],
+    "palette": [],
+    "locationSignal": null
+  },
+  "sourceUrl": "https://www.thejaspertan.com/",
+  "siteUrl": null,
+  "pageMode": "conversion",
+  "models": {
+    "startModel": "fal-ai/nano-banana-2",
+    "endModel": "fal-ai/nano-banana-2/edit",
+    "videoModel": "fal-ai/kling-video/v3/pro/image-to-video"
+  },
+  "paletteOverride": [],
+  "changeRequest": null,
+  "editSourceSlug": null,
+  "contentOverrides": null,
+  "experienceUpgrades": {
+    "guidedScroll": {
+      "enabled": false,
+      "initialDelayMs": 6000,
+      "downDurationMs": 112500,
+      "upDurationMs": 56250,
+      "endPauseMs": 3000,
+      "resumeDelayMs": 2000
+    },
+    "audio": {
+      "enabled": false
+    },
+    "depthHero": {
+      "enabled": false
+    }
+  },
+  "videoDurationSeconds": "5",
+  "prompts": {
+    "startPrompt": "Cinematic portrait of Jasper Tan, dramatic studio lighting, dark moody background, editorial photography style, sharp focus on face and expression, no text, no logos, ultra detailed",
+    "endPrompt": "Same Jasper Tan subject. Show a dynamic action or iconic pose that captures their essence, dramatic lighting with motion blur accents, dark atmospheric background, no text, no logos, editorial photography, ultra detailed.",
+    "motionPrompt": "Cinematic portrait animation. Start from first frame. Smooth transition to the dynamic action pose. Elegant camera movement, dramatic lighting shifts, no sudden warping, no text, dark atmospheric background."
+  },
+  "generatedAt": "2026-03-25T23:36:36.878Z",
+  "usedExistingVideo": true,
+  "existingVideoPath": "/home/thejaspertan/agents/Ultimateweb/generated-sites/the-jasper-tan-mn6m5p8k/media/transition.mp4",
+  "derivedStartImageFromVideo": true,
+  "derivedEndImageFromVideo": true,
+  "startImageUrl": null,
+  "endImageUrl": null,
+  "videoUrl": null,
+  "localVideo": "/home/thejaspertan/agents/Ultimateweb/generated-sites/the-jasper-tan-sourcefix-20260325/media/transition.mp4",
+  "videoMeta": {
+    "width": 1924,
+    "height": 1076,
+    "duration": 5.041667,
+    "fps": 24
+  },
+  "frameExtraction": {
+    "fps": 20,
+    "width": 1920
+  },
+  "frameCount": 101,
+  "frameExtension": "webp",
+  "category": "person",
+  "sectionKinds": [
+    "copy",
+    "copy",
+    "copy",
+    "stats",
+    "cards",
+    "cards",
+    "faq",
+    "cta"
+  ],
+  "trustLine": "Built with best-effort category research and premium design defaults.",
+  "editableContent": {
+    "hero": {
+      "kicker": "IDENTITY. PROOF. IMPACT.",
+      "title": "Jasper Tan",
+      "sub": "Jasper Tan is presented as a cinematic, research-informed experience designed to convert attention into action.",
+      "trustLine": "Built with best-effort category research and premium design defaults."
+    },
+    "marqueeText": "REDEFINE POSSIBLE",
+    "sections": [
+      {
+        "kind": "copy",
+        "label": "001 / Hook",
+        "heading": "Some people don’t follow the path. They become it.",
+        "body": "Experience Jasper Tan like never before — a journey through precision, beauty, and uncompromising craft.",
+        "button": "",
+        "stats": [],
+        "cards": [],
+        "items": []
+      },
+      {
+        "kind": "copy",
+        "label": "002 / Value",
+        "heading": "Where It All Began",
+        "body": "The formative years that forged Jasper Tan — raw talent colliding with relentless ambition.",
+        "button": "",
+        "stats": [],
+        "cards": [],
+        "items": []
+      },
+      {
+        "kind": "copy",
+        "label": "003 / Differentiation",
+        "heading": "Peak Achievement",
+        "body": "The moments that redefined what was possible — records shattered, boundaries dissolved.",
+        "button": "",
+        "stats": [],
+        "cards": [],
+        "items": []
+      },
+      {
+        "kind": "stats",
+        "label": "004 / Proof",
+        "heading": "Measured Confidence",
+        "body": "",
+        "button": "",
+        "stats": [
+          {
+            "value": "12",
+            "decimals": "0",
+            "suffix": "+",
+            "label": "Major achievements"
+          },
+          {
+            "value": "1",
+            "decimals": "0",
+            "suffix": "era",
+            "label": "Defining run"
+          },
+          {
+            "value": "24",
+            "decimals": "0",
+            "suffix": "moments",
+            "label": "Signature story beats"
+          }
+        ],
+        "cards": [],
+        "items": []
+      },
+      {
+        "kind": "cards",
+        "label": "005 / Trust",
+        "heading": "Research-Backed Highlights",
+        "body": "",
+        "button": "",
+        "stats": [],
+        "cards": [
+          {
+            "title": "Major achievements",
+            "body": "12 +"
+          },
+          {
+            "title": "Defining run",
+            "body": "1 era"
+          },
+          {
+            "title": "Signature story beats",
+            "body": "24 moments"
+          }
+        ],
+        "items": []
+      },
+      {
+        "kind": "cards",
+        "label": "006 / Decision",
+        "heading": "What Makes It Distinct",
+        "body": "",
+        "button": "",
+        "stats": [],
+        "cards": [
+          {
+            "title": "Major achievements",
+            "body": "12 +"
+          },
+          {
+            "title": "Defining run",
+            "body": "1 era"
+          },
+          {
+            "title": "Signature story beats",
+            "body": "24 moments"
+          }
+        ],
+        "items": []
+      },
+      {
+        "kind": "faq",
+        "label": "007 / Questions",
+        "heading": "What Visitors Need To Know",
+        "body": "",
+        "button": "",
+        "stats": [],
+        "cards": [],
+        "items": [
+          {
+            "question": "How should this page guide the visitor?",
+            "answer": "Move from impact to proof to action with a clear, premium sense of momentum."
+          },
+          {
+            "question": "What makes the experience feel credible?",
+            "answer": "Real data should anchor hero and proof sections whenever available, with informed fallback copy used sparingly elsewhere."
+          },
+          {
+            "question": "What should happen at the end of the page?",
+            "answer": "The final section should convert attention into the clearest next step for the topic."
+          }
+        ]
+      }
+    ],
+    "cta": {
+      "label": "008 / Explore",
+      "heading": "Discover Jasper Tan",
+      "body": "Move from headline milestones into the deeper story, philosophy, and defining moments behind Jasper Tan.",
+      "button": "Explore Story",
+      "headerCta": "Discover"
+    }
+  },
+  "cinematicLayers": {
+    "hero": {
+      "enabled": false,
+      "label": "Hero",
+      "layout": "card",
+      "loopMode": "loop",
+      "speed": 1,
+      "parallax": false,
+      "video": {
+        "available": false,
+        "filename": null,
+        "url": null
+      }
+    },
+    "sections": [
+      {
+        "enabled": false,
+        "label": "Section 1",
+        "layout": "card",
+        "loopMode": "loop",
+        "speed": 1,
+        "parallax": false,
+        "video": {
+          "available": false,
+          "filename": null,
+          "url": null
+        }
+      },
+      {
+        "enabled": false,
+        "label": "Section 2",
+        "layout": "card",
+        "loopMode": "loop",
+        "speed": 1,
+        "parallax": false,
+        "video": {
+          "available": false,
+          "filename": null,
+          "url": null
+        }
+      },
+      {
+        "enabled": false,
+        "label": "Section 3",
+        "layout": "card",
+        "loopMode": "loop",
+        "speed": 1,
+        "parallax": false,
+        "video": {
+          "available": false,
+          "filename": null,
+          "url": null
+        }
+      },
+      {
+        "enabled": false,
+        "label": "Section 4",
+        "layout": "card",
+        "loopMode": "loop",
+        "speed": 1,
+        "parallax": false,
+        "video": {
+          "available": false,
+          "filename": null,
+          "url": null
+        }
+      },
+      {
+        "enabled": false,
+        "label": "Section 5",
+        "layout": "card",
+        "loopMode": "loop",
+        "speed": 1,
+        "parallax": false,
+        "video": {
+          "available": false,
+          "filename": null,
+          "url": null
+        }
+      },
+      {
+        "enabled": false,
+        "label": "Section 6",
+        "layout": "card",
+        "loopMode": "loop",
+        "speed": 1,
+        "parallax": false,
+        "video": {
+          "available": false,
+          "filename": null,
+          "url": null
+        }
+      },
+      {
+        "enabled": false,
+        "label": "Section 7",
+        "layout": "card",
+        "loopMode": "loop",
+        "speed": 1,
+        "parallax": false,
+        "video": {
+          "available": false,
+          "filename": null,
+          "url": null
+        }
+      }
+    ]
+  },
+  "mediaPlayback": {
+    "enabled": false,
+    "loopMode": "loop",
+    "speed": 1,
+    "mobileFit": "contain"
+  },
+  "seo": {
+    "title": "Jasper Tan",
+    "description": "Jasper Tan is presented as a cinematic, research-informed experience designed to convert attention into action.",
+    "keywords": [
+      "Jasper Tan",
+      "person",
+      "conversion"
+    ],
+    "canonicalUrl": null,
+    "ogImageUrl": null,
+    "robotsDirectives": "noindex, nofollow",
+    "structuredData": {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebPage",
+          "@id": "#webpage-jasper-tan",
+          "name": "Jasper Tan",
+          "description": "Jasper Tan is presented as a cinematic, research-informed experience designed to convert attention into action.",
+          "isPartOf": {
+            "@id": "#website-jasper-tan"
+          },
+          "about": {
+            "@id": "#primaryentity-jasper-tan"
+          }
+        },
+        {
+          "@type": "WebSite",
+          "@id": "#website-jasper-tan",
+          "name": "Jasper Tan",
+          "description": "Jasper Tan is presented as a cinematic, research-informed experience designed to convert attention into action."
+        },
+        {
+          "@type": "Person",
+          "@id": "#primaryentity-jasper-tan",
+          "name": "Jasper Tan",
+          "description": "Jasper Tan is presented as a cinematic, research-informed experience designed to convert attention into action.",
+          "url": "https://www.thejaspertan.com/",
+          "mainEntityOfPage": "https://www.thejaspertan.com/"
+        }
+      ]
+    },
+    "hasPublicUrl": false,
+    "pageUrl": null,
+    "sitemapUrl": null,
+    "robotsPath": "robots.txt",
+    "sitemapPath": null
+  },
+  "sourceContext": {
+    "url": "https://www.thejaspertan.com/",
+    "title": null,
+    "description": null,
+    "pageText": null,
+    "palette": [],
+    "imageUrls": [],
+    "logoUrl": null
+  },
+  "research": {
+    "category": "person",
+    "summary": null,
+    "facts": [],
+    "proofPoints": [],
+    "faqCandidates": [],
+    "sources": [],
+    "coverage": {
+      "snippetCount": 0,
+      "attributeCount": 0,
+      "sourceCount": 0,
+      "factCount": 0
+    },
+    "confidence": "low",
+    "inferredFallbackUsed": true,
+    "researchedFields": []
+  }
+}
