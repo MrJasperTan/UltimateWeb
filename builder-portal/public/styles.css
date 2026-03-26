@@ -680,8 +680,14 @@ body.is-building .ring-b {
   margin-top: 0.75rem;
 }
 
+.gallery-actions > * {
+  flex: 1 1 0;
+}
+
 .gallery-action {
-  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   text-decoration: none;
 }
