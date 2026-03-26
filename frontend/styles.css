@@ -147,7 +147,7 @@ h2 {
 }
 
 .sample-showcase-head h2 {
-  max-width: 24ch;
+  max-width: none;
 }
 
 .sample-grid {
