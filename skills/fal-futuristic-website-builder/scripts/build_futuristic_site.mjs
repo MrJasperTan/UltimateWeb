@@ -11,6 +11,7 @@ const DEFAULT_START_MODEL = "fal-ai/nano-banana-2";
 const DEFAULT_END_MODEL = "fal-ai/nano-banana-2/edit";
 const DEFAULT_VIDEO_MODEL = "fal-ai/kling-video/v3/pro/image-to-video";
 const FAL_BASE_URL = "https://queue.fal.run";
+const JINA_READER_BASE_URL = "https://r.jina.ai/http://";
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = resolve(SCRIPT_DIR, "../../..");
 const PAGE_MODES = new Set(["conversion", "editorial", "hybrid"]);
@@ -52,14 +53,11 @@ Optional:
   --out-dir          Parent output directory (default: generated-sites)
   --slug             Output folder slug (default: derived from topic)
   --brand            Brand label used in the page copy
-  --site-url         Public canonical URL for the generated page
   --source-url       Existing website URL used for reference context
-  --color            Palette override color; repeat flag for multiple values
   --start-image      Existing start image URL or local path
   --end-image        Existing end image URL or local path
   --video-path       Existing video path; skips fal media generation
   --video-url        Existing video URL; skips fal media generation
-  --change-request   Plain-language edit request applied to generated prompts
   --edit-source-slug Source site slug when creating a new version
   --cinematic-layers JSON string with hero/section video layer settings
   --experience-upgrades JSON string with guided scroll, audio, and depth settings
@@ -72,7 +70,6 @@ Optional:
   --end-model        Override end image model
   --video-model      Override video model
   --duration         Video duration seconds (default: 5)
-  --page-mode        Site mode: conversion, editorial, or hybrid (default: conversion)
   --searxng-url      SearXNG instance URL for topic research (default: http://192.168.0.166:8888)
   --no-research      Skip topic research step
   --qa               Run Playwright screenshot QA after scaffolding
@@ -105,11 +102,11 @@ function parseArgs(argv) {
 }
 
 function normalizePageMode(rawMode) {
-  const mode = String(rawMode || "conversion").trim().toLowerCase();
+  const mode = String(rawMode || "hybrid").trim().toLowerCase();
   if (!PAGE_MODES.has(mode)) {
     throw new Error(`Invalid --page-mode "${rawMode}". Expected one of: conversion, editorial, hybrid.`);
   }
-  return mode;
+  return "hybrid";
 }
 
 function normalizeExperienceUpgrades(rawValue) {
@@ -259,6 +256,55 @@ function tokenizeText(value) {
         .filter((token) => token.length >= 3)
     )
   );
+}
+
+function extractHostname(value) {
+  if (!value) return "";
+  try {
+    return new URL(value).hostname.replace(/^www\./, "").toLowerCase();
+  } catch {
+    return "";
+  }
+}
+
+function looksLikePersonalName(value) {
+  const text = normalizeWhitespace(String(value || "").replace(/[|,:()/\\-]+/g, " "));
+  if (!text) return false;
+  const words = text.split(/\s+/).filter(Boolean);
+  if (words.length < 2 || words.length > 4) return false;
+  if (words.some((word) => !/^[A-Z][a-z]+$/.test(word))) return false;
+  return true;
+}
+
+function hasPersonSignals(value) {
+  const text = normalizeWhitespace(String(value || ""));
+  if (!text) return false;
+  return /\b(former|founder|co-founder|operator|advisor|strategist|innovator|veteran|marine|mba|speaker|author|leader|builder|consultant|entrepreneur|creator|specialist|expert|experience|journey|resume|cv|portfolio|about)\b/i.test(text);
+}
+
+function inferTopicTokens(topic, sourceContext = null) {
+  const stopTokens = new Set(["the", "and", "for", "with", "from"]);
+  const topicTokens = tokenizeText(topic).slice(0, 6);
+  const sourceTitleTokens = tokenizeText(sourceContext?.title || "");
+  const sourceHostTokens = tokenizeText(extractHostname(sourceContext?.url || ""));
+  const meaningfulSourceTitleTokens = sourceTitleTokens.filter(
+    (token) => !sourceHostTokens.includes(token) && !stopTokens.has(token)
+  );
+  return {
+    topicTokens,
+    strongTokens: topicTokens.filter((token) => token.length >= 4),
+    sourceTitleTokens: meaningfulSourceTitleTokens,
+    sourceHostTokens,
+  };
+}
+
+function isLikelyPersonTopic(topic, sourceContext = null) {
+  if (looksLikePersonalName(topic)) return true;
+  if (looksLikePersonalName(sourceContext?.title || "")) return true;
+  const personSignals = [topic, sourceContext?.title, sourceContext?.description, sourceContext?.pageText]
+    .filter(Boolean)
+    .some((value) => hasPersonSignals(value));
+  return personSignals;
 }
 
 function summarizePalette(colors) {
@@ -721,6 +767,129 @@ function extractImageUrls(html, baseUrl) {
   return Array.from(new Set(urls)).slice(0, 8);
 }
 
+function isLikelyDocumentPage(url) {
+  const pathname = (() => {
+    try {
+      return new URL(url).pathname.toLowerCase();
+    } catch {
+      return "";
+    }
+  })();
+  if (!pathname) return false;
+  return !/\.(?:jpg|jpeg|png|gif|webp|svg|mp4|mov|webm|pdf|zip|txt|xml|json)$/i.test(pathname);
+}
+
+function extractInternalLinks(html, baseUrl) {
+  if (!baseUrl) return [];
+  const baseHost = extractHostname(baseUrl);
+  const links = [];
+
+  for (const match of html.matchAll(/<a[^>]+href=["']([^"'#]+)["']/gi)) {
+    const href = match[1]?.trim();
+    const absolute = toAbsoluteUrl(baseUrl, href);
+    if (!absolute) continue;
+    try {
+      const parsed = new URL(absolute);
+      parsed.hash = "";
+      parsed.search = "";
+      const normalized = parsed.toString();
+      if (extractHostname(normalized) !== baseHost) continue;
+      if (!isLikelyDocumentPage(normalized)) continue;
+      if (/\/u\/\d+\//i.test(parsed.pathname)) continue;
+      if (/accounts\.google\.com|policies\.google\.com|support\.google\.com/i.test(parsed.hostname)) continue;
+      if (normalized === normalizePublicSiteUrl(baseUrl)) continue;
+      links.push(normalized);
+    } catch {
+      // Ignore malformed links.
+    }
+  }
+
+  return Array.from(new Set(links)).slice(0, 6);
+}
+
+function normalizeReaderText(text) {
+  return normalizeWhitespace(
+    String(text || "")
+      .replace(/^Title:\s.*$/gim, " ")
+      .replace(/^URL Source:\s.*$/gim, " ")
+      .replace(/^Markdown Content:\s*/gim, " ")
+      .replace(/!\[[^\]]*\]\([^)]+\)/g, " ")
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+      .replace(/[#>*`_-]{1,}/g, " ")
+  );
+}
+
+function extractReaderLinks(text, baseUrl) {
+  if (!baseUrl) return [];
+  const baseHost = extractHostname(baseUrl);
+  const links = [];
+  for (const match of String(text || "").matchAll(/\[[^\]]+\]\((https?:\/\/[^)]+)\)/gi)) {
+    const rawUrl = match[1];
+    try {
+      const parsed = new URL(rawUrl);
+      parsed.hash = "";
+      parsed.search = "";
+      const normalized = parsed.toString();
+      if (extractHostname(normalized) !== baseHost) continue;
+      if (!isLikelyDocumentPage(normalized)) continue;
+      if (normalized === normalizePublicSiteUrl(baseUrl)) continue;
+      links.push(normalized);
+    } catch {
+      // Ignore malformed links.
+    }
+  }
+  return Array.from(new Set(links)).slice(0, 6);
+}
+
+function clipParagraphs(text, maxItems = 4, maxLen = 280) {
+  return dedupeLines(
+    String(text || "")
+      .split(/\n{2,}|\.\s+(?=[A-Z0-9])/)
+      .map((line) => normalizeWhitespace(line))
+      .filter((line) => line.length >= 60)
+  )
+    .slice(0, maxItems)
+    .map((line) => clipText(line, maxLen));
+}
+
+function isGarbageSnippet(value) {
+  const clean = normalizeWhitespace(value);
+  if (!clean) return true;
+  return /\b(404|not found|warning:|target url returned error|shadow dom|as an ai language model)\b/i.test(clean);
+}
+
+function pageTextLooksThin(pageText, title = "", description = "") {
+  const clean = normalizeWhitespace(pageText);
+  if (!clean) return true;
+  if (clean.length < 220) return true;
+  const titleTokens = tokenizeText(title);
+  const descriptionTokens = tokenizeText(description);
+  const textTokens = tokenizeText(clean);
+  const overlap = textTokens.filter((token) => titleTokens.includes(token) || descriptionTokens.includes(token)).length;
+  return textTokens.length <= Math.max(25, overlap + 8);
+}
+
+async function fetchViaReader(url) {
+  if (!isValidHttpUrl(url)) return null;
+  try {
+    const readerUrl = `${JINA_READER_BASE_URL}${url.replace(/^https?:\/\//i, "")}`;
+    const response = await fetch(readerUrl, {
+      headers: { Accept: "text/plain" },
+      signal: AbortSignal.timeout(12000),
+    });
+    if (!response.ok) return null;
+    const raw = await response.text();
+    const text = normalizeReaderText(raw);
+    if (!text || text.length < 80) return null;
+    return {
+      text: clipText(text, 5000),
+      links: extractReaderLinks(raw, url),
+    };
+  } catch {
+    return null;
+  }
+}
+
 async function fetchSourceContext(sourceUrl) {
   if (!isValidHttpUrl(sourceUrl)) return null;
   try {
@@ -733,7 +902,30 @@ async function fetchSourceContext(sourceUrl) {
     const themeColor = extractMetaContent(html, ["theme-color", "msapplication-TileColor"]);
     const ogImage = extractMetaContent(html, ["og:image", "twitter:image"]);
     const imageUrls = extractImageUrls(html, sourceUrl);
-    const pageText = clipText(stripHtml(html), 1200);
+    const rawPageText = clipText(stripHtml(html), 5000);
+    let pageText = rawPageText;
+    const internalUrls = extractInternalLinks(html, sourceUrl);
+    let linkedPageSummaries = [];
+
+    if (pageTextLooksThin(pageText, title, description)) {
+      const rendered = await fetchViaReader(sourceUrl);
+      if (rendered?.text) {
+        pageText = rendered.text;
+      }
+      if (rendered?.links?.length) {
+        internalUrls.unshift(...rendered.links);
+      }
+    }
+
+    const uniqueInternalUrls = Array.from(new Set(internalUrls)).slice(0, 4);
+    for (const url of uniqueInternalUrls) {
+      const linked = await fetchViaReader(url);
+      if (!linked?.text) continue;
+      linkedPageSummaries.push(...clipParagraphs(linked.text, 2, 260));
+      if (linkedPageSummaries.length >= 6) break;
+    }
+    linkedPageSummaries = Array.from(new Set(linkedPageSummaries)).filter((line) => !isGarbageSnippet(line)).slice(0, 6);
+
     if (ogImage) {
       const absolute = toAbsoluteUrl(sourceUrl, ogImage);
       if (absolute && !imageUrls.includes(absolute)) imageUrls.unshift(absolute);
@@ -743,7 +935,9 @@ async function fetchSourceContext(sourceUrl) {
       url: sourceUrl,
       title,
       description,
-      pageText,
+      pageText: clipText(pageText, 5000),
+      linkedPageSummaries,
+      internalUrls: uniqueInternalUrls,
       palette,
       imageUrls,
       logoUrl: pickLogoCandidate(imageUrls),
@@ -759,11 +953,15 @@ function inferCategoryFromSignals(topic, sourceContext = null, research = null) 
     sourceContext?.title,
     sourceContext?.description,
     sourceContext?.pageText,
+    ...(sourceContext?.linkedPageSummaries || []).slice(0, 4),
     ...(research?.snippets || []).slice(0, 6),
   ]
     .filter(Boolean)
     .join(" ");
 
+  if (isLikelyPersonTopic(topic, sourceContext)) {
+    return "person";
+  }
   if (/\b(restaurant|bar|pub|tavern|brewery|brewpub|drinkery|cafe|café|coffee|bistro|grill|steakhouse|eatery|kitchen|lounge|menu|drinks|specials|catering|reservations?|happy hour|cocktails|beer|wine|craft beer|parties)\b/i.test(categorySignals)) {
     return "venue";
   }
@@ -822,6 +1020,9 @@ function isLikelyIrrelevantResult(category, text) {
   if (category === "venue") {
     return /\b(font|typeface|template|mockup|vector|creative market|download|spec enterprise)\b/i.test(haystack);
   }
+  if (category === "person") {
+    return /\b(horsepower|0-60|top speed|crate engine|engines|transmissions|national park|hotels|restaurants|travel deals|marketing platform|seo platform|sofa|nappa leather)\b/i.test(haystack);
+  }
   return false;
 }
 
@@ -829,20 +1030,24 @@ function isRelevantSearchResult(topic, result, sourceContext) {
   const haystack = normalizeWhitespace(`${result.title || ""} ${result.content || ""} ${result.url || ""}`).toLowerCase();
   const category = inferCategoryFromSignals(topic, sourceContext, null);
   if (isLikelyIrrelevantResult(category, haystack)) return false;
-  const topicTokens = tokenizeText(topic).slice(0, 6);
+  const { topicTokens, strongTokens, sourceTitleTokens } = inferTopicTokens(topic, sourceContext);
   const tokenHits = topicTokens.filter((token) => haystack.includes(token)).length;
-  if (tokenHits >= Math.min(2, topicTokens.length)) return true;
+
+  if (category === "person") {
+    const nameTokens = sourceTitleTokens.length >= 2 ? sourceTitleTokens.slice(0, 3) : strongTokens;
+    const nameHits = nameTokens.filter((token) => haystack.includes(token)).length;
+    if (nameTokens.length >= 2 && nameHits >= 2) return true;
+    if (tokenHits >= Math.min(2, strongTokens.length || topicTokens.length)) return true;
+  } else if (tokenHits >= Math.min(2, topicTokens.length)) {
+    return true;
+  }
 
   const brandToken = tokenizeText(deriveBrandLabel(topic))[0];
-  if (brandToken && haystack.includes(brandToken)) return true;
+  if (brandToken && category !== "person" && haystack.includes(brandToken)) return true;
 
   if (sourceContext?.url) {
-    try {
-      const hostname = new URL(sourceContext.url).hostname.replace(/^www\./, "");
-      if (haystack.includes(hostname)) return true;
-    } catch {
-      // ignore invalid source context
-    }
+    const hostname = extractHostname(sourceContext.url);
+    if (hostname && haystack.includes(hostname)) return true;
   }
 
   return false;
@@ -851,6 +1056,11 @@ function isRelevantSearchResult(topic, result, sourceContext) {
 async function researchTopic(topic, searxngUrl, sourceContext) {
   const category = inferCategoryFromSignals(topic, sourceContext, null);
   const queries = buildResearchQueries(topic, category, sourceContext);
+  const sourceSnippets = [
+    sourceContext?.description,
+    ...clipParagraphs(sourceContext?.pageText || "", 4, 280),
+    ...(sourceContext?.linkedPageSummaries || []).slice(0, 6),
+  ].filter((value) => value && !isGarbageSnippet(value));
 
   const allResults = [];
   const sources = [];
@@ -887,12 +1097,16 @@ async function researchTopic(topic, searxngUrl, sourceContext) {
     }
   }
 
-  if (allResults.length === 0) {
+  if (allResults.length === 0 && sourceSnippets.length === 0) {
     console.log("Research: no search results available, using template content.");
     return null;
   }
 
-  console.log(`Research: gathered ${allResults.length} results across ${queries.length} queries.`);
+  if (allResults.length === 0) {
+    console.log("Research: no search results available, using extracted source-site content only.");
+  } else {
+    console.log(`Research: gathered ${allResults.length} results across ${queries.length} queries.`);
+  }
 
   const research = {
     topic,
@@ -901,9 +1115,12 @@ async function researchTopic(topic, searxngUrl, sourceContext) {
     sources: [],
   };
 
+  research.snippets.push(...sourceSnippets);
+
   for (const result of allResults) {
     if (result.content && typeof result.content === "string" && result.content.length > 20) {
-      research.snippets.push(result.content.slice(0, 500));
+      const snippet = result.content.slice(0, 500);
+      if (!isGarbageSnippet(snippet)) research.snippets.push(snippet);
     }
     if (result.infobox_attributes && Array.isArray(result.infobox_attributes)) {
       for (const attr of result.infobox_attributes) {
@@ -917,10 +1134,6 @@ async function researchTopic(topic, searxngUrl, sourceContext) {
   // Deduplicate snippets
   research.snippets = [...new Set(research.snippets)].slice(0, 10);
   research.sources = dedupeSources(sources, 8);
-  if (sourceContext?.description) {
-    research.snippets.unshift(sourceContext.description);
-  }
-  research.snippets = [...new Set(research.snippets)].slice(0, 10);
   if (sourceContext?.url) {
     research.sources = dedupeSources(
       [{ url: sourceContext.url, title: sourceContext.title || topic, source: "source-site" }, ...sources],
@@ -1307,15 +1520,20 @@ function scoreSnippet(topic, snippet) {
   const lower = clean.toLowerCase();
   let score = 0;
   if (lower.includes(String(topic || "").toLowerCase())) score += 3;
+  if (/[a-z].*[A-Z]|[A-Z].*[a-z]/.test(clean)) score += 2;
   if (/\b(menu|drinks|events|party|catering|craft beer|cocktail|patio|downtown|chandler)\b/i.test(clean)) score += 2;
+  if (/\b(former marine|mba|innovator|systems|applications|profit increases|leadership|business strategy)\b/i.test(clean)) score += 3;
   if (!clean.includes("...")) score += 1;
   if (clean.length >= 80 && clean.length <= 260) score += 2;
+  if (/published time:|as an ai language model|\.jpg\b|\.png\b|\.webp\b/i.test(clean)) score -= 6;
+  if (/^[A-Z0-9\s:+|&-]{50,}$/.test(clean)) score -= 3;
   if (/last page|official website of|creative market|tiktok|spec enterprise/i.test(clean)) score -= 4;
   return score;
 }
 
 function buildResearchSummary(topic, snippets) {
   const candidates = dedupeLines(snippets)
+    .filter((line) => !isGarbageSnippet(line))
     .sort((a, b) => scoreSnippet(topic, b) - scoreSnippet(topic, a));
   const best = candidates[0] ? clipText(candidates[0], 320) : null;
   if (best) return best;
@@ -1554,8 +1772,11 @@ function extractNumber(text, regex) {
 
 function pickBestSnippet(research, maxLen) {
   if (!research || !research.snippets || research.snippets.length === 0) return null;
+  if (research.summary && scoreSnippet(research.topic || "", research.summary) >= 4) {
+    return clipText(research.summary, maxLen);
+  }
   const topic = research.topic || "";
-  const sorted = [...dedupeLines(research.snippets)].sort((a, b) => {
+  const sorted = [...dedupeLines(research.snippets)].filter((line) => !isGarbageSnippet(line)).sort((a, b) => {
     const scoreDelta = scoreSnippet(topic, b) - scoreSnippet(topic, a);
     if (scoreDelta !== 0) return scoreDelta;
     return b.length - a.length;
@@ -4090,10 +4311,7 @@ async function main() {
   mkdirSync(jsDir, { recursive: true });
 
   const sourceUrl = cleanOptionalString(options["source-url"]) || parsedTopic.sourceUrl;
-  const siteUrl = normalizePublicSiteUrl(options["site-url"]);
-  if (options["site-url"] && !siteUrl) {
-    throw new Error(`Invalid --site-url: ${options["site-url"]}`);
-  }
+  const siteUrl = normalizePublicSiteUrl(sourceUrl);
   const sourceContext = (await fetchSourceContext(sourceUrl)) || {
     url: sourceUrl,
     title: null,
@@ -4105,10 +4323,7 @@ async function main() {
   };
   const brand = String(options.brand || sourceContext?.title || deriveBrandLabel(topic)).trim();
   const pageMode = normalizePageMode(options["page-mode"]);
-  const paletteOverride = normalizePaletteOverride(options.color);
-  if (paletteOverride.length > 0) {
-    sourceContext.palette = paletteOverride;
-  }
+  const paletteOverride = [];
 
   const startModel = String(options["start-model"] || DEFAULT_START_MODEL);
   const endModel = String(options["end-model"] || DEFAULT_END_MODEL);
@@ -4117,7 +4332,7 @@ async function main() {
   const normalizedDuration = normalizeVideoDuration(duration);
 
   const searxngUrl = String(options["searxng-url"] || DEFAULT_SEARXNG_URL);
-  const skipResearch = options["no-research"] === true;
+  const skipResearch = options["no-research"] === true || Boolean(sourceUrl);
   let research = null;
 
   if (!skipResearch) {
@@ -4131,7 +4346,7 @@ async function main() {
 
   const businessProfile = buildBusinessProfile(topic, brand, sourceContext, research);
   const defaults = createPrompts(businessProfile);
-  const changeRequest = cleanOptionalString(options["change-request"]);
+  const changeRequest = null;
   const contentOverrides = cleanOptionalString(options["content-overrides"])
     ? JSON.parse(String(options["content-overrides"]))
     : null;

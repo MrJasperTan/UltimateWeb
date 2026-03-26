@@ -423,11 +423,11 @@ function readJsonFile(filePath) {
 }
 
 function normalizePageMode(rawMode) {
-  const mode = String(rawMode || "conversion").trim().toLowerCase();
+  const mode = String(rawMode || "hybrid").trim().toLowerCase();
   if (!PAGE_MODES.has(mode)) {
     throw new Error(`Invalid pageMode "${rawMode}". Expected conversion, editorial, or hybrid.`);
   }
-  return mode;
+  return "hybrid";
 }
 
 function cleanOptionalString(value) {
@@ -860,7 +860,7 @@ export function startBuilderServer({ appDir, publicDir }) {
       "--out-dir",
       previewRoot,
       "--page-mode",
-      normalizePageMode(siteConfig.pageMode),
+      "hybrid",
       "--video-path",
       previewVideoPath,
       "--edit-source-slug",
@@ -876,16 +876,14 @@ export function startBuilderServer({ appDir, publicDir }) {
 
     if (startImage) args.push("--start-image", startImage);
     if (endImage) args.push("--end-image", endImage);
-    if (siteConfig.existingWebsite) args.push("--source-url", siteConfig.existingWebsite);
-    if (publicSiteUrl) args.push("--site-url", publicSiteUrl);
+    if (siteConfig.existingWebsite) {
+      args.push("--source-url", siteConfig.existingWebsite);
+      args.push("--site-url", siteConfig.existingWebsite);
+    }
     if (startPrompt || siteConfig.startPrompt) args.push("--start-prompt", startPrompt || siteConfig.startPrompt);
     if (endPrompt || siteConfig.endPrompt) args.push("--end-prompt", endPrompt || siteConfig.endPrompt);
     if (videoPrompt || siteConfig.videoPrompt) args.push("--motion-prompt", videoPrompt || siteConfig.videoPrompt);
     if (cinematicLayers) args.push("--cinematic-layers", JSON.stringify(cinematicLayers));
-
-    for (const color of parseColorList(siteConfig.colors)) {
-      args.push("--color", color);
-    }
 
     const child = spawn("node", args, {
       cwd: rootDir,
@@ -1833,10 +1831,10 @@ export function startBuilderServer({ appDir, publicDir }) {
       slug,
       title: String(editableContent?.hero?.title || metadata.topic || slug.replace(/-/g, " ")).trim(),
       topic: String(metadata.topic || "").trim(),
-      pageMode: normalizePageMode(metadata.pageMode),
+      pageMode: "hybrid",
       existingWebsite: cleanOptionalString(metadata.sourceUrl || metadata.sourceContext?.url),
-      publicSiteUrl: cleanOptionalString(metadata.siteUrl || metadata.seo?.canonicalUrl),
-      colors: palette.join(", "),
+      publicSiteUrl: cleanOptionalString(metadata.sourceUrl || metadata.sourceContext?.url || metadata.siteUrl || metadata.seo?.canonicalUrl),
+      colors: "",
       startPrompt: cleanOptionalString(metadata.prompts?.startPrompt),
       endPrompt: cleanOptionalString(metadata.prompts?.endPrompt),
       videoPrompt: cleanOptionalString(metadata.prompts?.motionPrompt),
@@ -2019,7 +2017,7 @@ export function startBuilderServer({ appDir, publicDir }) {
     }
   }
 
-  function startBuildJob(topic, pageMode = "conversion", options = {}) {
+  function startBuildJob(topic, pageMode = "hybrid", options = {}) {
     const id = randomUUID();
     const slug = `${slugify(topic)}-${Date.now().toString(36)}`;
     const job = {
@@ -2048,7 +2046,7 @@ export function startBuilderServer({ appDir, publicDir }) {
       "--out-dir",
       generatedDir,
       "--page-mode",
-      pageMode,
+      "hybrid",
       "--start-model",
       "fal-ai/nano-banana-2",
       "--end-model",
@@ -2059,7 +2057,7 @@ export function startBuilderServer({ appDir, publicDir }) {
 
     const optionalArgs = [
       ["--source-url", options.existingWebsite],
-      ["--site-url", options.publicSiteUrl],
+      ["--site-url", options.existingWebsite],
       ["--start-image", options.startImage],
       ["--end-image", options.endImage],
       ["--video-path", options.videoPath],
@@ -2067,7 +2065,6 @@ export function startBuilderServer({ appDir, publicDir }) {
       ["--start-prompt", options.startPrompt],
       ["--end-prompt", options.endPrompt],
       ["--motion-prompt", options.videoPrompt],
-      ["--change-request", options.changeRequest],
       ["--edit-source-slug", options.editSourceSlug],
       ["--content-overrides", options.contentOverrides ? JSON.stringify(options.contentOverrides) : null],
       ["--cinematic-layers", options.cinematicLayers ? JSON.stringify(options.cinematicLayers) : null],
@@ -2082,10 +2079,6 @@ export function startBuilderServer({ appDir, publicDir }) {
 
     if (options.skipResearch) {
       args.push("--no-research");
-    }
-
-    for (const color of options.colors || []) {
-      args.push("--color", color);
     }
 
     const mediaMode = options.videoPath
@@ -2353,16 +2346,14 @@ export function startBuilderServer({ appDir, publicDir }) {
           ? await parseMultipartBody(request)
           : { fields: await parseJsonBody(request), files: {} };
         const topic = String(body.fields.topic || "").trim();
-        const pageMode = normalizePageMode(body.fields.pageMode);
+        const pageMode = "hybrid";
         const existingWebsite = cleanOptionalString(body.fields.existingWebsite);
-        const publicSiteUrl = cleanOptionalString(body.fields.siteUrl);
         const uploadedStartImage = pickExactUploadedFile(body.files, "startImage", isUploadedImage) || cleanOptionalString(body.fields.startImage);
         const uploadedEndImage = pickExactUploadedFile(body.files, "endImage", isUploadedImage) || cleanOptionalString(body.fields.endImage);
         const uploadedVideo = pickExactUploadedFile(body.files, "video", isUploadedVideo) || cleanOptionalString(body.fields.video);
         const startPrompt = cleanOptionalString(body.fields.startPrompt);
         const endPrompt = cleanOptionalString(body.fields.endPrompt);
         const videoPrompt = cleanOptionalString(body.fields.videoPrompt);
-        const changeRequest = cleanOptionalString(body.fields.changeRequest);
         const editSourceSlug = cleanOptionalString(body.fields.editSourceSlug);
         const contentOverrides = cleanOptionalString(body.fields.contentOverrides)
           ? JSON.parse(String(body.fields.contentOverrides))
@@ -2376,7 +2367,6 @@ export function startBuilderServer({ appDir, publicDir }) {
         const mediaPlayback = cleanOptionalString(body.fields.mediaPlayback)
           ? normalizeMediaPlayback(JSON.parse(String(body.fields.mediaPlayback)))
           : normalizeMediaPlayback(null);
-        const colors = parseColorList(body.fields.colors);
         if (editSourceSlug) {
           const editableSite = await findGeneratedSiteRecord(session.user.id, editSourceSlug);
           if (!editableSite) {
@@ -2421,8 +2411,6 @@ export function startBuilderServer({ appDir, publicDir }) {
         const job = startBuildJob(topic, pageMode, {
           userId: session.user.id,
           existingWebsite,
-          publicSiteUrl,
-          colors,
           startImage,
           endImage,
           videoPath: video && !isVideoUrl ? video : null,
@@ -2430,13 +2418,12 @@ export function startBuilderServer({ appDir, publicDir }) {
           startPrompt,
           endPrompt,
           videoPrompt,
-          changeRequest,
           editSourceSlug,
           contentOverrides,
           cinematicLayers,
           experienceUpgrades,
           mediaPlayback,
-          skipResearch: Boolean(editSourceSlug),
+          skipResearch: Boolean(editSourceSlug || existingWebsite),
         });
         sendJson(response, 202, {
           id: job.id,
@@ -2481,7 +2468,7 @@ export function startBuilderServer({ appDir, publicDir }) {
           return;
         }
 
-        const publicSiteUrl = cleanOptionalString(body.fields.siteUrl ?? siteConfig.publicSiteUrl);
+        const publicSiteUrl = cleanOptionalString(siteConfig.existingWebsite || siteConfig.publicSiteUrl);
         const uploadedStartImage = pickExactUploadedFile(body.files, "startImage", isUploadedImage) || cleanOptionalString(body.fields.startImage);
         const uploadedEndImage = pickExactUploadedFile(body.files, "endImage", isUploadedImage) || cleanOptionalString(body.fields.endImage);
         const uploadedVideo = pickExactUploadedFile(body.files, "video", isUploadedVideo) || cleanOptionalString(body.fields.video);
