@@ -111,15 +111,16 @@ button,
 
 .editor-main {
   display: grid;
-  grid-template-columns: 320px minmax(0, 1fr);
+  grid-template-columns: 1fr;
   gap: 18px;
-  min-height: calc(100vh - 210px);
+  min-height: 0;
 }
 
 .editor-sidebar {
   display: grid;
   gap: 18px;
   align-content: start;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
 }
 
 .sidebar-card {
