@@ -137,33 +137,39 @@
             <span>Existing Website</span>
             <input id="existing-website" name="existingWebsite" type="url" inputmode="url" autocomplete="off" placeholder="https://example.com" />
           </label>
-          <label class="field-block" for="start-image">
-            <span>Start Image</span>
-            <input id="start-image" name="startImage" type="file" accept="image/*" />
-            <small id="start-image-state" class="media-state">Optional. Leave empty to use the default build behavior.</small>
-          </label>
-          <label class="field-block" for="start-prompt">
-            <span>Start Image Prompt</span>
-            <textarea id="start-prompt" name="startPrompt" rows="3" placeholder="Optional override for the first image prompt"></textarea>
-          </label>
-          <label class="field-block" for="end-image">
-            <span>End Image</span>
-            <input id="end-image" name="endImage" type="file" accept="image/*" />
-            <small id="end-image-state" class="media-state">Optional. Leave empty to use the default build behavior.</small>
-          </label>
-          <label class="field-block" for="end-prompt">
-            <span>End Image Prompt</span>
-            <textarea id="end-prompt" name="endPrompt" rows="3" placeholder="Optional override for the final image prompt"></textarea>
-          </label>
-          <label class="field-block" for="video">
-            <span>Video</span>
-            <input id="video" name="video" type="file" accept="video/*" />
-            <small id="video-state" class="media-state">Optional. Leave empty to use the default build behavior.</small>
-          </label>
-          <label class="field-block" for="video-prompt">
-            <span>Video Prompt</span>
-            <textarea id="video-prompt" name="videoPrompt" rows="3" placeholder="Optional override for the video motion prompt"></textarea>
-          </label>
+          <div class="media-card">
+            <label class="field-block" for="start-image">
+              <span>Start Image</span>
+              <input id="start-image" name="startImage" type="file" accept="image/*" />
+              <small id="start-image-state" class="media-state">Optional. Leave empty to use the default build behavior.</small>
+            </label>
+            <label class="field-block" for="start-prompt">
+              <span>Start Image Prompt</span>
+              <textarea id="start-prompt" name="startPrompt" rows="3" placeholder="Optional override for the first image prompt"></textarea>
+            </label>
+          </div>
+          <div class="media-card">
+            <label class="field-block" for="end-image">
+              <span>End Image</span>
+              <input id="end-image" name="endImage" type="file" accept="image/*" />
+              <small id="end-image-state" class="media-state">Optional. Leave empty to use the default build behavior.</small>
+            </label>
+            <label class="field-block" for="end-prompt">
+              <span>End Image Prompt</span>
+              <textarea id="end-prompt" name="endPrompt" rows="3" placeholder="Optional override for the final image prompt"></textarea>
+            </label>
+          </div>
+          <div class="media-card">
+            <label class="field-block" for="video">
+              <span>Video</span>
+              <input id="video" name="video" type="file" accept="video/*" />
+              <small id="video-state" class="media-state">Optional. Leave empty to use the default build behavior.</small>
+            </label>
+            <label class="field-block" for="video-prompt">
+              <span>Video Prompt</span>
+              <textarea id="video-prompt" name="videoPrompt" rows="3" placeholder="Optional override for the video motion prompt"></textarea>
+            </label>
+          </div>
         </div>
       </form>
     </section>

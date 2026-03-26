@@ -327,6 +327,15 @@ h2 {
   gap: 0.38rem;
 }
 
+.media-card {
+  display: grid;
+  gap: 0.9rem;
+  padding: 0.9rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0.9rem;
+  background: rgba(255, 255, 255, 0.04);
+}
+
 .field-span-2 {
   grid-column: span 2;
 }
@@ -732,6 +741,10 @@ body.is-building .ring-b {
 
   .optional-grid {
     grid-template-columns: 1fr;
+  }
+
+  .media-card {
+    padding: 0.8rem;
   }
 
   .field-span-2 {
