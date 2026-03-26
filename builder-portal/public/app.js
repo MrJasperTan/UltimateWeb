@@ -1,21 +1,18 @@
 const form = document.getElementById("build-form");
 const topicInput = document.getElementById("topic");
 const existingWebsiteInput = document.getElementById("existing-website");
-const colorsInput = document.getElementById("colors");
 const startImageInput = document.getElementById("start-image");
 const endImageInput = document.getElementById("end-image");
 const videoInput = document.getElementById("video");
 const startImageState = document.getElementById("start-image-state");
 const endImageState = document.getElementById("end-image-state");
 const videoState = document.getElementById("video-state");
-const changeRequestInput = document.getElementById("change-request");
 const startPromptInput = document.getElementById("start-prompt");
 const endPromptInput = document.getElementById("end-prompt");
 const videoPromptInput = document.getElementById("video-prompt");
 const editBanner = document.getElementById("edit-banner");
 const editBannerText = document.getElementById("edit-banner-text");
 const cancelEditButton = document.getElementById("cancel-edit-btn");
-const pageModeInputs = document.querySelectorAll('input[name="pageMode"]');
 const submitButton = document.getElementById("submit-btn");
 const statusText = document.getElementById("status-text");
 const stageText = document.getElementById("stage-text");
@@ -415,17 +412,12 @@ async function beginEdit(slug) {
   const siteConfig = await fetchSiteConfig(slug);
   topicInput.value = siteConfig.topic || "";
   existingWebsiteInput.value = siteConfig.existingWebsite || "";
-  colorsInput.value = siteConfig.colors || "";
-  changeRequestInput.value = "";
   startPromptInput.value = siteConfig.startPrompt || "";
   endPromptInput.value = siteConfig.endPrompt || "";
   videoPromptInput.value = siteConfig.videoPrompt || "";
   startImageInput.value = "";
   endImageInput.value = "";
   videoInput.value = "";
-  Array.from(pageModeInputs).forEach((input) => {
-    input.checked = input.value === (siteConfig.pageMode || "conversion");
-  });
   setEditState(siteConfig);
   form.scrollIntoView({ behavior: "smooth", block: "start" });
 }
@@ -439,15 +431,12 @@ form.addEventListener("submit", async (event) => {
 
   const topic = topicInput.value.trim();
   const existingWebsite = existingWebsiteInput.value.trim();
-  const colors = colorsInput.value.trim();
   const startImageFile = startImageInput.files?.[0] || null;
   const endImageFile = endImageInput.files?.[0] || null;
   const videoFile = videoInput.files?.[0] || null;
-  const changeRequest = changeRequestInput.value.trim();
   const startPrompt = startPromptInput.value.trim();
   const endPrompt = endPromptInput.value.trim();
   const videoPrompt = videoPromptInput.value.trim();
-  const selectedPageMode = Array.from(pageModeInputs).find((input) => input.checked)?.value || "conversion";
   if (!topic) return;
 
   submitButton.disabled = true;
@@ -467,10 +456,7 @@ form.addEventListener("submit", async (event) => {
   try {
     const payload = new FormData();
     payload.append("topic", topic);
-    payload.append("pageMode", selectedPageMode);
     payload.append("existingWebsite", existingWebsite);
-    payload.append("colors", colors);
-    payload.append("changeRequest", changeRequest);
     payload.append("startPrompt", startPrompt);
     payload.append("endPrompt", endPrompt);
     payload.append("videoPrompt", videoPrompt);
@@ -490,7 +476,7 @@ form.addEventListener("submit", async (event) => {
     }
 
     activeJobId = data.id;
-    setStatus(`Job ${activeJobId.slice(0, 8)} • RUNNING • ${selectedPageMode.toUpperCase()}`);
+    setStatus(`Job ${activeJobId.slice(0, 8)} • RUNNING`);
     setStage("Preparing pipeline");
     clearEditState();
     startJobPolling(activeJobId);
